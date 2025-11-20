@@ -1869,8 +1869,8 @@ h3 {
 
 /* line 4, ../../Arafath/CL/january 2020/240. Animal/HTML/scss/_service.scss */
 .service_area {
-  padding-top: 241px;
-  padding-bottom: 106px;
+  padding-top: 150px;
+  padding-bottom: 10px;
 }
 
 @media (max-width: 767px) {
