@@ -24,5 +24,10 @@ namespace Demo123.Areas.Customer.Controllers
         {
             return View();
         }
+
+        public IActionResult Login()
+        {
+            return View();
+        }
     }
 }
