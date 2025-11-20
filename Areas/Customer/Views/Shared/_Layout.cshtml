@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Animal</title>
+
+
+    <!-- <link rel="manifest" href="site.webmanifest"> -->
+    <link rel="shortcut icon" type="image/x-icon" href="img/favicon.png">
+
+    <!-- CSS here -->
+    <link rel="stylesheet" href="~/Customer/css/bootstrap.min.css">
+    <link rel="stylesheet" href="~/Customer/css/owl.carousel.min.css">
+    <link rel="stylesheet" href="~/Customer/css/magnific-popup.css">
+    <link rel="stylesheet" href="~/Customer/css/font-awesome.min.css">
+    <link rel="stylesheet" href="~/Customer/css/themify-icons.css">
+    <link rel="stylesheet" href="~/Customer/css/nice-select.css">
+    <link rel="stylesheet" href="~/Customer/css/flaticon.css">
+    <link rel="stylesheet" href="~/Customer/css/gijgo.css">
+    <link rel="stylesheet" href="~/Customer/css/animate.css">
+    <link rel="stylesheet" href="~/Customer/css/slicknav.css">
+    <link rel="stylesheet" href="~/Customer/css/style.css">
+    <!-- <link rel="stylesheet" href="~/Customer/css/responsive.css"> -->
+
+</head>
+<body>
+    <!-- Header -->
+    @await Html.PartialAsync("_Header")
+
+    <!-- Page content -->
+    <main role="main">
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    @await Html.PartialAsync("_Footer")
+
+    <!-- JS files -->
+    <script src="~/Customer/js/vendor/modernizr-3.5.0.min.js"></script>
+    <script src="~/Customer/js/vendor/jquery-1.12.4.min.js"></script>
+    <script src="~/Customer/js/popper.min.js"></script>
+    <script src="~/Customer/js/bootstrap.min.js"></script>
+    <script src="~/Customer/js/owl.carousel.min.js"></script>
+    <script src="~/Customer/js/isotope.pkgd.min.js"></script>
+    <script src="~/Customer/js/ajax-form.js"></script>
+    <script src="~/Customer/js/waypoints.min.js"></script>
+    <script src="~/Customer/js/jquery.counterup.min.js"></script>
+    <script src="~/Customer/js/imagesloaded.pkgd.min.js"></script>
+    <script src="~/Customer/js/scrollIt.js"></script>
+    <script src="~/Customer/js/jquery.scrollUp.min.js"></script>
+    <script src="~/Customer/js/wow.min.js"></script>
+    <script src="~/Customer/js/nice-select.min.js"></script>
+    <script src="~/Customer/js/jquery.slicknav.min.js"></script>
+    <script src="~/Customer/js/jquery.magnific-popup.min.js"></script>
+    <script src="~/Customer/js/plugins.js"></script>
+    <script src="~/Customer/js/gijgo.min.js"></script>
+
+    @RenderSection("Scripts", required: false)
+
+</body>
+</html>
