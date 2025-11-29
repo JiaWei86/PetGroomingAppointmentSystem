@@ -1,0 +1,118 @@
+﻿
+
+@{
+    // Title for the browser tab
+    ViewData["Title"] = "Groomer Management";
+    // Key used to highlight the sidebar link (Assuming "Groomers" is the key)
+    ViewData["ActivePage"] = "Groomer";
+}
+
+<div class="content-header">
+    <h1 class="page-title">Groomer Management</h1>
+    <p class="breadcrumb">Home / Groomers</p>
+</div>
+
+<div class="panel">
+    <h3 class="panel-title">Existing Groomers</h3>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="showCreateForm()">Add Create New Groomer</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Groomer ID</th>
+                <th>Name</th>
+                <th>Specialty</th>
+                <th>Status</th>
+                <th>Contact</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+
+            @* Dummy Data Example (matches your screenshot) *@
+            <tr>
+                <td>GRM001</td>
+                <td>Anna Lee</td>
+                <td>Dog Styling, Senior Care</td>
+                <td>Active</td>
+                <td>anna.lee@petgroom.com</td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn">edit</button>
+                    <button class="btn btn-sm btn-action delete-btn">delete</button>
+                </td>
+            </tr>
+            <tr>
+                <td>GRM002</td>
+                <td>Mark Chen</td>
+                <td>Cat Grooming, Nail Trimming</td>
+                <td>On Leave</td>
+                <td>mark.chen@petgroom.com</td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn">edit</button>
+                    <button class="btn btn-sm btn-action delete-btn">delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="panel create-form" id="createGroomerForm">
+    <h3 class="panel-title">Create New Groomer</h3>
+
+    <form asp-controller="Groomer" asp-action="Create" method="post" class="form-grid">
+        <div class="form-group">
+            <label for="fullName">Full Name</label>
+            <input type="text" id="fullName" name="FirstName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="specialty">Specialty</label>
+            <input type="text" id="specialty" name="Specialty" placeholder="e.g., Cat Grooming, Poodle" required />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="Email" required />
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="Status">
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="Notes" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Save Groomer</button>
+        </div>
+    </form>
+</div>
+
+
+@section Scripts {
+    <script>
+        // Simple JavaScript function to show/hide the create form
+        // (You may need to hide this form by default using CSS)
+        function showCreateForm() {
+            var form = document.getElementById('createGroomerForm');
+            form.style.display = 'block';
+        }
+
+        // Initially hide the form on load, if desired
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('createGroomerForm');
+            if(form) form.style.display = 'none';
+        });
+    </script>
+}

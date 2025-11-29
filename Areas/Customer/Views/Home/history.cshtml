@@ -1,0 +1,347 @@
+﻿@{
+    ViewData["Title"] = "History";
+}
+
+<link rel="stylesheet" href="~/Customer/css/history.css" />
+
+<section class="history-section">
+    <div class="history-wrap">
+        <div class="history-header">
+            <h2>History</h2>
+            <p class="muted">Review your previous appointments and redeemed items.</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="appointments">Appointment History</button>
+            <button class="tab-btn" data-tab="redeem">Redeem History</button>
+        </div>
+
+        <div class="tab-panels">
+            <!-- APPOINTMENT HISTORY -->
+            <div id="appointments" class="tab-panel active">
+                <div class="controls">
+                    <div class="left">
+                        <label>
+                            Show
+                            <select id="apptStatusFilter">
+                                <option value="all">All statuses</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="visited">Visited</option>
+                                <option value="noshow">No Show</option>
+                                <option value="pending">Pending</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="right">
+                        <input id="apptSearch" placeholder="Search by pet, date, groomer..." />
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table id="apptTable" class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Pet(s)</th>
+                                <th>Groomer</th>
+                                <th>Service</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- injected --></tbody>
+                    </table>
+                </div>
+
+                <div class="pager">
+                    <button id="apptPrev" class="small-btn">Prev</button>
+                    <span id="apptPageInfo"></span>
+                    <button id="apptNext" class="small-btn">Next</button>
+                </div>
+            </div>
+
+            <!-- REDEEM HISTORY -->
+            <div id="redeem" class="tab-panel">
+                <div class="controls">
+                    <div class="left">
+                        <label>
+                            Show
+                            <select id="redeemStatusFilter">
+                                <option value="all">All statuses</option>
+                                <option value="used">Used</option>
+                                <option value="expired">Expired</option>
+                                <option value="available">Available</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="right">
+                        <input id="redeemSearch" placeholder="Search by item, date..." />
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table id="redeemTable" class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Item</th>
+                                <th>Points</th>
+                                <th>Redeemed By</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody><!-- injected --></tbody>
+                    </table>
+                </div>
+
+                <div class="pager">
+                    <button id="redeemPrev" class="small-btn">Prev</button>
+                    <span id="redeemPageInfo"></span>
+                    <button id="redeemNext" class="small-btn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Script: client-side rendering + filtering + pagination -->
+<script>
+    (function(){
+      /* ---------- Config ---------- */
+      const PLACEHOLDER_IMG = '/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png'; // uploaded file path used as placeholder
+
+      /* Sample appointment history data (in production replace via server JSON or Razor model) */
+      const appointmentHistory = [
+        { id: 'a1', date:'2025-11-24', time:'10:00', pets:['Buddy'], groomer:'Alice', service:'Full Groom', status:'confirmed' },
+        { id: 'a2', date:'2025-10-20', time:'14:00', pets:['Bella'], groomer:'Ben', service:'Nail Trim', status:'visited' },
+        { id: 'a3', date:'2025-09-12', time:'09:30', pets:['Milo'], groomer:'Cara', service:'Bathing', status:'noshow' },
+        { id: 'a4', date:'2025-08-05', time:'11:00', pets:['Buddy','Bella'], groomer:'Alice', service:'Spa Package', status:'pending' },
+        { id: 'a5', date:'2025-07-30', time:'13:00', pets:['Milo'], groomer:'Ben', service:'Trimming', status:'cancelled' },
+        // ... add more for testing pagination
+      ];
+
+      /* Sample redeem history data */
+      const redeemHistory = [
+        { id:'r1', date:'2025-10-01', item:'10% Off Grooming', points:100, user:'Jia Wei', status:'used' },
+        { id:'r2', date:'2025-09-05', item:'Free Nail Trim', points:80, user:'Xin Ru', status:'expired' },
+        { id:'r3', date:'2025-08-20', item:'Gift Wrap', points:40, user:'Yi Teng', status:'used' },
+        { id:'r4', date:'2025-07-14', item:'Bookmark', points:10, user:'Seng Hin', status:'available' },
+        // ...
+      ];
+
+      /* ---------- Simple pagination helper ---------- */
+      function Paginator(list, pageSize=5) {
+        this.list = list;
+        this.pageSize = pageSize;
+        this.page = 1;
+      }
+      Paginator.prototype.numPages = function(){ return Math.max(1, Math.ceil(this.list.length / this.pageSize)); }
+      Paginator.prototype.currentPageItems = function(){
+        const s = (this.page-1)*this.pageSize;
+        return this.list.slice(s, s + this.pageSize);
+      }
+      Paginator.prototype.setPage = function(p){ this.page = Math.min(Math.max(1,p), this.numPages()); }
+
+      /* ---------- Appointment Tab Logic ---------- */
+      const appt = {
+        raw: appointmentHistory.slice(),
+        filtered: appointmentHistory.slice(),
+        paginator: new Paginator(appointmentHistory, 5),
+        dom: {
+          tbody: document.querySelector('#apptTable tbody'),
+          statusFilter: document.getElementById('apptStatusFilter'),
+          search: document.getElementById('apptSearch'),
+          prev: document.getElementById('apptPrev'),
+          next: document.getElementById('apptNext'),
+          pageInfo: document.getElementById('apptPageInfo')
+        }
+      };
+
+      function renderApptTable(){
+        appt.dom.tbody.innerHTML = '';
+        appt.paginator.list = appt.filtered;
+        appt.paginator.setPage(appt.paginator.page);
+        const rows = appt.paginator.currentPageItems();
+
+        if(rows.length === 0){
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="7" class="muted">No appointment records found.</td>';
+          appt.dom.tbody.appendChild(tr);
+        } else {
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+
+            const petsHtml = r.pets.map(p => `<div class="pet-chip"><img src="${PLACEHOLDER_IMG}" alt="${p}" /> <span>${p}</span></div>`).join('');
+
+            tr.innerHTML = `
+              <td>${r.date}</td>
+              <td>${r.time}</td>
+              <td>${petsHtml}</td>
+              <td>${r.groomer}</td>
+              <td>${r.service}</td>
+              <td class="text-center"><span class="status ${r.status}">${formatStatusLabel(r.status)}</span></td>
+              <td class="text-center"><button class="small-btn view-btn" data-id="${r.id}">View</button></td>
+            `;
+            appt.dom.tbody.appendChild(tr);
+          });
+        }
+
+        appt.dom.pageInfo.textContent = `Page ${appt.paginator.page} of ${appt.paginator.numPages()}`;
+        appt.dom.prev.disabled = (appt.paginator.page <= 1);
+        appt.dom.next.disabled = (appt.paginator.page >= appt.paginator.numPages());
+      }
+
+      function formatStatusLabel(s){
+        switch(s){
+          case 'confirmed': return 'Confirmed';
+          case 'visited': return 'Visited';
+          case 'noshow': return 'No Show';
+          case 'pending': return 'Pending';
+          case 'cancelled': return 'Cancelled';
+          default: return s;
+        }
+      }
+
+      function applyApptFilters(){
+        const status = appt.dom.statusFilter.value;
+        const q = appt.dom.search.value.trim().toLowerCase();
+        appt.filtered = appt.raw.filter(item => {
+          if(status !== 'all' && item.status !== status) return false;
+          if(q){
+            // search in date, groomer, pet names, service
+            const inDate = item.date.toLowerCase().includes(q);
+            const inGroomer = (item.groomer || '').toLowerCase().includes(q);
+            const inService = (item.service || '').toLowerCase().includes(q);
+            const inPets = item.pets.join(' ').toLowerCase().includes(q);
+            return inDate || inGroomer || inService || inPets;
+          }
+          return true;
+        });
+        appt.paginator.page = 1;
+        renderApptTable();
+      }
+
+      /* ---------- Redeem Tab Logic ---------- */
+      const red = {
+        raw: redeemHistory.slice(),
+        filtered: redeemHistory.slice(),
+        paginator: new Paginator(redeemHistory, 6),
+        dom: {
+          tbody: document.querySelector('#redeemTable tbody'),
+          statusFilter: document.getElementById('redeemStatusFilter'),
+          search: document.getElementById('redeemSearch'),
+          prev: document.getElementById('redeemPrev'),
+          next: document.getElementById('redeemNext'),
+          pageInfo: document.getElementById('redeemPageInfo')
+        }
+      };
+
+      function renderRedeemTable(){
+        red.dom.tbody.innerHTML = '';
+        red.paginator.list = red.filtered;
+        red.paginator.setPage(red.paginator.page);
+        const rows = red.paginator.currentPageItems();
+
+        if(rows.length === 0){
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" class="muted">No redeem records found.</td>';
+          red.dom.tbody.appendChild(tr);
+        } else {
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${r.date}</td>
+              <td>${r.item}</td>
+              <td>${r.points}</td>
+              <td>${r.user}</td>
+              <td class="text-center"><span class="status ${r.status}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
+              <td class="text-center"><button class="small-btn view-redeem" data-id="${r.id}">View</button></td>
+            `;
+            red.dom.tbody.appendChild(tr);
+          });
+        }
+
+        red.dom.pageInfo.textContent = `Page ${red.paginator.page} of ${red.paginator.numPages()}`;
+        red.dom.prev.disabled = (red.paginator.page <= 1);
+        red.dom.next.disabled = (red.paginator.page >= red.paginator.numPages());
+      }
+
+      function applyRedeemFilters(){
+        const status = red.dom.statusFilter.value;
+        const q = red.dom.search.value.trim().toLowerCase();
+        red.filtered = red.raw.filter(item => {
+          if(status !== 'all' && item.status !== status) return false;
+          if(q){
+            return item.item.toLowerCase().includes(q) || item.date.toLowerCase().includes(q) || (item.user||'').toLowerCase().includes(q);
+          }
+          return true;
+        });
+        red.paginator.page = 1;
+        renderRedeemTable();
+      }
+
+      /* ---------- Tabs wiring ---------- */
+      const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+      const panels = Array.from(document.querySelectorAll('.tab-panel'));
+
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', function(){
+          tabButtons.forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          const t = btn.getAttribute('data-tab');
+          panels.forEach(p => p.id === t ? p.classList.add('active') : p.classList.remove('active'));
+        });
+      });
+
+      /* ---------- Event binding ---------- */
+      // Appt filters
+      appt.dom.statusFilter.addEventListener('change', applyApptFilters);
+      appt.dom.search.addEventListener('input', debounce(applyApptFilters, 250));
+      appt.dom.prev.addEventListener('click', ()=> { appt.paginator.setPage(appt.paginator.page - 1); renderApptTable(); });
+      appt.dom.next.addEventListener('click', ()=> { appt.paginator.setPage(appt.paginator.page + 1); renderApptTable(); });
+
+      // Redeem filters
+      red.dom.statusFilter.addEventListener('change', applyRedeemFilters);
+      red.dom.search.addEventListener('input', debounce(applyRedeemFilters, 250));
+      red.dom.prev.addEventListener('click', ()=> { red.paginator.setPage(red.paginator.page - 1); renderRedeemTable(); });
+      red.dom.next.addEventListener('click', ()=> { red.paginator.setPage(red.paginator.page + 1); renderRedeemTable(); });
+
+      // row-level actions (delegation)
+      document.body.addEventListener('click', function(e){
+        if(e.target.matches('.view-btn')){
+          const id = e.target.getAttribute('data-id');
+          const rec = appointmentHistory.find(x => x.id === id);
+          if(rec) showAppointmentDetail(rec);
+        }
+        if(e.target.matches('.view-redeem')){
+          const id = e.target.getAttribute('data-id');
+          const rec = redeemHistory.find(x => x.id === id);
+          if(rec) showRedeemDetail(rec);
+        }
+      });
+
+      function showAppointmentDetail(rec){
+        // lightweight detail modal (native prompt demo)
+        alert(`Appointment\n\nDate: ${rec.date}\nTime: ${rec.time}\nPet(s): ${rec.pets.join(', ')}\nGroomer: ${rec.groomer}\nService: ${rec.service}\nStatus: ${rec.status}`);
+      }
+      function showRedeemDetail(rec){
+        alert(`Redeem\n\nDate: ${rec.date}\nItem: ${rec.item}\nPoints: ${rec.points}\nStatus: ${rec.status}`);
+      }
+
+      /* ---------- Utilities ---------- */
+      function debounce(fn, wait){
+        let t;
+        return function(...args){ clearTimeout(t); t = setTimeout(()=> fn.apply(this, args), wait); };
+      }
+
+      /* ---------- Initial render ---------- */
+      applyApptFilters();
+      applyRedeemFilters();
+
+    })();
+</script>
