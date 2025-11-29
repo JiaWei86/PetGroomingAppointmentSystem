@@ -1,5 +1,772 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "My Profile";
 }
+
+<div class="profile-page-wrapper">
+    <div class="profile-header-accent"></div>
+
+    <div class="container py-4">
+        <div class="row">
+            <!-- Left column: profile card -->
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow-sm profile-card-main">
+                    <div class="card-body text-center">
+                        <!-- Avatar (uses uploaded path; replace with real avatar path later) -->
+                        <img src="/mnt/data/PetGroomingAppointmentSystem.zip"
+                             alt="avatar"
+                             class="rounded-circle mb-3 profile-avatar"
+                             style="object-fit:cover;" />
+
+                        <h4 class="card-title mb-0">Hachimi</h4>
+                        <div class="text-muted mb-2">+60 12-345 6789</div>
+
+                        <p class="small text-muted">hachiminanbeludo@example.com</p>
+
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-orange-primary" id="editProfileBtn" onclick="openEditModal()">Edit Profile</button>
+                            <a href="#" class="btn btn-orange-outline">Change Password</a>
+                        </div>
+                    </div>
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Member since:</strong>
+                            <span class="float-right">Jan 2024</span>
+                        </li>
+
+                        <li class="list-group-item">
+                            <strong>Status:</strong>
+                            <span class="badge-orange float-right">Active</span>
+                        </li>
+
+                        <li class="list-group-item">
+                            <strong>Loyalty Points:</strong>
+                            <span class="float-right text-warning font-weight-bold">999999</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Quick Actions card -->
+                <div class="card mt-3 quick-actions-card">
+                    <div class="card-body">
+                        <h6 class="card-title">Quick Actions</h6>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-orange-primary btn-sm">+ Add Pet</a>
+                            <a href="#" class="btn btn-orange-outline btn-sm">Book Service</a>
+                            <a href="#" class="btn btn-orange-outline btn-sm">View Invoices</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggested promotion / voucher -->
+                <div class="card mt-3 promotion-card">
+                    <div class="card-body">
+                        <h6 class="card-title">🎉 Exclusive Offer</h6>
+                        <p class="small mb-2">You have a <strong>10% discount</strong> available for your first grooming this month.</p>
+                        <a href="#" class="btn btn-redeem btn-sm">Redeem Now</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: tabs for Pets / Loyalty / Tips -->
+            <div class="col-lg-8">
+                <div class="card profile-card-main">
+                    <div class="card-body">
+                        <!-- Tabs -->
+                        <ul class="nav nav-tabs nav-tabs-orange" id="profileTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" id="pets-tab" data-toggle="tab" href="#pets" role="tab" aria-controls="pets" aria-selected="true">🐾 Pets</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="loyalty-tab" data-toggle="tab" href="#loyalty" role="tab" aria-controls="loyalty" aria-selected="false">⭐ Loyalty & Rewards</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="tips-tab" data-toggle="tab" href="#tips" role="tab" aria-controls="tips" aria-selected="false">💡 Pet Care Tips</a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content pt-3" id="profileTabContent">
+                            <!-- Pets tab -->
+                            <div class="tab-pane fade show active" id="pets" role="tabpanel" aria-labelledby="pets-tab">
+                                <div class="row gy-3">
+                                    <!-- Sample pet card -->
+                                    <div class="col-md-6">
+                                        <div class="card h-100 pet-card">
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col-4 text-center p-3">
+                                                    <img src="/images/pet-placeholder.png" alt="Pet photo"
+                                                         class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
+                                                </div>
+                                                <div class="col-8">
+                                                    <div class="card-body py-2">
+                                                        <h6 class="card-title mb-1">Bella</h6>
+                                                        <p class="small text-muted mb-1">Dog • Shih Tzu</p>
+                                                        <p class="small text-muted mb-1">DOB: 2019-05-12</p>
+                                                        <div class="d-flex gap-2">
+                                                            <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('bella')">Edit</button>
+                                                            <a href="#" class="btn btn-sm btn-danger">Delete</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- another sample pet -->
+                                    <div class="col-md-6">
+                                        <div class="card h-100 pet-card">
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col-4 text-center p-3">
+                                                    <img src="/images/pet-placeholder.png" alt="Pet photo"
+                                                         class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
+                                                </div>
+                                                <div class="col-8">
+                                                    <div class="card-body py-2">
+                                                        <h6 class="card-title mb-1">Milo</h6>
+                                                        <p class="small text-muted mb-1">Cat • Domestic Short Hair</p>
+                                                        <p class="small text-muted mb-1">DOB: 2021-11-03</p>
+                                                        <div class="d-flex gap-2">
+                                                            <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('milo')">Edit</button>
+                                                            <a href="#" class="btn btn-sm btn-danger">Delete</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> <!-- end pet list -->
+
+                                <div class="mt-3 text-center">
+                                    <a href="#" class="btn btn-sm btn-orange-primary">+ Add New Pet</a>
+                                </div>
+                            </div>
+
+                            <!-- Loyalty tab -->
+                            <div class="tab-pane fade" id="loyalty" role="tabpanel" aria-labelledby="loyalty-tab">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="loyalty-section">
+                                            <h6 class="mb-3">Points Balance</h6>
+                                            <div class="loyalty-points-display">125 pts</div>
+                                            <p class="small text-muted">Earn points for every booking. Redeem for discounts.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="loyalty-section">
+                                            <h6 class="mb-3">Next Reward</h6>
+                                            <p class="small text-muted">Get a free nail-trim at 200 pts</p>
+                                            <a href="#" class="btn btn-sm btn-orange-primary">Redeem</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tips tab -->
+                            <div class="tab-pane fade" id="tips" role="tabpanel" aria-labelledby="tips-tab">
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item tips-item">
+                                        <h6 class="mb-1">Grooming tip: Brushing</h6>
+                                        <p class="small text-muted mb-0">Brush your pet twice a week to reduce shedding and mats.</p>
+                                    </div>
+                                    <div class="list-group-item tips-item">
+                                        <h6 class="mb-1">Health tip: Vaccination</h6>
+                                        <p class="small text-muted mb-0">Keep your pet vaccinations up to date. Contact us for reminders.</p>
+                                    </div>
+                                    <div class="list-group-item tips-item">
+                                        <h6 class="mb-1">Seasonal: Cooling</h6>
+                                        <p class="small text-muted mb-0">In hot weather, keep short walks and provide water breaks.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- end tab content -->
+                    </div> <!-- end card body -->
+                </div> <!-- end card -->
+                <!-- Recommended Services / Suggestions (fills remaining space) -->
+                <div class="card profile-card-main mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">Recommended for your pets</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="service-box">
+                                    <div class="mb-2"><strong>Full Groom</strong></div>
+                                    <div class="small text-muted mb-2">Recommended for long-haired dogs</div>
+                                    <a href="#" class="btn btn-sm btn-orange-primary">Book</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="service-box">
+                                    <div class="mb-2"><strong>Nail Trim</strong></div>
+                                    <div class="small text-muted mb-2">Quick & safe</div>
+                                    <a href="#" class="btn btn-sm btn-orange-primary">Book</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="service-box">
+                                    <div class="mb-2"><strong>Vaccination Reminder</strong></div>
+                                    <div class="small text-muted mb-2">Stay protected</div>
+                                    <a href="#" class="btn btn-sm btn-orange-primary">Set Reminder</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- end right column -->
+        </div> <!-- end row -->
+    </div>
+</div>
+
+<!-- ============================================
+     EDIT USER PROFILE MODAL
+     ============================================ -->
+<div id="editProfileOverlay" class="custom-modal-overlay">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content edit-profile-modal">
+            <div class="custom-modal-header edit-profile-header">
+                <h5 class="custom-modal-title">
+                    <i class="fa fa-user-edit"></i> Edit Profile
+                </h5>
+                <button type="button" class="custom-close-btn" onclick="closeEditModal()">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="custom-modal-body edit-profile-body">
+                <form id="editProfileForm">
+                    <!-- Photo Upload Section -->
+                    <div class="photo-upload-section mb-4">
+                        <div class="text-center">
+                            <!-- Image Preview (shown by default) -->
+                            <div class="photo-preview-wrapper mb-3" id="photoPreviewWrapper">
+                                <img id="photoPreview" 
+                                     src="/mnt/data/PetGroomingAppointmentSystem.zip"
+                                     alt="Profile Photo"
+                                     class="rounded-circle"
+                                     style="width:120px;height:120px;object-fit:cover;border:3px solid #ff9500;" />
+                            </div>
+                            
+                            <!-- Webcam Section (Hidden by default) -->
+                            <div id="webcamSection" class="webcam-section" style="display:none;">
+                                <video id="webcamVideo" 
+                                       class="webcam-video rounded-circle mb-2"
+                                       width="120" 
+                                       height="120" 
+                                       autoplay
+                                       playsinline
+                                       style="object-fit:cover;border:3px solid #ff9500;display:block;margin:0 auto;">
+                                </video>
+                                <div class="webcam-controls mt-2">
+                                    <button type="button" class="btn btn-sm btn-success" onclick="captureWebcamPhoto()">
+                                        <i class="fa fa-camera"></i> Capture Photo
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="stopWebcam()">
+                                        <i class="fa fa-times"></i> Close Webcam
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- File Upload Input -->
+                            <div class="photo-upload-input mt-3">
+                                <input type="file" 
+                                       id="photoInput" 
+                                       name="photo" 
+                                       accept="image/*" 
+                                       class="form-control"
+                                       onchange="previewPhoto(event)" />
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fa fa-info-circle"></i> Recommended: 300x300px, Max 5MB
+                                </small>
+                            </div>
+
+                            <!-- Webcam Toggle Button -->
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-sm btn-primary" id="webcamToggleBtn" onclick="startWebcam()">
+                                    <i class="fa fa-video-camera"></i> Use Webcam
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Form Fields -->
+                    <div class="row">
+                        <!-- Full Name -->
+                        <div class="col-md-6 mb-3">
+                            <label for="fullName" class="form-label">
+                                <strong>Full Name</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control edit-profile-input" 
+                                   id="fullName" 
+                                   name="name"
+                                   placeholder="Enter your full name"
+                                   value="Hachimi"
+                                   required />
+                        </div>
+
+                        <!-- IC Number -->
+                        <div class="col-md-6 mb-3">
+                            <label for="icNumber" class="form-label">
+                                <strong>IC Number</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control edit-profile-input" 
+                                   id="icNumber" 
+                                   name="ic"
+                                   placeholder="e.g., 123456-12-1234"
+                                   value="123456-12-1234"
+                                   required />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Email -->
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <strong>Email Address</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" 
+                                   class="form-control edit-profile-input" 
+                                   id="email" 
+                                   name="email"
+                                   placeholder="your.email@example.com"
+                                   value="hachiminanbeludo@example.com"
+                                   required />
+                        </div>
+
+                        <!-- Age -->
+                        <div class="col-md-6 mb-3">
+                            <label for="age" class="form-label">
+                                <strong>Age</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" 
+                                   class="form-control edit-profile-input" 
+                                   id="age" 
+                                   name="age"
+                                   placeholder="Enter your age"
+                                   value="28"
+                                   min="18"
+                                   max="120"
+                                   required />
+                        </div>
+                    </div>
+
+                    <!-- Phone Number (optional) -->
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">
+                            <strong>Phone Number</strong>
+                        </label>
+                        <input type="tel" 
+                               class="form-control edit-profile-input" 
+                               id="phone" 
+                               name="phone"
+                               placeholder="e.g., +60 12-345 6789"
+                               value="+60 12-345 6789" />
+                    </div>
+
+                    <!-- Success Message (hidden by default) -->
+                    <div id="successMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
+                        <i class="fa fa-check-circle"></i> Profile updated successfully!
+                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <!-- Error Message (hidden by default) -->
+                    <div id="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
+                        <i class="fa fa-exclamation-circle"></i> <span id="errorText"></span>
+                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="custom-modal-footer edit-profile-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-orange-primary" form="editProfileForm">
+                    <i class="fa fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     EDIT PET PROFILE MODAL (Different Design)
+     ============================================ -->
+<div id="editPetOverlay" class="custom-modal-overlay pet-modal-overlay">
+    <div class="custom-modal-dialog pet-modal-dialog">
+        <div class="custom-modal-content edit-pet-modal">
+            <div class="custom-modal-header edit-pet-header">
+                <div class="pet-header-content">
+                    <h5 class="custom-modal-title">
+                        <i class="fa fa-paw"></i> Edit Pet Profile
+                    </h5>
+                    <p class="pet-header-subtitle mb-0">Update your pet's information</p>
+                </div>
+                <button type="button" class="custom-close-btn" onclick="closeEditPetModal()">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="custom-modal-body edit-pet-body">
+                <form id="editPetForm">
+                    <!-- Pet Photo Upload Section -->
+                    <div class="pet-photo-upload-section mb-4">
+                        <div class="text-center">
+                            <div class="pet-photo-preview-wrapper mb-3">
+                                <img id="petPhotoPreview" 
+                                     src="/images/pet-placeholder.png"
+                                     alt="Pet Photo"
+                                     class="rounded-circle"
+                                     style="width:130px;height:130px;object-fit:cover;border:4px dashed #ff9500;" />
+                                <div class="pet-photo-overlay">
+                                    <i class="fa fa-camera"></i>
+                                </div>
+                            </div>
+                            <div class="pet-photo-upload-input">
+                                <input type="file" 
+                                       id="petPhotoInput" 
+                                       name="photo" 
+                                       accept="image/*" 
+                                       class="form-control"
+                                       onchange="previewPetPhoto(event)" />
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fa fa-upload"></i> Click to upload pet photo
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="pet-divider">
+
+                    <!-- Pet Name & Age Row -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="petName" class="form-label pet-form-label">
+                                <i class="fa fa-tag"></i> <strong>Pet Name</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control edit-pet-input" 
+                                   id="petName" 
+                                   name="name"
+                                   placeholder="e.g., Bella, Max, Luna"
+                                   value="Bella"
+                                   required />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="petAge" class="form-label pet-form-label">
+                                <i class="fa fa-birthday-cake"></i> <strong>Age (Years)</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" 
+                                   class="form-control edit-pet-input" 
+                                   id="petAge" 
+                                   name="age"
+                                   placeholder="e.g., 3"
+                                   value="5"
+                                   min="0"
+                                   max="50"
+                                   step="0.5"
+                                   required />
+                        </div>
+                    </div>
+
+                    <!-- Pet Type & Breed Row -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="petType" class="form-label pet-form-label">
+                                <i class="fa fa-paw"></i> <strong>Pet Type</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control edit-pet-input" id="petType" name="type" required>
+                                <option value="">Select pet type</option>
+                                <option value="Dog" selected>Dog</option>
+                                <option value="Cat">Cat</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="petBreed" class="form-label pet-form-label">
+                                <i class="fa fa-paw"></i> <strong>Breed</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control edit-pet-input" 
+                                   id="petBreed" 
+                                   name="breed"
+                                   placeholder="e.g., Shih Tzu, Golden Retriever"
+                                   value="Shih Tzu"
+                                   required />
+                        </div>
+                    </div>
+
+                    <!-- Pet Remark/Notes -->
+                    <div class="mb-3">
+                        <label for="petRemark" class="form-label pet-form-label">
+                            <i class="fa fa-sticky-note"></i> <strong>Remarks / Special Notes</strong>
+                        </label>
+                        <textarea class="form-control edit-pet-input" 
+                                  id="petRemark" 
+                                  name="remark"
+                                  rows="4"
+                                  placeholder="e.g., Allergies, behavioral notes, medical conditions, grooming preferences...">Friendly and playful. Sensitive to loud noises.</textarea>
+                    </div>
+
+                    <!-- Success Message (hidden by default) -->
+                    <div id="petSuccessMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
+                        <i class="fa fa-check-circle"></i> Pet profile updated successfully!
+                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <!-- Error Message (hidden by default) -->
+                    <div id="petErrorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
+                        <i class="fa fa-exclamation-circle"></i> <span id="petErrorText"></span>
+                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="custom-modal-footer edit-pet-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditPetModal()">
+                    <i class="fa fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary edit-pet-save-btn" form="editPetForm">
+                    <i class="fa fa-heart"></i> Save Pet Info
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Canvas for Capturing Webcam Frame -->
+<canvas id="webcamCanvas" style="display:none;"></canvas>
+
+<!-- JavaScript for Modals, Webcam, and Photo Preview -->
+<script>
+// ==================== USER PROFILE MODAL ====================
+// Open Edit Profile Modal
+function openEditModal() {
+    document.getElementById('editProfileOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close Edit Profile Modal
+function closeEditModal() {
+    document.getElementById('editProfileOverlay').classList.remove('show');
+    document.body.style.overflow = 'auto';
+    stopWebcam(); // Stop webcam if it's running
+}
+
+// ==================== WEBCAM FUNCTIONS ====================
+let webcamStream = null;
+
+// Start Webcam
+function startWebcam() {
+    const video = document.getElementById('webcamVideo');
+    const webcamSection = document.getElementById('webcamSection');
+    const photoPreviewWrapper = document.getElementById('photoPreviewWrapper');
+
+    // Check for browser support
+    const constraints = { 
+        video: { 
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: false 
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function(stream) {
+            webcamStream = stream;
+            video.srcObject = stream;
+            
+            // Ensure video plays
+            video.onloadedmetadata = function() {
+                video.play().catch(function(error) {
+                    console.error('Error playing video:', error);
+                });
+            };
+            
+            webcamSection.style.display = 'block';
+            photoPreviewWrapper.style.display = 'none';
+            console.log('Webcam started successfully');
+        })
+        .catch(function(error) {
+            console.error('Error accessing webcam:', error);
+            let errorMsg = 'Unable to access webcam. ';
+            
+            if (error.name === 'NotAllowedError') {
+                errorMsg += 'Permission denied. Please allow camera access.';
+            } else if (error.name === 'NotFoundError') {
+                errorMsg += 'No camera found on this device.';
+            } else if (error.name === 'NotReadableError') {
+                errorMsg += 'Camera is already in use by another application.';
+            }
+            
+            alert(errorMsg);
+            showError(errorMsg);
+        });
+}
+
+// Stop Webcam
+function stopWebcam() {
+    const webcamSection = document.getElementById('webcamSection');
+    const photoPreviewWrapper = document.getElementById('photoPreviewWrapper');
+    const video = document.getElementById('webcamVideo');
+
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => {
+            track.stop();
+        });
+        webcamStream = null;
+    }
+
+    video.srcObject = null;
+    webcamSection.style.display = 'none';
+    photoPreviewWrapper.style.display = 'block';
+}
+
+// Capture Photo from Webcam
+function captureWebcamPhoto() {
+    const video = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('webcamCanvas');
+    const photoPreview = document.getElementById('photoPreview');
+
+    if (!video.videoWidth || !video.videoHeight) {
+        alert('Please wait for the camera to load before capturing.');
+        return;
+    }
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    // Convert canvas to image
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    photoPreview.src = imageData;
+
+    // Store the image data in a hidden input for form submission
+    document.getElementById('webcamImageData').value = imageData;
+
+    stopWebcam();
+    showSuccess('Photo captured successfully!');
+}
+
+// Helper function to show error message
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    errorText.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Helper function to show success message
+function showSuccess(message) {
+    const successDiv = document.getElementById('successMessage');
+    successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+    successDiv.style.display = 'block';
+    setTimeout(() => {
+        successDiv.style.display = 'none';
+    }, 5000);
+}
+
+// ==================== PET PROFILE MODAL ====================
+// Open Edit Pet Modal
+function openEditPetModal(petName) {
+    document.getElementById('editPetOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close Edit Pet Modal
+function closeEditPetModal() {
+    document.getElementById('editPetOverlay').classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+// ==================== MODAL OVERLAY HANDLERS ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Create hidden input for webcam image data
+    const form = document.getElementById('editProfileForm');
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.id = 'webcamImageData';
+    hiddenInput.name = 'webcamImageData';
+    hiddenInput.value = '';
+    form.appendChild(hiddenInput);
+
+    // User Profile Modal
+    var profileOverlay = document.getElementById('editProfileOverlay');
+    profileOverlay.addEventListener('click', function(event) {
+        if (event.target === profileOverlay) {
+            closeEditModal();
+        }
+    });
+
+    // Pet Profile Modal
+    var petOverlay = document.getElementById('editPetOverlay');
+    petOverlay.addEventListener('click', function(event) {
+        if (event.target === petOverlay) {
+            closeEditPetModal();
+        }
+    });
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeEditPetModal();
+        }
+    });
+});
+
+// ==================== PHOTO PREVIEW FUNCTIONS ====================
+// User Profile Photo Preview
+function previewPhoto(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreview').src = e.target.result;
+            // Show the preview and hide webcam section
+            document.getElementById('photoPreviewWrapper').style.display = 'block';
+            document.getElementById('webcamSection').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Pet Photo Preview
+function previewPetPhoto(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('petPhotoPreview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
