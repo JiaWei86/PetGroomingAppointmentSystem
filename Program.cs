@@ -8,9 +8,15 @@ app.UseStaticFiles();
 app.UseRouting();
 
 // Route for Customer area
+
+
 app.MapControllerRoute(
     name: "customer",
     pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name: "admin",
+    pattern: "{area=Admin}/{controller=Home}/{action=Index}/{id?}");
 
 // Default fallback route (optional)
 app.MapControllerRoute(
@@ -22,5 +28,7 @@ app.MapControllerRoute(
     name: "about",
     pattern: "about",
     defaults: new { controller = "Home", action = "About" });
+
+
 
 app.Run();
