@@ -1,0 +1,275 @@
+@{
+    ViewData["Title"] = "Appointment Management";
+    ViewData["ActivePage"] = "Appointment";
+}
+
+<div class="content-header">
+    <h1 class="page-title">Appointment Management</h1>
+    <p class="breadcrumb">Home / Appointments</p>
+</div>
+
+<!-- Filters Section -->
+<div class="panel">
+    <h3 class="panel-title">Filter Appointments</h3>
+    
+    <form method="get" class="form-grid filter-form">
+        <div class="form-group">
+            <label for="filterStatus">Status</label>
+            <select id="filterStatus" name="status" class="form-control">
+                <option value="">All Statuses</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Pending">Pending</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="filterGroomer">Groomer</label>
+            <select id="filterGroomer" name="groomerid" class="form-control">
+                <option value="">All Groomers</option>
+                <option value="1">Anna Lee</option>
+                <option value="2">Mark Chen</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="filterDate">Date</label>
+            <input type="date" id="filterDate" name="date" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <button type="reset" class="btn btn-reset">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Appointments Table -->
+<div class="panel">
+    <div class="panel-header-wrapper">
+        <h3 class="panel-title">All Appointments</h3>
+        <button class="btn btn-primary" onclick="showCreateForm()">+ New Appointment</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Appointment ID</th>
+                <th>Date & Time</th>
+                <th>Customer Name</th>
+                <th>Pet Name</th>
+                <th>Pet Type</th>
+                <th>Groomer</th>
+                <th>Service</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Appointment 1 -->
+            <tr>
+                <td>#APT001</td>
+                <td>Dec 29, 2025 - 09:00 AM</td>
+                <td>John Doe</td>
+                <td>Buddy</td>
+                <td>Dog</td>
+                <td>Anna Lee</td>
+                <td>Full Groom</td>
+                <td><span class="status-tag active">Confirmed</span></td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(1)">Edit</button>
+                    <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(1)">Delete</button>
+                </td>
+            </tr>
+
+            <!-- Appointment 2 -->
+            <tr>
+                <td>#APT002</td>
+                <td>Dec 30, 2025 - 10:30 AM</td>
+                <td>Sarah Johnson</td>
+                <td>Whiskers</td>
+                <td>Cat</td>
+                <td>Mark Chen</td>
+                <td>Bath & Trim</td>
+                <td><span class="status-tag active">Confirmed</span></td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(2)">Edit</button>
+                    <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(2)">Delete</button>
+                </td>
+            </tr>
+
+            <!-- Appointment 3 -->
+            <tr>
+                <td>#APT003</td>
+                <td>Jan 02, 2026 - 02:00 PM</td>
+                <td>Michael Smith</td>
+                <td>Max</td>
+                <td>Dog</td>
+                <td>Anna Lee</td>
+                <td>Nail Trim</td>
+                <td><span class="status-tag inactive">Pending</span></td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(3)">Edit</button>
+                    <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(3)">Delete</button>
+                </td>
+            </tr>
+
+            <!-- Appointment 4 -->
+            <tr>
+                <td>#APT004</td>
+                <td>Dec 28, 2025 - 03:30 PM</td>
+                <td>Emily Davis</td>
+                <td>Mittens</td>
+                <td>Cat</td>
+                <td>Mark Chen</td>
+                <td>Full Groom</td>
+                <td><span class="status-tag active">Completed</span></td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(4)">Edit</button>
+                    <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(4)">Delete</button>
+                </td>
+            </tr>
+
+            <!-- Appointment 5 -->
+            <tr>
+                <td>#APT005</td>
+                <td>Dec 27, 2025 - 11:00 AM</td>
+                <td>Robert Wilson</td>
+                <td>Fluffy</td>
+                <td>Dog</td>
+                <td>Anna Lee</td>
+                <td>Bath Only</td>
+                <td><span class="status-tag inactive">Cancelled</span></td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(5)">Edit</button>
+                    <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(5)">Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Create/Edit Appointment Form -->
+<div class="panel create-form" id="createAppointmentForm">
+    <h3 class="panel-title">Create New Appointment</h3>
+
+    <form asp-controller="Home" asp-action="CreateAppointment" method="post" class="form-grid">
+        <div class="form-group">
+            <label for="customerName">Customer Name</label>
+            <input type="text" id="customerName" name="CustomerName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="petName">Pet Name</label>
+            <input type="text" id="petName" name="PetName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="petType">Pet Type</label>
+            <select id="petType" name="PetType" required>
+                <option value="">Select Pet Type</option>
+                <option value="Dog">Dog</option>
+                <option value="Cat">Cat</option>
+                <option value="Rabbit">Rabbit</option>
+                <option value="Bird">Bird</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="appointmentDate">Appointment Date</label>
+            <input type="date" id="appointmentDate" name="AppointmentDate" required />
+        </div>
+
+        <div class="form-group">
+            <label for="appointmentTime">Appointment Time</label>
+            <input type="time" id="appointmentTime" name="AppointmentTime" required />
+        </div>
+
+        <div class="form-group">
+            <label for="groomer">Select Groomer</label>
+            <select id="groomer" name="GroomerId" required>
+                <option value="">Select a Groomer</option>
+                <option value="1">Anna Lee - Dog Styling, Senior Care</option>
+                <option value="2">Mark Chen - Cat Grooming, Nail Trimming</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="serviceType">Service Type</label>
+            <select id="serviceType" name="ServiceType" required>
+                <option value="">Select Service</option>
+                <option value="Full Groom">Full Groom</option>
+                <option value="Bath & Trim">Bath & Trim</option>
+                <option value="Nail Trim">Nail Trim</option>
+                <option value="Bath Only">Bath Only</option>
+                <option value="Styling">Styling</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="Status">
+                <option value="Pending">Pending</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="contactEmail">Contact Email</label>
+            <input type="email" id="contactEmail" name="ContactEmail" required />
+        </div>
+
+        <div class="form-group">
+            <label for="contactPhone">Contact Phone</label>
+            <input type="tel" id="contactPhone" name="ContactPhone" required />
+        </div>
+
+        <div class="form-group full-width">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="Notes" rows="4" placeholder="Add any special notes or instructions..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-reset" onclick="hideCreateForm()">Cancel</button>
+            <button type="submit" class="btn btn-success">Save Appointment</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function showCreateForm() {
+            document.getElementById('createAppointmentForm').classList.add('visible');
+            document.querySelector('html').style.overflow = 'hidden';
+        }
+
+        function hideCreateForm() {
+            document.getElementById('createAppointmentForm').classList.remove('visible');
+            document.querySelector('html').style.overflow = 'auto';
+        }
+
+        function editAppointment(id) {
+            alert('Edit functionality for appointment #' + id + ' would go here');
+            showCreateForm();
+        }
+
+        function deleteAppointment(id) {
+            if (confirm('Are you sure you want to delete this appointment?')) {
+                alert('Appointment #' + id + ' deleted successfully');
+                location.reload();
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const form = document.getElementById('createAppointmentForm');
+            if (event.target === form) {
+                hideCreateForm();
+            }
+        });
+    </script>
+}
