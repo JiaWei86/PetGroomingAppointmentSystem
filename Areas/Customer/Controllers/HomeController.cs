@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Demo123.Areas.Customer.Controllers
+namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 {
     [Area("Customer")]
     public class HomeController : Controller
@@ -21,6 +21,11 @@ namespace Demo123.Areas.Customer.Controllers
         }
 
         public IActionResult Appointment()
+        {
+            return View();
+        }
+
+        public IActionResult History()
         {
             return View();
         }

@@ -1,0 +1,433 @@
+﻿.appt-section {
+    --accent: #ff7a18;
+    --muted: #777;
+    --card: #fff;
+    font-family: Inter, Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+/* background wrapper */
+.appt-bg {
+    width: 100%;
+    padding: 40px 0;
+    background: linear-gradient(135deg,#F7D3CA 0%,A63939 100%);
+    box-sizing: border-box;
+}
+
+/*.appt-wrap {
+    max-width: 1250px;
+    margin: 0 auto;
+    padding: 40px;
+    background: black;*/ /*bg of calender */
+    /*border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    box-sizing: border-box;
+}*/
+
+.appt-row {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.card {
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.calendar-card {
+    width: 460px;
+}
+
+.form-card {
+    width: 520px;
+    min-height: 460px;
+}
+
+.cal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cal-title {
+    font-size: 22px;
+    font-weight: 700;
+    padding-top: 6px;
+    margin: 0;
+}
+
+.nav {
+    display: flex;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+    .nav button {
+        background: none;
+        border: 0;
+        font-weight: 700;
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        padding: 0;
+    }
+
+/* calendar grid */
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.days {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.day {
+    min-height: 56px;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+}
+
+    .day.outside {
+        color: #bdbdbd;
+        cursor: default;
+    }
+
+    .day .num {
+        min-width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        border-radius: 50%;
+        margin-right: 6px;
+        display: inline-block;
+    }
+
+    .day:hover:not(.outside) {
+        background: rgba(0,0,0,0.04);
+    }
+
+    .day.selected .num {
+        border: 2px solid #47b66a;
+    }
+
+    /* --- Closed (Monday) styling --- */
+    .day.closed {
+        opacity: 0.42; /* visually muted */
+        cursor: not-allowed;
+        pointer-events: none; /* prevents clicks if you prefer */
+    }
+
+        /* keep numbers visible but muted */
+        .day.closed .num {
+            border: none;
+            color: rgba(0,0,0,0.35);
+        }
+
+        /* optional small label inside the cell (if you want a "Closed" label) */
+        .day.closed::after {
+            content: "Closed";
+            font-size: 10px;
+            color: rgba(0,0,0,0.45);
+            position: absolute;
+            left: 8px;
+            top: 36px;
+            pointer-events: none;
+        }
+
+.status-dot {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* legend */
+.legend {
+    margin-top: 12px;
+    font-size: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    color: var(--muted);
+}
+
+.legend-row {
+    display: flex;
+    gap: 18px;
+    margin: 8px 0;
+    align-items: center;
+}
+
+.legend-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background-image: none !important;
+    opacity: 1 !important;
+    box-sizing: border-box;
+}
+
+    .legend-color.rateus {
+        background: #8e44ad !important;
+    }
+
+    .legend-color.visited {
+        background: #000 !important;
+    }
+
+    .legend-color.confirmed {
+        background: #47b66a !important;
+    }
+
+    .legend-color.noshow {
+        background: #9e9e9e !important;
+    }
+
+    .legend-color.pending {
+        background: #b71c46 !important;
+    }
+
+    .legend-color.unavailable {
+        background: #84d0c8 !important;
+    }
+
+/* pet grid (cards) */
+.pet-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pet-cards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.pet-card {
+    width: 140px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #fafafa;
+    box-sizing: border-box;
+}
+
+    .pet-card img {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+
+.pet-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pet-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #333;
+}
+
+.pet-meta {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.pet-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* add-new area */
+#newPetBlock {
+    display: none;
+    border: 1px dashed #eee;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    background: #fff;
+}
+
+.newpet-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    display: none;
+}
+
+    .newpet-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.field {
+    margin-bottom: 12px;
+}
+
+label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+input, select, textarea, button {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+textarea {
+    min-height: 90px;
+}
+
+.primary {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.muted {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.small-btn {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    cursor: pointer;
+}
+
+.note-small {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+}
+
+/* accessibility / clickable label tweaks */
+.pet-card {
+    user-select: none;
+}
+
+    .pet-card input[type="checkbox"] {
+        transform: scale(1.05);
+    }
+
+/* Success toast*/
+.appt-success-toast {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #fff;
+    color: #333;
+    padding: 18px 22px;
+    border-radius: 14px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.18);
+    border: 1px solid rgba(0,0,0,0.05);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 320ms ease;
+    z-index: 99999;
+    min-width: 300px;
+}
+
+    /* Visible state */
+    .appt-success-toast.show {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* green circle check */
+    .appt-success-toast .tick {
+        width: 50px;
+        height: 50px;
+        border-radius: 50px;
+        background: linear-gradient(180deg,#3ecf84,#27a35a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 18px rgba(39,163,90,0.28);
+        flex-shrink: 0;
+    }
+
+    /* Text block */
+    .appt-success-toast .msg {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .appt-success-toast .msg .title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #153b25;
+        }
+
+        .appt-success-toast .msg .sub {
+            font-size: 14px;
+            color: #576066;
+            margin-top: 3px;
+        }
+
+    /* small close 'x' */
+    .appt-success-toast .close {
+        margin-left: auto;
+        background: transparent;
+        border: none;
+        font-size: 18px;
+        color: rgba(0,0,0,0.45);
+        cursor: pointer;
+        padding: 6px;
+    }
