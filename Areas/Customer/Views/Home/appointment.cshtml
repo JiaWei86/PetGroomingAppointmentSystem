@@ -1,5 +1,439 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
+﻿@{
+    ViewData["Title"] = "Appointment";
 }
+
+<link rel="stylesheet" href="~/Customer/css/appointment.css"/>
+
+<section class="appt-section" aria-label="Appointment booking widget">
+    <div class="appt-bg">
+            <div class="appt-row">
+                <!-- Calendar card -->
+                <div class="card calendar-card" role="region" aria-label="appointments calendar">
+                    <div class="cal-head">
+                        <div class="cal-title" id="monthTitle">Month Year</div>
+                        <div class="nav">
+                            <button id="prevBtn">PREV</button>
+                            <button id="nextBtn">NEXT</button>
+                        </div>
+                    </div>
+
+                    <div class="weekdays" aria-hidden="true">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+
+                    <div class="days" id="daysGrid"></div>
+
+                    <div class="legend" aria-hidden="true">
+                        <div class="legend-row">
+                            <div class="legend-item"><span class="legend-color rateus"></span><span class="muted">Rate Us</span></div>
+                            <div class="legend-item"><span class="legend-color visited"></span><span class="muted">Visited</span></div>
+                            <div class="legend-item"><span class="legend-color confirmed"></span><span class="muted">Confirmed</span></div>
+                        </div>
+                        <div class="legend-row">
+                            <div class="legend-item"><span class="legend-color noshow"></span><span class="muted">No Show</span></div>
+                            <div class="legend-item"><span class="legend-color pending"></span><span class="muted">Pending Confirmation</span></div>
+                            <div class="legend-item"><span class="legend-color unavailable"></span><span class="muted">Consultant not available</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form card -->
+                <div class="card form-card" id="formPanel" aria-live="polite">
+                    <div id="formPlaceholder" class="muted">Select a date (today or a future date) to show the booking form.</div>
+
+                    <form id="apptForm" style="display:none;" onsubmit="return false;">
+                        <div class="field">
+                            <label>Selected Date</label>
+                            <input id="selectedDateText" type="text" readonly />
+                        </div>
+
+                        <div class="field">
+                            <label for="categorySelect">Category</label>
+                            <select id="categorySelect" required>
+                                <option value="" disabled selected>-- Select category --</option>
+                                <option value="dog">Dog</option>
+                                <option value="cat">Cat</option>
+                            </select>
+                        </div>
+
+                        <div class="field pet-grid">
+                            <label>Choose Pet(s)</label>
+                            <div id="petCards" class="pet-cards" aria-live="polite"></div>
+                            <div class="note-small">Tick one or more pets to book for multiple pets. If your pet isn't listed, press "Add new pet".</div>
+
+                            <div class="pet-actions">
+                                <button type="button" id="showAddNewBtn" class="small-btn">Add new pet</button>
+                            </div>
+
+                            <div id="newPetBlock">
+                                <div class="field">
+                                    <label>New Pet Name</label>
+                                    <input id="newPetName" placeholder="Pet name" />
+                                </div>
+                                <div class="field">
+                                    <label>New Pet Type</label>
+                                    <input id="newPetType" readonly />
+                                </div>
+                                <div class="field">
+                                    <label>Photo (optional)</label>
+                                    <input id="newPetPhoto" type="file" accept="image/*" />
+                                    <div class="note-small">Choose a photo from your album. If you skip this, a placeholder will be used.</div>
+                                    <div class="newpet-preview" id="newPetPreview">
+                                        <img id="newPetPreviewImg" src="" alt="Preview" />
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+                                    <button type="button" id="savePetBtn" class="small-btn">Save Pet</button>
+                                    <button type="button" id="cancelNewPetBtn" class="small-btn">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="timeSelect">Choose Time (before 17:00)</label>
+                            <select id="timeSelect" required></select>
+                            <div class="muted">Bookings are not available for times ≥ 17:00.</div>
+                        </div>
+
+                        <div class="field">
+                            <label for="groomerSelect">Choose Groomer (optional)</label>
+                            <select id="groomerSelect">
+                                <option value="any">Any available</option>
+                                <option value="alice">Alice</option>
+                                <option value="ben">Ben</option>
+                                <option value="cara">Cara</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label>Special Requests</label>
+                            <textarea id="notes" placeholder="Allergies, behaviour, medication..."></textarea>
+                        </div>
+
+                        <div class="field">
+                            <button id="submitBtn" class="primary">Submit Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+    </div>
+
+    <!-- Success toast (UI only; styles live in appointment.css) -->
+    <div id="apptSuccessToast" class="appt-success-toast" aria-live="polite" role="status" style="display:none;">
+        <div class="tick" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </div>
+        <div class="msg">
+            <div class="title">Appointment submitted</div>
+            <div class="sub">Your request has been received.</div>
+        </div>
+        <button class="close" id="apptSuccessClose" aria-label="Close">&times;</button>
+    </div>
+</section>
+
+    <script>
+        (function(){
+          // placeholder image path (local path available in project)
+          const PLACEHOLDER_IMG = '/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png';
+
+          // sample user pets (replace with server-side data in production)
+          const userPets = [
+            { id:'p1', name:'Buddy', category:'dog', photo: PLACEHOLDER_IMG },
+            { id:'p2', name:'Bella', category:'dog', photo: PLACEHOLDER_IMG },
+            { id:'p3', name:'Milo',  category:'cat', photo: PLACEHOLDER_IMG }
+          ];
+
+          // DOM refs
+          const daysGrid = document.getElementById('daysGrid');
+          const monthTitle = document.getElementById('monthTitle');
+          const prevBtn = document.getElementById('prevBtn');
+          const nextBtn = document.getElementById('nextBtn');
+
+          const formPlaceholder = document.getElementById('formPlaceholder');
+          const apptForm = document.getElementById('apptForm');
+          const selectedDateText = document.getElementById('selectedDateText');
+
+          const categorySelect = document.getElementById('categorySelect');
+          const petCards = document.getElementById('petCards');
+          const showAddNewBtn = document.getElementById('showAddNewBtn');
+          const newPetBlock = document.getElementById('newPetBlock');
+          const newPetName = document.getElementById('newPetName');
+          const newPetType = document.getElementById('newPetType');
+          const newPetPhoto = document.getElementById('newPetPhoto');
+          const newPetPreview = document.getElementById('newPetPreview');
+          const newPetPreviewImg = document.getElementById('newPetPreviewImg');
+          const savePetBtn = document.getElementById('savePetBtn');
+          const cancelNewPetBtn = document.getElementById('cancelNewPetBtn');
+
+          const timeSelect = document.getElementById('timeSelect');
+          const groomerSelect = document.getElementById('groomerSelect');
+          const notes = document.getElementById('notes');
+          const submitBtn = document.getElementById('submitBtn');
+
+          // success toast elements & helpers (if using toast)
+          const toast = document.getElementById('apptSuccessToast');
+          const toastClose = document.getElementById('apptSuccessClose');
+
+          let state = new Date(); state.setDate(1);
+
+          function pad(n){ return String(n).padStart(2,'0'); }
+          function isAllowed(dateObj){ const t=new Date(); t.setHours(0,0,0,0); return dateObj.getTime() >= t.getTime(); }
+
+          function generateSlots(startH=9,endH=16,interval=30){
+            const slots=[]; const start=startH*60; const end=endH*60+30;
+            for(let t=start;t<=end;t+=interval){
+              const hh=String(Math.floor(t/60)).padStart(2,'0'); const mm=String(t%60).padStart(2,'0');
+              slots.push(`${hh}:${mm}`);
+            }
+            return slots;
+          }
+
+          function populateTimeSlots(){
+            timeSelect.innerHTML='';
+            const ph=document.createElement('option'); ph.value=''; ph.textContent='-- Select time --';
+            timeSelect.appendChild(ph);
+            generateSlots().forEach(s=>{
+              const o=document.createElement('option'); o.value=s; o.textContent=s; timeSelect.appendChild(o);
+            });
+          }
+
+          // calendar render
+          function render(){
+            daysGrid.innerHTML=''; const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            monthTitle.textContent = `${monthNames[state.getMonth()]} ${state.getFullYear()}`;
+            const year = state.getFullYear(), month = state.getMonth();
+            const first = new Date(year, month, 1), startDay = first.getDay();
+            const daysInMonth = new Date(year, month+1, 0).getDate();
+            const prevDays = new Date(year, month, 0).getDate();
+            const sampleMarks = sampleMarksForMonth(state);
+
+            for(let i=0;i<42;i++){
+              const cell=document.createElement('div'); cell.className='day';
+              let dayNum, cellDate, outside=false;
+              const index = i - startDay + 1;
+              if(index <= 0){ dayNum = prevDays + index; outside = true; cellDate = new Date(year, month-1, dayNum); }
+              else if(index > daysInMonth){ dayNum = index - daysInMonth; outside = true; cellDate = new Date(year, month+1, dayNum); }
+              else { dayNum = index; cellDate = new Date(year, month, dayNum); }
+
+              // mark outside days visually if needed
+              if(outside) cell.classList.add('outside');
+
+              // mark Monday as closed: JS identifies Mondays (getDay() === 1)
+              const isMonday = (cellDate.getDay() === 1);
+              if(isMonday){
+                cell.classList.add('closed');
+                // keep aria information
+                cell.setAttribute('aria-disabled', 'true');
+              }
+
+              const num = document.createElement('span'); num.className='num'; num.textContent = dayNum; cell.appendChild(num);
+
+              const y = cellDate.getFullYear(), m = pad(cellDate.getMonth()+1), d = pad(cellDate.getDate());
+              const key = `${y}-${m}-${d}`; const status = sampleMarks[key];
+              if(status){ cell.classList.add('status-'+status); const dot=document.createElement('span'); dot.className='status-dot'; cell.appendChild(dot); }
+
+              // selectable only if visible month day (not outside), >= today, and NOT Monday (closed)
+              if(!outside && isAllowed(cellDate) && !isMonday){
+                cell.addEventListener('click', function(){
+                  const prev = daysGrid.querySelector('.day.selected'); if(prev) prev.classList.remove('selected');
+                  cell.classList.add('selected');
+                  showFormForDate(cellDate);
+                });
+              } else {
+                // if user tries to click a closed day but pointer-events allowed, we can show a message
+                // (if you use pointer-events:none in CSS for .day.closed then this won't fire)
+                cell.addEventListener('click', function(e){
+                  if (isMonday) {
+                    e.preventDefault();
+                    alert('Closed on Mondays — please select another date.');
+                  }
+                });
+                cell.classList.add('outside');
+              }
+              daysGrid.appendChild(cell);
+            }
+          }
+
+          function sampleMarksForMonth(dt){
+            const y=dt.getFullYear(), m=pad(dt.getMonth()+1); const base={};
+            base[`${y}-${m}-05`] = 'visited'; base[`${y}-${m}-12`] = 'pending'; base[`${y}-${m}-18`] = 'noshow';
+            base[`${y}-${m}-24`] = 'confirmed'; base[`${y}-${m}-02`] = 'rateus'; base[`${y}-${m}-27`] = 'unavailable';
+            return base;
+          }
+
+          // Guard showFormForDate: do not open form if date is Monday (extra safety)
+          function showFormForDate(dateObj){
+            if(dateObj.getDay() === 1){ // 1 = Monday
+              // user-friendly message
+              alert('Sorry — we are closed on Mondays. Please choose another date.');
+              return;
+            }
+            selectedDateText.value = `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}`;
+            populateTimeSlots();
+            apptForm.style.display = 'block';
+            formPlaceholder.style.display = 'none';
+          }
+
+          function hideForm(){
+            apptForm.style.display='none';
+            formPlaceholder.style.display='block';
+            const prevSel = daysGrid.querySelector('.day.selected'); if(prevSel) prevSel.classList.remove('selected');
+          }
+
+          // pet cards render
+          function renderPetCards(){
+            const cat = categorySelect.value;
+            petCards.innerHTML='';
+            if(!cat){
+              petCards.innerHTML = '<div class="note-small">Choose a category to see pets.</div>';
+              return;
+            }
+            const list = userPets.filter(p => p.category === cat);
+            if(list.length === 0){
+              petCards.innerHTML = '<div class="note-small">No saved pets for this category. Click "Add new pet" to add one.</div>';
+            } else {
+              list.forEach(p=>{
+                const card=document.createElement('label'); card.className='pet-card'; card.setAttribute('data-id', p.id);
+
+                const img=document.createElement('img'); img.src=p.photo || PLACEHOLDER_IMG; img.alt=p.name;
+                const info=document.createElement('div'); info.className='pet-info';
+                const nm=document.createElement('div'); nm.className='pet-name'; nm.textContent=p.name;
+                const meta=document.createElement('div'); meta.className='pet-meta'; meta.textContent = (p.category==='dog'?'Dog':'Cat');
+                info.appendChild(nm); info.appendChild(meta);
+
+                const checkboxWrap=document.createElement('div'); checkboxWrap.className='pet-checkbox';
+                const cb=document.createElement('input'); cb.type='checkbox'; cb.value=p.id; cb.className='pet-checkbox-input';
+                checkboxWrap.appendChild(cb);
+
+                card.appendChild(img); card.appendChild(info); card.appendChild(checkboxWrap);
+
+                // click toggles checkbox (except when clicking the actual input)
+                card.addEventListener('click', function(e){ if(e.target === cb) return; cb.checked = !cb.checked; });
+
+                petCards.appendChild(card);
+              });
+            }
+          }
+
+          // add-new flow
+          function startAddNewPet(){
+            if(!categorySelect.value){ alert('Please select Category first (Dog / Cat)'); return; }
+            categorySelect.disabled = true;
+            newPetType.value = (categorySelect.value === 'dog' ? 'Dog' : 'Cat');
+            newPetBlock.style.display = 'block';
+            newPetPreview.style.display = 'none';
+            newPetPreviewImg.src = '';
+            newPetName.focus();
+          }
+
+          function cancelAddNewPet(){
+            newPetBlock.style.display='none';
+            newPetName.value=''; newPetType.value=''; newPetPhoto.value=''; newPetPreviewImg.src=''; newPetPreview.style.display='none';
+            categorySelect.disabled = false;
+            renderPetCards();
+          }
+
+          newPetPhoto.addEventListener('change', function(){
+            const file = this.files && this.files[0];
+            if(!file){ newPetPreviewImg.src=''; newPetPreview.style.display='none'; return; }
+            const reader = new FileReader();
+            reader.onload = function(ev){ newPetPreviewImg.src = ev.target.result; newPetPreview.style.display = 'block'; };
+            reader.readAsDataURL(file);
+          });
+
+          function saveNewPet(){
+            const cat = categorySelect.value; const name = newPetName.value.trim();
+            if(!cat){ alert('Choose category first.'); return; }
+            if(!name){ alert('Enter pet name.'); newPetName.focus(); return; }
+            const file = newPetPhoto.files && newPetPhoto.files[0];
+            if(file){
+              const reader = new FileReader();
+              reader.onload = function(ev){ pushNewPet(name, cat, ev.target.result); };
+              reader.readAsDataURL(file);
+            } else pushNewPet(name, cat, PLACEHOLDER_IMG);
+          }
+
+          function pushNewPet(name, cat, imgSrc){
+            const id = 'p' + Date.now();
+            userPets.push({ id, name, category: cat, photo: imgSrc });
+            categorySelect.disabled = false;
+            newPetBlock.style.display='none';
+            newPetName.value=''; newPetType.value=''; newPetPhoto.value=''; newPetPreviewImg.src=''; newPetPreview.style.display='none';
+            renderPetCards();
+            setTimeout(()=>{ const cb = petCards.querySelector(`input.pet-checkbox-input[value="${id}"]`); if(cb) cb.checked = true; }, 50);
+          }
+
+          function getSelectedPets(){
+            const checks = Array.from(petCards.querySelectorAll('input.pet-checkbox-input')).filter(i=>i.checked);
+            const ids = checks.map(i=>i.value);
+            return ids.map(id => userPets.find(p => p.id === id)).filter(Boolean);
+          }
+
+          // toast helpers if you use the toast
+          function showSuccessToast() {
+            if(!toast) return;
+            toast.style.display = 'flex';
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => hideSuccessToast(), 3000);
+          }
+          function hideSuccessToast() {
+            if(!toast) return;
+            toast.classList.remove('show');
+            clearTimeout(toast._removeTimer);
+            toast._removeTimer = setTimeout(()=> { toast.style.display = 'none'; }, 350);
+          }
+          if(toastClose) toastClose.addEventListener('click', hideSuccessToast);
+
+          // event wiring
+          prevBtn.addEventListener('click', ()=>{ state.setMonth(state.getMonth()-1); render(); hideForm(); });
+          nextBtn.addEventListener('click', ()=>{ state.setMonth(state.getMonth()+1); render(); hideForm(); });
+
+          categorySelect.addEventListener('change', ()=> renderPetCards());
+          showAddNewBtn.addEventListener('click', startAddNewPet);
+          cancelNewPetBtn.addEventListener('click', cancelAddNewPet);
+          saveNewPetBtn = savePetBtn.addEventListener('click', saveNewPet); // keep reference
+
+          submitBtn.addEventListener('click', ()=>{
+            // basic client validation
+            if(!selectedDateText.value){ alert('Please select a date.'); return; }
+            // block if selected date is Monday (defensive check)
+            const selDateParts = selectedDateText.value.split('-');
+            if(selDateParts.length===3){
+              const d = new Date(Number(selDateParts[0]), Number(selDateParts[1])-1, Number(selDateParts[2]));
+              if(d.getDay() === 1){ alert('Selected date is a Monday — we are closed on Mondays.'); return; }
+            }
+            if(!categorySelect.value){ alert('Please select a category.'); return; }
+            const selectedPets = getSelectedPets();
+            if(selectedPets.length === 0){ alert('Please tick at least one pet.'); return; }
+            if(!timeSelect.value){ alert('Please choose a time before 17:00.'); return; }
+
+            const payload = {
+              date: selectedDateText.value,
+              time: timeSelect.value,
+              category: categorySelect.value,
+              pets: selectedPets.map(p=>({ id:p.id, name:p.name, photo:p.photo })),
+              groomer: groomerSelect.value,
+              notes: notes.value.trim()
+            };
+
+            console.log('Appointment payload', payload);
+
+            // show success toast (green tick)
+            showSuccessToast();
+
+            // reset UI a little
+            hideForm();
+            render();
+          });
+
+          // init
+          populateTimeSlots();
+          render();
+          renderPetCards();
+        })();
+    </script>

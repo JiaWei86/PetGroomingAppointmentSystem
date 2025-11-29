@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - PetGrooming</title>
+
+    <!-- Force fresh CSS load -->
+    <link rel="stylesheet" href="~/staff/css/site.css?v=@DateTime.Now.Ticks" />
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div id="app-container">
+
+        <aside id="sidebar">
+            <div class="logo">
+                <i class="material-icons">pets</i>
+                Hajimi House
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a class="@(ViewData["ActivePage"] as string == "Dashboard" ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index"><i class="material-icons">dashboard</i> Dashboard</a></li>
+                    <li><a class="@(ViewData["ActivePage"] as string == "Groomers" ? "active" : "")" asp-area="" asp-controller="Groomer" asp-action="Index"><i class="material-icons">person</i> Groomers</a></li>
+                    <li><a class="@(ViewData["ActivePage"] as string == "Appointment" ? "active" : "")" asp-controller="Home" asp-action="Appointment"><i class="material-icons">event</i> Appointments</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div id="main-content-wrapper">
+
+            <header id="topbar">
+                <div class="search-bar">
+                    <i class="material-icons">search</i>
+                    <input type="text" placeholder="Search here..." />
+                </div>
+                <div class="user-profile">
+                    <span>Stebin Ben</span>
+                    <i class="material-icons">account_circle</i>
+                </div>
+            </header>
+
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+
+        </div>
+    </div>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,518 @@
+/* ============================================
+   CUSTOM MODAL STYLING - SHARED
+   ============================================ */
+
+.custom-modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+.custom-modal-overlay.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-modal-dialog {
+    background-color: #fafafa;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(255, 149, 0, 0.15);
+    max-width: 700px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideDown 0.3s ease;
+}
+
+.custom-modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+.custom-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #ffe4cc;
+    border-radius: 15px 15px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-modal-title {
+    margin: 0;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.custom-modal-title i {
+    font-size: 1.5rem;
+}
+
+.custom-close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #ffffff;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.custom-close-btn:hover {
+    transform: scale(1.2);
+}
+
+.custom-modal-body {
+    padding: 30px;
+    background: #fafafa;
+}
+
+.custom-modal-footer {
+    padding: 20px;
+    background: #ffffff;
+    border-top: 1px solid #ffe4cc;
+    border-radius: 0 0 15px 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* ============================================
+   EDIT USER PROFILE MODAL
+   ============================================ */
+
+.edit-profile-header {
+    background: linear-gradient(90deg, #ff9500 0%, #ff6b35 100%);
+    color: #ffffff;
+    border-radius: 15px 15px 0 0;
+}
+
+.edit-profile-body {
+    padding: 30px;
+    background: #fafafa;
+}
+
+.edit-profile-footer {
+    padding: 20px;
+    background: #ffffff;
+    border-top: 1px solid #ffe4cc;
+    border-radius: 0 0 15px 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Photo Upload Section */
+.photo-upload-section {
+    background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+    border: 2px dashed #ff9500;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.photo-preview-wrapper {
+    display: inline-block;
+    position: relative;
+}
+
+.photo-preview-wrapper img {
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+}
+
+.photo-upload-input input[type="file"] {
+    display: block;
+    padding: 10px;
+    border: 1px solid #ffe4cc;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: all 0.3s ease;
+}
+
+.photo-upload-input input[type="file"]:focus {
+    outline: none;
+    border-color: #ff9500;
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+}
+
+/* Form Input Styling */
+.edit-profile-input {
+    background: #ffffff;
+    border: 1px solid #ffe4cc;
+    border-radius: 8px;
+    padding: 12px 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.edit-profile-input:focus {
+    background: #ffffff;
+    border-color: #ff9500;
+    box-shadow: 0 0 0 3px rgba(255, 149, 0, 0.1);
+    outline: none;
+}
+
+.edit-profile-input::placeholder {
+    color: #999;
+}
+
+/* ============================================
+   EDIT PET PROFILE MODAL
+   ============================================ */
+
+.pet-modal-dialog {
+    max-width: 650px;
+}
+
+.edit-pet-modal {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 12px 45px rgba(255, 107, 53, 0.2);
+}
+
+.edit-pet-header {
+    background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+    padding: 24px;
+    border-radius: 15px 15px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.pet-header-content {
+    flex: 1;
+}
+
+.edit-pet-header .custom-modal-title {
+    margin: 0;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ffffff;
+}
+
+.pet-header-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    margin-top: 6px;
+}
+
+.edit-pet-body {
+    padding: 30px;
+    background: #ffffff;
+}
+
+/* Pet Photo Upload Section */
+.pet-photo-upload-section {
+    background: linear-gradient(135deg, #fff9f5 0%, #ffe8d9 100%);
+    border: 2px dashed #ff8c42;
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+}
+
+.pet-photo-preview-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.pet-photo-preview-wrapper img {
+    box-shadow: 0 6px 16px rgba(255, 107, 53, 0.25);
+}
+
+.pet-photo-overlay {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    border: 3px solid #ffffff;
+}
+
+.pet-photo-upload-input input[type="file"] {
+    display: block;
+    padding: 10px;
+    border: 1px solid #ffb28c;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: all 0.3s ease;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.pet-photo-upload-input input[type="file"]:focus {
+    outline: none;
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+/* Pet Form Labels */
+.pet-form-label {
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pet-form-label i {
+    color: #ff8c42;
+    font-size: 1rem;
+}
+
+.pet-form-label .text-danger {
+    margin-left: 3px;
+}
+
+/* Pet Form Inputs */
+.edit-pet-input {
+    background: #f9f9f9;
+    border: 1px solid #e8d9cc;
+    border-radius: 8px;
+    padding: 12px 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.edit-pet-input:focus {
+    background: #ffffff;
+    border-color: #ff8c42;
+    box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+    outline: none;
+}
+
+.edit-pet-input::placeholder {
+    color: #bbb;
+}
+
+.edit-pet-input option {
+    color: #333;
+}
+
+/* Pet Textarea */
+textarea.edit-pet-input {
+    resize: vertical;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.5;
+}
+
+/* Pet Divider */
+.pet-divider {
+    border: none;
+    border-top: 2px solid #f0e8df;
+    margin: 20px 0;
+}
+
+/* Pet Modal Footer */
+.edit-pet-footer {
+    padding: 20px 30px;
+    background: #fafafa;
+    border-top: 1px solid #e8d9cc;
+    border-radius: 0 0 15px 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.edit-pet-footer .btn {
+    padding: 10px 24px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.edit-pet-footer .btn-secondary {
+    background: #e9ecef;
+    color: #495057;
+    border: none;
+}
+
+.edit-pet-footer .btn-secondary:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
+
+.edit-pet-save-btn {
+    background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
+.edit-pet-save-btn:hover {
+    background: linear-gradient(135deg, #ff5722 0%, #ff7a3a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+
+@media (max-width: 576px) {
+    .custom-modal-dialog {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .custom-modal-body {
+        padding: 20px;
+    }
+
+    .custom-modal-header,
+    .custom-modal-footer {
+        padding: 15px;
+    }
+
+    .custom-modal-title {
+        font-size: 1.1rem;
+    }
+
+    /* Pet Modal Mobile */
+    .edit-pet-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .edit-pet-header .custom-modal-title {
+        font-size: 1.2rem;
+    }
+
+    .pet-header-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .edit-pet-body {
+        padding: 20px;
+    }
+
+    .edit-pet-footer {
+        padding: 15px 20px;
+        flex-direction: column-reverse;
+    }
+
+    .edit-pet-footer .btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .pet-photo-upload-section {
+        padding: 20px;
+    }
+
+    .pet-photo-preview-wrapper img {
+        width: 110px !important;
+        height: 110px !important;
+    }
+
+    .pet-photo-overlay {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+}
+
+/* ============================================
+   WEBCAM STYLING
+   ============================================ */
+
+.webcam-section {
+    background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%);
+    border: 2px dashed #ff9500;
+    border-radius: 12px;
+    padding: 15px;
+    display: none;
+}
+
+.webcam-video {
+    background: #000;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+}
+
+.webcam-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.webcam-controls .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.webcam-controls .btn-success {
+    background: #28a745;
+    color: #ffffff;
+    border: none;
+}
+
+.webcam-controls .btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.webcam-controls .btn-secondary {
+    background: #6c757d;
+    color: #ffffff;
+    border: none;
+}
+
+.webcam-controls .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
