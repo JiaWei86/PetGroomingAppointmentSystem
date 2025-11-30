@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Customer Login";
     Layout = null;
 }
@@ -24,7 +24,12 @@
                 <div class="alert alert-danger">@ViewData["Error"]</div>
             }
 
-            <form method="post">
+            @if (ViewData["Success"] != null)
+            {
+                <div class="alert alert-success">@ViewData["Success"]</div>
+            }
+
+            <form method="post" id="loginForm">
                 <div class="form-group">
                     <label for="phoneNumber">Phone Number</label>
                     <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Enter your phone number" required />
@@ -35,13 +40,60 @@
                     <input type="password" id="password" name="password" placeholder="Enter your password" required />
                 </div>
 
-                <button type="submit" class="btn-submit">Login</button>
+                @if (ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"])
+                {
+                    <div class="alert alert-warning" id="lockoutAlert">
+                        <strong>Account locked due to too many failed attempts.</strong>
+                        <br />
+                        Please try again in <span id="lockoutTimer">@ViewData["LockoutSeconds"]</span> seconds.
+                    </div>
+                    <button type="submit" class="btn-submit" disabled id="submitBtn">Login (Locked)</button>
+                }
+                else
+                {
+                    <button type="submit" class="btn-submit" id="submitBtn">Login</button>
+                }
             </form>
 
             <div class="auth-footer">
                 <p>Don't have an account? <a href="@Url.Action("Register", "Auth")">Register here</a></p>
+                <p><a href="@Url.Action("ForgotPassword", "Auth")">Forgot your password?</a></p>
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const lockoutSeconds = parseInt('@(ViewData["LockoutSeconds"] ?? "0")');
+            if (lockoutSeconds > 0) {
+                let remainingSeconds = lockoutSeconds;
+                const timerElement = document.getElementById('lockoutTimer');
+                const submitBtn = document.getElementById('submitBtn');
+                const lockoutAlert = document.getElementById('lockoutAlert');
+
+                const updateTimer = () => {
+                    if (timerElement) {
+                        timerElement.textContent = remainingSeconds;
+                    }
+                    
+                    remainingSeconds--;
+                    
+                    if (remainingSeconds < 0) {
+                        // Enable button and hide alert instead of reloading
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Login';
+                        }
+                        if (lockoutAlert) {
+                            lockoutAlert.style.display = 'none';
+                        }
+                    } else {
+                        setTimeout(updateTimer, 1000);
+                    }
+                };
+                updateTimer();
+            }
+        });
+    </script>
 </body>
 </html>

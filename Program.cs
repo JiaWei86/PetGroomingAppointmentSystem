@@ -1,34 +1,42 @@
+using PetGroomingAppointmentSystem.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add session support
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+});
+
+// Add MVC with Razor Pages
 builder.Services.AddControllersWithViews();
-builder.Services.AddSession();
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
-
-// Route for Customer area
-
+app.UseAuthorization();
 
 app.MapControllerRoute(
-    name: "customer",
-    pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
+    name: "areas",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
 
-app.MapControllerRoute(
-    name: "admin",
-    pattern: "{area=Admin}/{controller=Home}/{action=Index}/{id?}");
-
-// Default fallback route (optional)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Friendly route for About page (still works)
-app.MapControllerRoute(
-    name: "about",
-    pattern: "about",
-    defaults: new { controller = "Home", action = "About" });
-
+app.MapRazorPages();
 app.Run();
