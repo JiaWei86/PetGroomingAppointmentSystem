@@ -1,19 +1,35 @@
 ﻿@{
-    ViewData["Title"] = "Appointment";
+    ViewData["Title"] = "Book an Appointment";
 }
 
 <link rel="stylesheet" href="~/Customer/css/appointment.css"/>
 
 <section class="appt-section" aria-label="Appointment booking widget">
-    <div class="appt-bg">
+    <div class="appt-container">
+        <div class="appt-header">
+            <div class="appt-header-content">
+                <h1>Schedule Your Pet's Appointment</h1>
+                <p>Book a convenient time for grooming with our experienced professionals</p>
+            </div>
+        </div>
+
+        <div class="appt-bg">
             <div class="appt-row">
                 <!-- Calendar card -->
                 <div class="card calendar-card" role="region" aria-label="appointments calendar">
                     <div class="cal-head">
                         <div class="cal-title" id="monthTitle">Month Year</div>
                         <div class="nav">
-                            <button id="prevBtn">PREV</button>
-                            <button id="nextBtn">NEXT</button>
+                            <button id="prevBtn" class="nav-btn" aria-label="Previous month">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <button id="nextBtn" class="nav-btn" aria-label="Next month">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -23,6 +39,10 @@
 
                     <div class="days" id="daysGrid"></div>
 
+                    <div class="calendar-footer">
+                        <button type="button" id="todayBtn" class="today-btn">Today</button>
+                    </div>
+
                     <div class="legend" aria-hidden="true">
                         <div class="legend-row">
                             <div class="legend-item"><span class="legend-color rateus"></span><span class="muted">Rate Us</span></div>
@@ -31,409 +51,648 @@
                         </div>
                         <div class="legend-row">
                             <div class="legend-item"><span class="legend-color noshow"></span><span class="muted">No Show</span></div>
-                            <div class="legend-item"><span class="legend-color pending"></span><span class="muted">Pending Confirmation</span></div>
-                            <div class="legend-item"><span class="legend-color unavailable"></span><span class="muted">Consultant not available</span></div>
+                            <div class="legend-item"><span class="legend-color pending"></span><span class="muted">Pending</span></div>
+                            <div class="legend-item"><span class="legend-color unavailable"></span><span class="muted">Unavailable</span></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Form card -->
                 <div class="card form-card" id="formPanel" aria-live="polite">
-                    <div id="formPlaceholder" class="muted">Select a date (today or a future date) to show the booking form.</div>
+                    <div id="formPlaceholder" class="form-placeholder">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <p>Select a date to show the booking form</p>
+                        <small>Choose today or any future date</small>
+                    </div>
 
-                    <form id="apptForm" style="display:none;" onsubmit="return false;">
-                        <div class="field">
-                            <label>Selected Date</label>
-                            <input id="selectedDateText" type="text" readonly />
-                        </div>
+                    <form id="apptForm" style="display:none;" onsubmit="return false;" class="appt-form">
+                        <fieldset>
+                            <legend>Booking Details</legend>
 
-                        <div class="field">
-                            <label for="categorySelect">Category</label>
-                            <select id="categorySelect" required>
-                                <option value="" disabled selected>-- Select category --</option>
-                                <option value="dog">Dog</option>
-                                <option value="cat">Cat</option>
-                            </select>
-                        </div>
-
-                        <div class="field pet-grid">
-                            <label>Choose Pet(s)</label>
-                            <div id="petCards" class="pet-cards" aria-live="polite"></div>
-                            <div class="note-small">Tick one or more pets to book for multiple pets. If your pet isn't listed, press "Add new pet".</div>
-
-                            <div class="pet-actions">
-                                <button type="button" id="showAddNewBtn" class="small-btn">Add new pet</button>
+                            <div class="form-group">
+                                <label class="form-label">Selected Date</label>
+                                <input id="selectedDateText" type="text" readonly class="form-control date-display" />
                             </div>
 
-                            <div id="newPetBlock">
-                                <div class="field">
-                                    <label>New Pet Name</label>
-                                    <input id="newPetName" placeholder="Pet name" />
+                            <div class="form-group">
+                                <label for="categorySelect" class="form-label">Pet Category <span class="required">*</span></label>
+                                <select id="categorySelect" required class="form-control">
+                                    <option value="" disabled selected>-- Select category --</option>
+                                    <option value="dog">🐕 Dog</option>
+                                    <option value="cat">🐱 Cat</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group pet-grid">
+                                <label class="form-label">Choose Pet(s) <span class="required">*</span></label>
+                                <div id="petCards" class="pet-cards" aria-live="polite"></div>
+                                <div class="form-hint">Select one or more pets for the appointment</div>
+
+                                <div class="pet-actions">
+                                    <button type="button" id="showAddNewBtn" class="btn btn-secondary btn-sm">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                        Add New Pet
+                                    </button>
                                 </div>
-                                <div class="field">
-                                    <label>New Pet Type</label>
-                                    <input id="newPetType" readonly />
-                                </div>
-                                <div class="field">
-                                    <label>Photo (optional)</label>
-                                    <input id="newPetPhoto" type="file" accept="image/*" />
-                                    <div class="note-small">Choose a photo from your album. If you skip this, a placeholder will be used.</div>
-                                    <div class="newpet-preview" id="newPetPreview">
-                                        <img id="newPetPreviewImg" src="" alt="Preview" />
+
+                                <div id="newPetBlock" class="new-pet-block">
+                                    <h4>Add New Pet</h4>
+                                    <div class="form-group">
+                                        <label for="newPetName" class="form-label">Pet Name <span class="required">*</span></label>
+                                        <input id="newPetName" type="text" placeholder="e.g., Buddy" class="form-control" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPetType" class="form-label">Pet Type</label>
+                                        <input id="newPetType" type="text" readonly class="form-control" disabled />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPetPhoto" class="form-label">Photo (Optional)</label>
+                                        <div class="file-upload">
+                                            <input id="newPetPhoto" type="file" accept="image/*" class="file-input" />
+                                            <label for="newPetPhoto" class="file-label">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                                </svg>
+                                                Choose photo
+                                            </label>
+                                        </div>
+                                        <div class="newpet-preview" id="newPetPreview">
+                                            <img id="newPetPreviewImg" src="" alt="Preview" />
+                                        </div>
+                                        <small class="form-hint">JPG, PNG up to 5MB</small>
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <button type="button" id="savePetBtn" class="btn btn-primary btn-sm">Save Pet</button>
+                                        <button type="button" id="cancelNewPetBtn" class="btn btn-outline btn-sm">Cancel</button>
                                     </div>
                                 </div>
-
-                                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-                                    <button type="button" id="savePetBtn" class="small-btn">Save Pet</button>
-                                    <button type="button" id="cancelNewPetBtn" class="small-btn">Cancel</button>
-                                </div>
                             </div>
-                        </div>
+                        </fieldset>
 
-                        <div class="field">
-                            <label for="timeSelect">Choose Time (before 17:00)</label>
-                            <select id="timeSelect" required></select>
-                            <div class="muted">Bookings are not available for times ≥ 17:00.</div>
-                        </div>
+                        <fieldset>
+                            <legend>Service Details</legend>
 
-                        <div class="field">
-                            <label for="groomerSelect">Choose Groomer (optional)</label>
-                            <select id="groomerSelect">
-                                <option value="any">Any available</option>
-                                <option value="alice">Alice</option>
-                                <option value="ben">Ben</option>
-                                <option value="cara">Cara</option>
-                            </select>
-                        </div>
+                            <div class="form-group">
+                                <label for="timeSelect" class="form-label">Preferred Time <span class="required">*</span></label>
+                                <select id="timeSelect" required class="form-control">
+                                    <option value="" disabled selected>-- Select time --</option>
+                                </select>
+                                <small class="form-hint">Available 9:00 AM - 4:30 PM</small>
+                            </div>
 
-                        <div class="field">
-                            <label>Special Requests</label>
-                            <textarea id="notes" placeholder="Allergies, behaviour, medication..."></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="groomerSelect" class="form-label">Preferred Groomer</label>
+                                <select id="groomerSelect" class="form-control">
+                                    <option value="any">Any Available</option>
+                                    <option value="alice">👩‍💼 Alice</option>
+                                    <option value="ben">👨‍💼 Ben</option>
+                                    <option value="cara">👩‍💼 Cara</option>
+                                </select>
+                                <small class="form-hint">Leave blank for automatic assignment</small>
+                            </div>
 
-                        <div class="field">
-                            <button id="submitBtn" class="primary">Submit Request</button>
+                            <div class="form-group">
+                                <label for="notes" class="form-label">Special Requests</label>
+                                <textarea id="notes" placeholder="Allergies, behavior notes, special instructions..." class="form-control" rows="4"></textarea>
+                                <small class="form-hint" id="charCount">0 / 500 characters</small>
+                            </div>
+                        </fieldset>
+
+                        <div class="form-actions-main">
+                            <button id="submitBtn" type="button" class="btn btn-primary btn-lg">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Submit Appointment Request
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
-    </div>
+        </div>
 
-    <!-- Success toast (UI only; styles live in appointment.css) -->
-    <div id="apptSuccessToast" class="appt-success-toast" aria-live="polite" role="status" style="display:none;">
-        <div class="tick" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+        <!-- Success toast -->
+        <div id="apptSuccessToast" class="appt-toast appt-toast--success" aria-live="polite" role="status" style="display:none;">
+            <div class="toast-content">
+                <div class="toast-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <div class="toast-body">
+                    <div class="toast-title">Appointment Request Submitted!</div>
+                    <div class="toast-message">We'll confirm your booking shortly</div>
+                </div>
+                <button class="toast-close" id="apptSuccessClose" aria-label="Close notification">&times;</button>
+            </div>
         </div>
-        <div class="msg">
-            <div class="title">Appointment submitted</div>
-            <div class="sub">Your request has been received.</div>
+
+        <!-- Error toast -->
+        <div id="apptErrorToast" class="appt-toast appt-toast--error" aria-live="polite" role="alert" style="display:none;">
+            <div class="toast-content">
+                <div class="toast-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="toast-body">
+                    <div class="toast-title">Error</div>
+                    <div class="toast-message" id="errorToastMsg">Please fill in all required fields</div>
+                </div>
+                <button class="toast-close" id="apptErrorClose" aria-label="Close notification">&times;</button>
+            </div>
         </div>
-        <button class="close" id="apptSuccessClose" aria-label="Close">&times;</button>
     </div>
 </section>
 
-    <script>
-        (function(){
-          // placeholder image path (local path available in project)
-          const PLACEHOLDER_IMG = '/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png';
+<script>
+    (function(){
+        // Configuration
+        const CONFIG = {
+            PLACEHOLDER_IMG: '/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png',
+            TIME_START: 9,
+            TIME_END: 16,
+            TIME_INTERVAL: 30,
+            TOAST_DURATION: 3500,
+            MAX_NOTES_LENGTH: 500,
+            CLOSED_DAYS: [1] // Monday
+        };
 
-          // sample user pets (replace with server-side data in production)
-          const userPets = [
-            { id:'p1', name:'Buddy', category:'dog', photo: PLACEHOLDER_IMG },
-            { id:'p2', name:'Bella', category:'dog', photo: PLACEHOLDER_IMG },
-            { id:'p3', name:'Milo',  category:'cat', photo: PLACEHOLDER_IMG }
-          ];
+        // Initial user pets
+        const userPets = [
+            { id:'p1', name:'Buddy', category:'dog', photo: CONFIG.PLACEHOLDER_IMG },
+            { id:'p2', name:'Bella', category:'dog', photo: CONFIG.PLACEHOLDER_IMG },
+            { id:'p3', name:'Milo',  category:'cat', photo: CONFIG.PLACEHOLDER_IMG }
+        ];
 
-          // DOM refs
-          const daysGrid = document.getElementById('daysGrid');
-          const monthTitle = document.getElementById('monthTitle');
-          const prevBtn = document.getElementById('prevBtn');
-          const nextBtn = document.getElementById('nextBtn');
+        // DOM Elements
+        const elements = {
+            daysGrid: document.getElementById('daysGrid'),
+            monthTitle: document.getElementById('monthTitle'),
+            prevBtn: document.getElementById('prevBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            todayBtn: document.getElementById('todayBtn'),
+            formPlaceholder: document.getElementById('formPlaceholder'),
+            apptForm: document.getElementById('apptForm'),
+            selectedDateText: document.getElementById('selectedDateText'),
+            categorySelect: document.getElementById('categorySelect'),
+            petCards: document.getElementById('petCards'),
+            showAddNewBtn: document.getElementById('showAddNewBtn'),
+            newPetBlock: document.getElementById('newPetBlock'),
+            newPetName: document.getElementById('newPetName'),
+            newPetType: document.getElementById('newPetType'),
+            newPetPhoto: document.getElementById('newPetPhoto'),
+            newPetPreview: document.getElementById('newPetPreview'),
+            newPetPreviewImg: document.getElementById('newPetPreviewImg'),
+            savePetBtn: document.getElementById('savePetBtn'),
+            cancelNewPetBtn: document.getElementById('cancelNewPetBtn'),
+            timeSelect: document.getElementById('timeSelect'),
+            groomerSelect: document.getElementById('groomerSelect'),
+            notes: document.getElementById('notes'),
+            charCount: document.getElementById('charCount'),
+            submitBtn: document.getElementById('submitBtn'),
+            successToast: document.getElementById('apptSuccessToast'),
+            errorToast: document.getElementById('apptErrorToast'),
+            successClose: document.getElementById('apptSuccessClose'),
+            errorClose: document.getElementById('apptErrorClose'),
+            errorMsg: document.getElementById('errorToastMsg')
+        };
 
-          const formPlaceholder = document.getElementById('formPlaceholder');
-          const apptForm = document.getElementById('apptForm');
-          const selectedDateText = document.getElementById('selectedDateText');
+        let calendarState = new Date();
+        calendarState.setDate(1);
 
-          const categorySelect = document.getElementById('categorySelect');
-          const petCards = document.getElementById('petCards');
-          const showAddNewBtn = document.getElementById('showAddNewBtn');
-          const newPetBlock = document.getElementById('newPetBlock');
-          const newPetName = document.getElementById('newPetName');
-          const newPetType = document.getElementById('newPetType');
-          const newPetPhoto = document.getElementById('newPetPhoto');
-          const newPetPreview = document.getElementById('newPetPreview');
-          const newPetPreviewImg = document.getElementById('newPetPreviewImg');
-          const savePetBtn = document.getElementById('savePetBtn');
-          const cancelNewPetBtn = document.getElementById('cancelNewPetBtn');
+        // Utility Functions
+        function pad(n) { return String(n).padStart(2, '0'); }
+        function isAllowed(dateObj) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return dateObj.getTime() >= today.getTime();
+        }
+        function isClosedDay(dateObj) {
+            return CONFIG.CLOSED_DAYS.includes(dateObj.getDay());
+        }
 
-          const timeSelect = document.getElementById('timeSelect');
-          const groomerSelect = document.getElementById('groomerSelect');
-          const notes = document.getElementById('notes');
-          const submitBtn = document.getElementById('submitBtn');
-
-          // success toast elements & helpers (if using toast)
-          const toast = document.getElementById('apptSuccessToast');
-          const toastClose = document.getElementById('apptSuccessClose');
-
-          let state = new Date(); state.setDate(1);
-
-          function pad(n){ return String(n).padStart(2,'0'); }
-          function isAllowed(dateObj){ const t=new Date(); t.setHours(0,0,0,0); return dateObj.getTime() >= t.getTime(); }
-
-          function generateSlots(startH=9,endH=16,interval=30){
-            const slots=[]; const start=startH*60; const end=endH*60+30;
-            for(let t=start;t<=end;t+=interval){
-              const hh=String(Math.floor(t/60)).padStart(2,'0'); const mm=String(t%60).padStart(2,'0');
-              slots.push(`${hh}:${mm}`);
+        function generateTimeSlots() {
+            const slots = [];
+            const start = CONFIG.TIME_START * 60;
+            const end = CONFIG.TIME_END * 60 + CONFIG.TIME_INTERVAL;
+            
+            for (let t = start; t <= end; t += CONFIG.TIME_INTERVAL) {
+                const hours = String(Math.floor(t / 60)).padStart(2, '0');
+                const mins = String(t % 60).padStart(2, '0');
+                slots.push(`${hours}:${mins}`);
             }
             return slots;
-          }
+        }
 
-          function populateTimeSlots(){
-            timeSelect.innerHTML='';
-            const ph=document.createElement('option'); ph.value=''; ph.textContent='-- Select time --';
-            timeSelect.appendChild(ph);
-            generateSlots().forEach(s=>{
-              const o=document.createElement('option'); o.value=s; o.textContent=s; timeSelect.appendChild(o);
+        function populateTimeSlots() {
+            elements.timeSelect.innerHTML = '<option value="" disabled selected>-- Select time --</option>';
+            generateTimeSlots().forEach(slot => {
+                const option = document.createElement('option');
+                option.value = slot;
+                option.textContent = slot;
+                elements.timeSelect.appendChild(option);
             });
-          }
+        }
 
-          // calendar render
-          function render(){
-            daysGrid.innerHTML=''; const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            monthTitle.textContent = `${monthNames[state.getMonth()]} ${state.getFullYear()}`;
-            const year = state.getFullYear(), month = state.getMonth();
-            const first = new Date(year, month, 1), startDay = first.getDay();
-            const daysInMonth = new Date(year, month+1, 0).getDate();
+        // Character counter
+        elements.notes.addEventListener('input', function() {
+            const count = this.value.length;
+            elements.charCount.textContent = `${count} / ${CONFIG.MAX_NOTES_LENGTH} characters`;
+            if (count > CONFIG.MAX_NOTES_LENGTH) {
+                this.value = this.value.substring(0, CONFIG.MAX_NOTES_LENGTH);
+            }
+        });
+
+        // Calendar Rendering
+        function renderCalendar() {
+            elements.daysGrid.innerHTML = '';
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            elements.monthTitle.textContent = `${monthNames[calendarState.getMonth()]} ${calendarState.getFullYear()}`;
+
+            const year = calendarState.getFullYear();
+            const month = calendarState.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const startDay = firstDay.getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
             const prevDays = new Date(year, month, 0).getDate();
-            const sampleMarks = sampleMarksForMonth(state);
+            const statuses = getMonthStatuses(calendarState);
 
-            for(let i=0;i<42;i++){
-              const cell=document.createElement('div'); cell.className='day';
-              let dayNum, cellDate, outside=false;
-              const index = i - startDay + 1;
-              if(index <= 0){ dayNum = prevDays + index; outside = true; cellDate = new Date(year, month-1, dayNum); }
-              else if(index > daysInMonth){ dayNum = index - daysInMonth; outside = true; cellDate = new Date(year, month+1, dayNum); }
-              else { dayNum = index; cellDate = new Date(year, month, dayNum); }
+            for (let i = 0; i < 42; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'day';
+                
+                let dayNum, cellDate, isOutside = false;
+                const index = i - startDay + 1;
 
-              // mark outside days visually if needed
-              if(outside) cell.classList.add('outside');
+                if (index <= 0) {
+                    dayNum = prevDays + index;
+                    isOutside = true;
+                    cellDate = new Date(year, month - 1, dayNum);
+                } else if (index > daysInMonth) {
+                    dayNum = index - daysInMonth;
+                    isOutside = true;
+                    cellDate = new Date(year, month + 1, dayNum);
+                } else {
+                    dayNum = index;
+                    cellDate = new Date(year, month, dayNum);
+                }
 
-              // mark Monday as closed: JS identifies Mondays (getDay() === 1)
-              const isMonday = (cellDate.getDay() === 1);
-              if(isMonday){
-                cell.classList.add('closed');
-                // keep aria information
-                cell.setAttribute('aria-disabled', 'true');
-              }
+                if (isOutside) cell.classList.add('day--outside');
 
-              const num = document.createElement('span'); num.className='num'; num.textContent = dayNum; cell.appendChild(num);
+                const isClosed = isClosedDay(cellDate);
+                if (isClosed) {
+                    cell.classList.add('day--closed');
+                    cell.setAttribute('aria-disabled', 'true');
+                }
 
-              const y = cellDate.getFullYear(), m = pad(cellDate.getMonth()+1), d = pad(cellDate.getDate());
-              const key = `${y}-${m}-${d}`; const status = sampleMarks[key];
-              if(status){ cell.classList.add('status-'+status); const dot=document.createElement('span'); dot.className='status-dot'; cell.appendChild(dot); }
+                const numSpan = document.createElement('span');
+                numSpan.className = 'day-num';
+                numSpan.textContent = dayNum;
+                cell.appendChild(numSpan);
 
-              // selectable only if visible month day (not outside), >= today, and NOT Monday (closed)
-              if(!outside && isAllowed(cellDate) && !isMonday){
-                cell.addEventListener('click', function(){
-                  const prev = daysGrid.querySelector('.day.selected'); if(prev) prev.classList.remove('selected');
-                  cell.classList.add('selected');
-                  showFormForDate(cellDate);
-                });
-              } else {
-                // if user tries to click a closed day but pointer-events allowed, we can show a message
-                // (if you use pointer-events:none in CSS for .day.closed then this won't fire)
-                cell.addEventListener('click', function(e){
-                  if (isMonday) {
-                    e.preventDefault();
-                    alert('Closed on Mondays — please select another date.');
-                  }
-                });
-                cell.classList.add('outside');
-              }
-              daysGrid.appendChild(cell);
+                const y = cellDate.getFullYear();
+                const m = pad(cellDate.getMonth() + 1);
+                const d = pad(cellDate.getDate());
+                const key = `${y}-${m}-${d}`;
+                const status = statuses[key];
+
+                if (status) {
+                    cell.classList.add(`day--${status}`);
+                    const dot = document.createElement('span');
+                    dot.className = 'day-dot';
+                    dot.setAttribute('aria-hidden', 'true');
+                    cell.appendChild(dot);
+                }
+
+                if (!isOutside && isAllowed(cellDate) && !isClosed) {
+                    cell.classList.add('day--selectable');
+                    cell.addEventListener('click', () => selectDate(cellDate));
+                } else {
+                    cell.classList.add('day--disabled');
+                }
+
+                elements.daysGrid.appendChild(cell);
             }
-          }
+        }
 
-          function sampleMarksForMonth(dt){
-            const y=dt.getFullYear(), m=pad(dt.getMonth()+1); const base={};
-            base[`${y}-${m}-05`] = 'visited'; base[`${y}-${m}-12`] = 'pending'; base[`${y}-${m}-18`] = 'noshow';
-            base[`${y}-${m}-24`] = 'confirmed'; base[`${y}-${m}-02`] = 'rateus'; base[`${y}-${m}-27`] = 'unavailable';
-            return base;
-          }
+        function getMonthStatuses(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = pad(dateObj.getMonth() + 1);
+            return {
+                [`${y}-${m}-05`]: 'visited',
+                [`${y}-${m}-12`]: 'pending',
+                [`${y}-${m}-18`]: 'noshow',
+                [`${y}-${m}-24`]: 'confirmed',
+                [`${y}-${m}-02`]: 'rateus',
+                [`${y}-${m}-27`]: 'unavailable'
+            };
+        }
 
-          // Guard showFormForDate: do not open form if date is Monday (extra safety)
-          function showFormForDate(dateObj){
-            if(dateObj.getDay() === 1){ // 1 = Monday
-              // user-friendly message
-              alert('Sorry — we are closed on Mondays. Please choose another date.');
-              return;
+        function selectDate(dateObj) {
+            if (isClosedDay(dateObj)) {
+                showErrorToast('Sorry, we are closed on Mondays. Please select another date.');
+                return;
             }
-            selectedDateText.value = `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}`;
+
+            const previousSelected = elements.daysGrid.querySelector('.day--selected');
+            if (previousSelected) previousSelected.classList.remove('day--selected');
+
+            Array.from(elements.daysGrid.children).forEach(cell => {
+                if (cell.textContent.trim() === String(dateObj.getDate())) {
+                    cell.classList.add('day--selected');
+                }
+            });
+
+            elements.selectedDateText.value = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
             populateTimeSlots();
-            apptForm.style.display = 'block';
-            formPlaceholder.style.display = 'none';
-          }
+            elements.apptForm.style.display = 'block';
+            elements.formPlaceholder.style.display = 'none';
+            elements.apptForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
-          function hideForm(){
-            apptForm.style.display='none';
-            formPlaceholder.style.display='block';
-            const prevSel = daysGrid.querySelector('.day.selected'); if(prevSel) prevSel.classList.remove('selected');
-          }
+        function hideForm() {
+            elements.apptForm.style.display = 'none';
+            elements.formPlaceholder.style.display = 'flex';
+            const selected = elements.daysGrid.querySelector('.day--selected');
+            if (selected) selected.classList.remove('day--selected');
+        }
 
-          // pet cards render
-          function renderPetCards(){
-            const cat = categorySelect.value;
-            petCards.innerHTML='';
-            if(!cat){
-              petCards.innerHTML = '<div class="note-small">Choose a category to see pets.</div>';
-              return;
+        // Pet Cards Rendering
+        function renderPetCards() {
+            const category = elements.categorySelect.value;
+            elements.petCards.innerHTML = '';
+
+            if (!category) {
+                elements.petCards.innerHTML = '<div class="form-hint">Select a category to see pets</div>';
+                return;
             }
-            const list = userPets.filter(p => p.category === cat);
-            if(list.length === 0){
-              petCards.innerHTML = '<div class="note-small">No saved pets for this category. Click "Add new pet" to add one.</div>';
-            } else {
-              list.forEach(p=>{
-                const card=document.createElement('label'); card.className='pet-card'; card.setAttribute('data-id', p.id);
 
-                const img=document.createElement('img'); img.src=p.photo || PLACEHOLDER_IMG; img.alt=p.name;
-                const info=document.createElement('div'); info.className='pet-info';
-                const nm=document.createElement('div'); nm.className='pet-name'; nm.textContent=p.name;
-                const meta=document.createElement('div'); meta.className='pet-meta'; meta.textContent = (p.category==='dog'?'Dog':'Cat');
-                info.appendChild(nm); info.appendChild(meta);
-
-                const checkboxWrap=document.createElement('div'); checkboxWrap.className='pet-checkbox';
-                const cb=document.createElement('input'); cb.type='checkbox'; cb.value=p.id; cb.className='pet-checkbox-input';
-                checkboxWrap.appendChild(cb);
-
-                card.appendChild(img); card.appendChild(info); card.appendChild(checkboxWrap);
-
-                // click toggles checkbox (except when clicking the actual input)
-                card.addEventListener('click', function(e){ if(e.target === cb) return; cb.checked = !cb.checked; });
-
-                petCards.appendChild(card);
-              });
+            const filteredPets = userPets.filter(p => p.category === category);
+            if (filteredPets.length === 0) {
+                elements.petCards.innerHTML = '<div class="form-hint">No pets in this category. Add a new pet to get started.</div>';
+                return;
             }
-          }
 
-          // add-new flow
-          function startAddNewPet(){
-            if(!categorySelect.value){ alert('Please select Category first (Dog / Cat)'); return; }
-            categorySelect.disabled = true;
-            newPetType.value = (categorySelect.value === 'dog' ? 'Dog' : 'Cat');
-            newPetBlock.style.display = 'block';
-            newPetPreview.style.display = 'none';
-            newPetPreviewImg.src = '';
-            newPetName.focus();
-          }
+            filteredPets.forEach(pet => {
+                const card = document.createElement('label');
+                card.className = 'pet-card';
+                card.setAttribute('data-id', pet.id);
 
-          function cancelAddNewPet(){
-            newPetBlock.style.display='none';
-            newPetName.value=''; newPetType.value=''; newPetPhoto.value=''; newPetPreviewImg.src=''; newPetPreview.style.display='none';
-            categorySelect.disabled = false;
+                const img = document.createElement('img');
+                img.src = pet.photo || CONFIG.PLACEHOLDER_IMG;
+                img.alt = pet.name;
+                img.className = 'pet-card-img';
+
+                const info = document.createElement('div');
+                info.className = 'pet-info';
+
+                const name = document.createElement('div');
+                name.className = 'pet-name';
+                name.textContent = pet.name;
+
+                const meta = document.createElement('div');
+                meta.className = 'pet-meta';
+                meta.textContent = pet.category === 'dog' ? 'Dog' : 'Cat';
+
+                info.appendChild(name);
+                info.appendChild(meta);
+
+                const checkboxWrap = document.createElement('div');
+                checkboxWrap.className = 'pet-checkbox-wrap';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = pet.id;
+                checkbox.className = 'pet-checkbox';
+                checkbox.setAttribute('aria-label', `Select ${pet.name}`);
+
+                checkboxWrap.appendChild(checkbox);
+
+                card.appendChild(img);
+                card.appendChild(info);
+                card.appendChild(checkboxWrap);
+
+                card.addEventListener('click', (e) => {
+                    if (e.target === checkbox) return;
+                    checkbox.checked = !checkbox.checked;
+                });
+
+                elements.petCards.appendChild(card);
+            });
+        }
+
+        // Add New Pet Flow
+        function startAddNewPet() {
+            if (!elements.categorySelect.value) {
+                showErrorToast('Please select a pet category first');
+                return;
+            }
+            elements.categorySelect.disabled = true;
+            elements.newPetType.value = elements.categorySelect.value === 'dog' ? 'Dog' : 'Cat';
+            elements.newPetBlock.style.display = 'block';
+            elements.newPetPreview.style.display = 'none';
+            elements.newPetName.focus();
+        }
+
+        function cancelAddNewPet() {
+            elements.newPetBlock.style.display = 'none';
+            elements.newPetName.value = '';
+            elements.newPetType.value = '';
+            elements.newPetPhoto.value = '';
+            elements.newPetPreviewImg.src = '';
+            elements.newPetPreview.style.display = 'none';
+            elements.categorySelect.disabled = false;
             renderPetCards();
-          }
+        }
 
-          newPetPhoto.addEventListener('change', function(){
-            const file = this.files && this.files[0];
-            if(!file){ newPetPreviewImg.src=''; newPetPreview.style.display='none'; return; }
+        elements.newPetPhoto.addEventListener('change', function() {
+            const file = this.files?.[0];
+            if (!file) {
+                elements.newPetPreviewImg.src = '';
+                elements.newPetPreview.style.display = 'none';
+                return;
+            }
+
             const reader = new FileReader();
-            reader.onload = function(ev){ newPetPreviewImg.src = ev.target.result; newPetPreview.style.display = 'block'; };
+            reader.onload = (e) => {
+                elements.newPetPreviewImg.src = e.target.result;
+                elements.newPetPreview.style.display = 'block';
+            };
             reader.readAsDataURL(file);
-          });
+        });
 
-          function saveNewPet(){
-            const cat = categorySelect.value; const name = newPetName.value.trim();
-            if(!cat){ alert('Choose category first.'); return; }
-            if(!name){ alert('Enter pet name.'); newPetName.focus(); return; }
-            const file = newPetPhoto.files && newPetPhoto.files[0];
-            if(file){
-              const reader = new FileReader();
-              reader.onload = function(ev){ pushNewPet(name, cat, ev.target.result); };
-              reader.readAsDataURL(file);
-            } else pushNewPet(name, cat, PLACEHOLDER_IMG);
-          }
+        function saveNewPet() {
+            const category = elements.categorySelect.value;
+            const name = elements.newPetName.value.trim();
 
-          function pushNewPet(name, cat, imgSrc){
-            const id = 'p' + Date.now();
-            userPets.push({ id, name, category: cat, photo: imgSrc });
-            categorySelect.disabled = false;
-            newPetBlock.style.display='none';
-            newPetName.value=''; newPetType.value=''; newPetPhoto.value=''; newPetPreviewImg.src=''; newPetPreview.style.display='none';
-            renderPetCards();
-            setTimeout(()=>{ const cb = petCards.querySelector(`input.pet-checkbox-input[value="${id}"]`); if(cb) cb.checked = true; }, 50);
-          }
-
-          function getSelectedPets(){
-            const checks = Array.from(petCards.querySelectorAll('input.pet-checkbox-input')).filter(i=>i.checked);
-            const ids = checks.map(i=>i.value);
-            return ids.map(id => userPets.find(p => p.id === id)).filter(Boolean);
-          }
-
-          // toast helpers if you use the toast
-          function showSuccessToast() {
-            if(!toast) return;
-            toast.style.display = 'flex';
-            void toast.offsetWidth;
-            toast.classList.add('show');
-            clearTimeout(toast._hideTimer);
-            toast._hideTimer = setTimeout(() => hideSuccessToast(), 3000);
-          }
-          function hideSuccessToast() {
-            if(!toast) return;
-            toast.classList.remove('show');
-            clearTimeout(toast._removeTimer);
-            toast._removeTimer = setTimeout(()=> { toast.style.display = 'none'; }, 350);
-          }
-          if(toastClose) toastClose.addEventListener('click', hideSuccessToast);
-
-          // event wiring
-          prevBtn.addEventListener('click', ()=>{ state.setMonth(state.getMonth()-1); render(); hideForm(); });
-          nextBtn.addEventListener('click', ()=>{ state.setMonth(state.getMonth()+1); render(); hideForm(); });
-
-          categorySelect.addEventListener('change', ()=> renderPetCards());
-          showAddNewBtn.addEventListener('click', startAddNewPet);
-          cancelNewPetBtn.addEventListener('click', cancelAddNewPet);
-          saveNewPetBtn = savePetBtn.addEventListener('click', saveNewPet); // keep reference
-
-          submitBtn.addEventListener('click', ()=>{
-            // basic client validation
-            if(!selectedDateText.value){ alert('Please select a date.'); return; }
-            // block if selected date is Monday (defensive check)
-            const selDateParts = selectedDateText.value.split('-');
-            if(selDateParts.length===3){
-              const d = new Date(Number(selDateParts[0]), Number(selDateParts[1])-1, Number(selDateParts[2]));
-              if(d.getDay() === 1){ alert('Selected date is a Monday — we are closed on Mondays.'); return; }
+            if (!name) {
+                showErrorToast('Please enter a pet name');
+                elements.newPetName.focus();
+                return;
             }
-            if(!categorySelect.value){ alert('Please select a category.'); return; }
-            const selectedPets = getSelectedPets();
-            if(selectedPets.length === 0){ alert('Please tick at least one pet.'); return; }
-            if(!timeSelect.value){ alert('Please choose a time before 17:00.'); return; }
 
+            const file = elements.newPetPhoto.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => pushNewPet(name, category, e.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                pushNewPet(name, category, CONFIG.PLACEHOLDER_IMG);
+            }
+        }
+
+        function pushNewPet(name, category, imgSrc) {
+            const id = 'p' + Date.now();
+            userPets.push({ id, name, category, photo: imgSrc });
+            elements.categorySelect.disabled = false;
+            elements.newPetBlock.style.display = 'none';
+            elements.newPetName.value = '';
+            elements.newPetType.value = '';
+            elements.newPetPhoto.value = '';
+            elements.newPetPreviewImg.src = '';
+            elements.newPetPreview.style.display = 'none';
+            renderPetCards();
+
+            setTimeout(() => {
+                const checkbox = elements.petCards.querySelector(`input[value="${id}"]`);
+                if (checkbox) checkbox.checked = true;
+            }, 50);
+        }
+
+        function getSelectedPets() {
+            const checkboxes = Array.from(elements.petCards.querySelectorAll('input[type="checkbox"]:checked'));
+            return checkboxes
+                .map(cb => userPets.find(p => p.id === cb.value))
+                .filter(Boolean);
+        }
+
+        // Toast Helpers
+        function showToast(element, duration = CONFIG.TOAST_DURATION) {
+            element.style.display = 'flex';
+            void element.offsetWidth;
+            element.classList.add('show');
+            clearTimeout(element._hideTimer);
+            element._hideTimer = setTimeout(() => hideToast(element), duration);
+        }
+
+        function hideToast(element) {
+            element.classList.remove('show');
+            clearTimeout(element._removeTimer);
+            element._removeTimer = setTimeout(() => {
+                element.style.display = 'none';
+            }, 350);
+        }
+
+        function showSuccessToast() {
+            showToast(elements.successToast);
+        }
+
+        function showErrorToast(message) {
+            elements.errorMsg.textContent = message;
+            showToast(elements.errorToast);
+        }
+
+        elements.successClose.addEventListener('click', () => hideToast(elements.successToast));
+        elements.errorClose.addEventListener('click', () => hideToast(elements.errorToast));
+
+        // Validation
+        function validateForm() {
+            if (!elements.selectedDateText.value) {
+                showErrorToast('Please select a date');
+                return false;
+            }
+
+            if (!elements.categorySelect.value) {
+                showErrorToast('Please select a pet category');
+                return false;
+            }
+
+            const selectedPets = getSelectedPets();
+            if (selectedPets.length === 0) {
+                showErrorToast('Please select at least one pet');
+                return false;
+            }
+
+            if (!elements.timeSelect.value) {
+                showErrorToast('Please select a time');
+                return false;
+            }
+
+            return true;
+        }
+
+        // Event Listeners
+        elements.prevBtn.addEventListener('click', () => {
+            calendarState.setMonth(calendarState.getMonth() - 1);
+            renderCalendar();
+            hideForm();
+        });
+
+        elements.nextBtn.addEventListener('click', () => {
+            calendarState.setMonth(calendarState.getMonth() + 1);
+            renderCalendar();
+            hideForm();
+        });
+
+        elements.todayBtn.addEventListener('click', () => {
+            const today = new Date();
+            if (isClosedDay(today)) {
+                showErrorToast('Today is closed. Please select another date.');
+                return;
+            }
+            calendarState = new Date();
+            calendarState.setDate(1);
+            renderCalendar();
+            selectDate(today);
+        });
+
+        elements.categorySelect.addEventListener('change', () => renderPetCards());
+        elements.showAddNewBtn.addEventListener('click', startAddNewPet);
+        elements.cancelNewPetBtn.addEventListener('click', cancelAddNewPet);
+        elements.savePetBtn.addEventListener('click', saveNewPet);
+
+        elements.submitBtn.addEventListener('click', () => {
+            if (!validateForm()) return;
+
+            const selectedPets = getSelectedPets();
             const payload = {
-              date: selectedDateText.value,
-              time: timeSelect.value,
-              category: categorySelect.value,
-              pets: selectedPets.map(p=>({ id:p.id, name:p.name, photo:p.photo })),
-              groomer: groomerSelect.value,
-              notes: notes.value.trim()
+                date: elements.selectedDateText.value,
+                time: elements.timeSelect.value,
+                category: elements.categorySelect.value,
+                pets: selectedPets.map(p => ({ id: p.id, name: p.name, photo: p.photo })),
+                groomer: elements.groomerSelect.value,
+                notes: elements.notes.value.trim()
             };
 
-            console.log('Appointment payload', payload);
+            console.log('Appointment payload:', payload);
 
-            // show success toast (green tick)
+            // Here you would normally send this to your backend
+            // await fetch('/api/appointments', { method: 'POST', body: JSON.stringify(payload) })
+
             showSuccessToast();
-
-            // reset UI a little
             hideForm();
-            render();
-          });
+            elements.apptForm.reset();
+            elements.notes.dispatchEvent(new Event('input'));
+            renderCalendar();
+        });
 
-          // init
-          populateTimeSlots();
-          render();
-          renderPetCards();
-        })();
-    </script>
+        // Initialize
+        populateTimeSlots();
+        renderCalendar();
+        renderPetCards();
+    })();
+</script>
