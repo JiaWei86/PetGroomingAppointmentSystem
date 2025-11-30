@@ -75,7 +75,7 @@
 .btn-orange-primary {
     background: linear-gradient(90deg, #ff9500 0%, #ff6b35 100%);
     color: #ffffff;
-    border: none;
+    border: 1px solid transparent;
     font-weight: 600;
     transition: all 0.3s ease;
 }
@@ -88,7 +88,7 @@
 }
 
 .btn-orange-outline {
-    border: 2px solid #ff9500;
+    border: 1px solid #ff9500;
     color: #ff9500;
     font-weight: 600;
     transition: all 0.3s ease;
@@ -396,6 +396,95 @@
     font-size: 1.1rem;
 }
 
+/* Pet Card Button Spacing */
+.pet-card .card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.pet-card .d-flex.gap-5 {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: auto;
+}
+
+.pet-card .btn {
+    flex: 1;
+    min-width: 70px;
+    white-space: nowrap;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.pet-card .btn-orange-outline,
+.pet-card .btn-danger {
+    border-width: 1px;
+}
+
+/* Pet Card Button Spacing - FIXED */
+.pet-card .row {
+    display: flex;
+    height: 100%;
+}
+
+.pet-card .col-8 {
+    display: flex;
+    flex-direction: column;
+}
+
+.pet-card .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px !important;
+}
+
+.pet-card .d-flex.gap-2 {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
+    margin-top: 12px;
+    justify-content: flex-start;
+}
+
+.pet-card .btn-sm {
+    min-width: 0px !important;
+    white-space: nowrap !important;
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+    border-width: 1px !important;
+}
+
+.pet-card .btn-orange-outline {
+    background: transparent !important;
+    border: 1px solid #ff9500 !important;
+    color: #ff9500 !important;
+}
+
+.pet-card .btn-danger {
+    background: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+    color: white !important;
+    padding: 6px 10px !important;
+}
+
+.pet-card .btn-danger:hover {
+    background: #c82333 !important;
+}
+
+/* Pet Info Section */
+.pet-card h6 {
+    margin-bottom: 8px !important;
+    font-size: 0.95rem !important;
+}
+
+.pet-card p {
+    margin-bottom: 6px !important;
+    font-size: 0.8rem !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 991px) {
     .profile-page-wrapper {
@@ -436,3 +525,24 @@
         height: 100px !important;
     }
 }
+
+@media (max-width: 576px) {
+    .pet-card .d-flex.gap-2 {
+        gap: 20px !important;
+    }
+    
+    .pet-card .btn-sm {
+        min-width: 50px !important;
+        padding: 5px 8px !important;
+        font-size: 0.75rem !important;
+    }
+
+}
+
+.pet-card .btn-orange-outline:hover {
+    background: #ff9500 !important;
+    color: #ffffff !important;
+    border-color: #ff9500 !important;
+}
+
+
