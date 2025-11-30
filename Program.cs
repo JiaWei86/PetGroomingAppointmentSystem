@@ -28,6 +28,23 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
+
+// Add custom middleware to protect admin area
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+    if (path.StartsWith("/admin") && !path.StartsWith("/admin/auth/login"))
+    {
+        var isLoggedIn = context.Session.GetString("IsAdminLoggedIn");
+        if (string.IsNullOrEmpty(isLoggedIn))
+        {
+            context.Response.Redirect("/Admin/Auth/Login");
+            return;
+        }
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllerRoute(
