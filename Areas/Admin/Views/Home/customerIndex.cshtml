@@ -1,0 +1,379 @@
+﻿@{
+    ViewBag.Title = "Edit Customer Index Page";
+}
+<div class="content-header">
+    <h1 class="page-title">Customer Index Management</h1>
+</div>
+<div class="container" style="max-width:1100px; margin:auto; padding:40px 0;">
+
+    <!-- PET WELLBEING SECTION -->
+    <div class="panel">
+        <h3>Pet Wellbeing Section</h3>
+        <div class="form-group">
+            <label>Section Title (First Line)</label>
+            <input type="text" class="form-control" placeholder="Your Pets'" value="Your Pets'" />
+        </div>
+        <div class="form-group">
+            <label>Section Title (Bold Line)</label>
+            <input type="text" class="form-control" placeholder="Well-being" value="Well-being" />
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" rows="2" placeholder="Easy grooming appointments with gentle, reliable care for every furry companion.">Easy grooming appointments with gentle, reliable care for every furry companion.</textarea>
+        </div>
+        <div class="form-group">
+            <label>Pet Image (Corgi Dog)</label><br />
+            <input type="file" accept="image/*" />
+            <small class="form-text text-muted">Current: Corgi puppy image</small>
+        </div>
+    </div>
+
+    <!-- SERVICES & PRICING SECTION -->
+    <div class="panel">
+        <h3>Services & Price List</h3>
+        <div class="form-group">
+            <label>Section Title</label>
+            <input type="text" class="form-control" placeholder="Our Services & Price List" value="Our Services & Price List" />
+        </div>
+        <div class="form-group">
+            <label>Featured Image (Cat Image)</label><br />
+            <input type="file" accept="image/*" />
+            <small class="form-text text-muted">Current: Orange cat in circular frame</small>
+        </div>
+
+        <hr />
+
+        <!-- BATHING PRICES -->
+        <h4>Bathing Prices</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Small Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM50" value="RM50" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Medium Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM80" value="RM80" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Large Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM100" value="RM100" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Cats</label>
+                    <input type="text" class="form-control" placeholder="RM45" value="RM45" />
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <!-- HAIRCUT/TRIMMING PRICES -->
+        <h4>Haircut/Trimming Prices</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Small Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM100" value="RM100" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Medium Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM120" value="RM120" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Large Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM140" value="RM140" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Cats</label>
+                    <input type="text" class="form-control" placeholder="RM80" value="RM80" />
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <!-- NAIL CLIPPING/GRINDING PRICES -->
+        <h4>Nail Clipping/Grinding Prices</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Small Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM30" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Medium Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM40" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Large Dogs</label>
+                    <input type="text" class="form-control" placeholder="RM50" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Cats</label>
+                    <input type="text" class="form-control" placeholder="RM25" />
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <button class="btn btn-success">
+                <i class="fa fa-plus"></i> Add New Service Category
+            </button>
+        </div>
+    </div>
+
+    <!-- DOG SERVICES SECTION -->
+    <div class="panel">
+        <h3>Services for Every Dog</h3>
+        <div class="form-group">
+            <label>Section Title</label>
+            <input type="text" class="form-control" placeholder="Services for every dog" value="Services for every dog" />
+        </div>
+
+        <div class="mb-3">
+            <button class="btn btn-success">
+                <i class="fa fa-plus"></i> Add New Dog Service
+            </button>
+        </div>
+
+        <!-- SERVICE CARD 1 - BATHING -->
+        <div class="service-card panel">
+            <h5>Service 1: Bathing</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Bathing" value="Bathing" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="A gentle full-body wash that cleans, freshens, and removes loose fur.">A gentle full-body wash that cleans, freshens, and removes loose fur.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+
+        <!-- SERVICE CARD 2 - HAIRCUT/TRIMMING -->
+        <div class="service-card panel">
+            <h5>Service 2: Haircut / Trimming</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Haircut / Trimming" value="Haircut / Trimming" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="A neat coat trim or full haircut to keep your dog looking clean, and stylish.">A neat coat trim or full haircut to keep your dog looking clean, and stylish.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+
+        <!-- SERVICE CARD 3 - NAIL CLIPPING/GRINDING -->
+        <div class="service-card panel">
+            <h5>Service 3: Nail Clipping / Grinding</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Nail Clipping / Grinding" value="Nail Clipping / Grinding" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="Safe nail trimming to maintain healthy paw care and prevent overgrowth.">Safe nail trimming to maintain healthy paw care and prevent overgrowth.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+    </div>
+
+    <!-- CAT SERVICES SECTION -->
+    <div class="panel">
+        <h3>Services for Every Cat</h3>
+        <div class="form-group">
+            <label>Section Title</label>
+            <input type="text" class="form-control" placeholder="Services for every cat" value="Services for every cat" />
+        </div>
+
+        <div class="mb-3">
+            <button class="btn btn-success">
+                <i class="fa fa-plus"></i> Add New Cat Service
+            </button>
+        </div>
+
+        <!-- CAT SERVICE CARD 1 - NAIL CLIPPING/GRINDING -->
+        <div class="service-card panel">
+            <h5>Service 1: Nail Clipping / Grinding</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Nail Clipping / Grinding" value="Nail Clipping / Grinding" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="Quick nail trimming to reduce sharp claws and avoid accidental scratches.">Quick nail trimming to reduce sharp claws and avoid accidental scratches.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+
+        <!-- CAT SERVICE CARD 2 - BATHING -->
+        <div class="service-card panel">
+            <h5>Service 2: Bathing</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Bathing" value="Bathing" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="A mild, stress-free bath using cat-safe products to keep the coat clean and soft.">A mild, stress-free bath using cat-safe products to keep the coat clean and soft.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+
+        <!-- CAT SERVICE CARD 3 - HAIRCUT/TRIMMING -->
+        <div class="service-card panel">
+            <h5>Service 3: Haircut / Trimming</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Haircut / Trimming" value="Haircut / Trimming" />
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" rows="2" placeholder="Light coat trimming to reduce tangles and keep your cat tidy and comfortable.">Light coat trimming to reduce tangles and keep your cat tidy and comfortable.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Icon/Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Red paw print icon</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Service</button>
+        </div>
+    </div>
+
+    <!-- REDEEM GIFT SECTION -->
+    <div class="panel">
+        <h3>Redeem Gift Section</h3>
+        <div class="form-group">
+            <label>Section Title</label>
+            <input type="text" class="form-control" placeholder="Redeem Gift" value="Redeem Gift" />
+        </div>
+
+        <div class="mb-3">
+            <button class="btn btn-success">
+                <i class="fa fa-plus"></i> Add New Gift
+            </button>
+        </div>
+
+        <!-- GIFT CARD 1 -->
+        <div class="service-card panel">
+            <h5>Gift 1: Nail Clipping / Grinding</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Nail Clipping / Grinding" value="Nail Clipping / Grinding" />
+            </div>
+            <div class="form-group">
+                <label>Gift Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Pink litter box image</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Gift</button>
+        </div>
+
+        <!-- GIFT CARD 2 -->
+        <div class="service-card panel">
+            <h5>Gift 2: Bathing</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Bathing" value="Bathing" />
+            </div>
+            <div class="form-group">
+                <label>Gift Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Pet bed image</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Gift</button>
+        </div>
+
+        <!-- GIFT CARD 3 -->
+        <div class="service-card panel">
+            <h5>Gift 3: Haircut / Trimming</h5>
+            <div class="form-group">
+                <label>Service Name</label>
+                <input type="text" class="form-control" placeholder="Haircut / Trimming" value="Haircut / Trimming" />
+            </div>
+            <div class="form-group">
+                <label>Gift Image</label><br />
+                <input type="file" accept="image/*" />
+                <small class="form-text text-muted">Current: Pet food bowls image</small>
+            </div>
+            <button class="btn btn-danger btn-sm">Remove Gift</button>
+        </div>
+    </div>
+
+    <!-- HERO SECTION - "Why go with Anipat?" -->
+    <div class="panel">
+        <h3>Hero Section - "Why go with Anipat?"</h3>
+        <div class="form-group">
+            <label>Main Heading</label>
+            <input type="text" class="form-control" placeholder="Why go with Anipat?" value="Why go with Anipat?" />
+        </div>
+        <div class="form-group">
+            <label>Description Text</label>
+            <textarea class="form-control" rows="3" placeholder="Because we know that even the best technology is only as good as the people behind it. 24/7 tech support.">Because we know that even the best technology is only as good as the people behind it. 24/7 tech support.</textarea>
+        </div>
+        <div class="form-group">
+            <label>Contact Phone Number</label>
+            <input type="text" class="form-control" placeholder="+6011 4589 2563" value="+6011 4589 2563" />
+        </div>
+        <div class="form-group">
+            <label>Background Image</label><br />
+            <input type="file" accept="image/*" />
+            <small class="form-text text-muted">Current: Paw print pattern background</small>
+        </div>
+    </div>
+
+    <!-- SAVE BUTTON -->
+    <div class="text-right mt-4">
+        <button class="btn btn-secondary">
+            Preview Changes
+        </button>
+        <button class="btn btn-primary">
+            Save Changes
+        </button>
+    </div>
+</div>

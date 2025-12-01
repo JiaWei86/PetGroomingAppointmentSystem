@@ -1,0 +1,265 @@
+@{
+    ViewData["Title"] = "Loyalty Points Management";
+    ViewData["ActivePage"] = "LoyaltyPoint";
+}
+
+<div class="content-header">
+    <h1 class="page-title">Loyalty Points Management</h1>
+</div>
+
+<!-- Filters Section -->
+<div class="panel">
+    <h3 class="panel-title">Filter Loyalty Points</h3>
+    
+    <form method="get" class="form-grid filter-form">
+        <div class="form-group">
+            <label for="searchLoyaltyCustomer">Customer</label>
+            <input type="text" id="searchLoyaltyCustomer" name="searchLoyaltyCustomer" class="form-control" placeholder="Customer name" />
+        </div>
+
+        <div class="form-group">
+            <label for="filterPoints">Points Range</label>
+            <select id="filterPoints" name="filterPoints" class="form-control">
+                <option value="">All Points</option>
+                <option value="0-100">0 - 100 pts</option>
+                <option value="100-500">100 - 500 pts</option>
+                <option value="500-1000">500 - 1000 pts</option>
+                <option value="1000">1000+ pts</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <button type="reset" class="btn btn-reset">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Loyalty Points Table -->
+<div class="panel">
+    @{
+        // Hard-coded sample loyalty points data
+        var loyaltyPoints = new List<dynamic>
+        {
+            new { 
+                Id = 1, 
+                CustomerName = "John Doe", 
+                Email = "john@example.com", 
+                PointsBalance = 250,
+                CreatedAt = DateTime.Parse("Jan 15, 2024"), 
+                UpdatedAt = DateTime.Parse("Jan 20, 2024")
+            },
+            new { 
+                Id = 2, 
+                CustomerName = "Sarah Johnson", 
+                Email = "sarah@example.com", 
+                PointsBalance = 150,
+                CreatedAt = DateTime.Parse("Feb 10, 2024"), 
+                UpdatedAt = DateTime.Parse("Feb 18, 2024")
+            },
+            new { 
+                Id = 3, 
+                CustomerName = "Michael Smith", 
+                Email = "michael@example.com", 
+                PointsBalance = 500,
+                CreatedAt = DateTime.Parse("Mar 05, 2024"), 
+                UpdatedAt = DateTime.Parse("Mar 22, 2024")
+            },
+            new { 
+                Id = 4, 
+                CustomerName = "Emily Davis", 
+                Email = "emily@example.com", 
+                PointsBalance = 300,
+                CreatedAt = DateTime.Parse("Apr 12, 2024"), 
+                UpdatedAt = DateTime.Parse("Apr 28, 2024")
+            },
+            new { 
+                Id = 5, 
+                CustomerName = "Robert Wilson", 
+                Email = "robert@example.com", 
+                PointsBalance = 750,
+                CreatedAt = DateTime.Parse("May 01, 2024"), 
+                UpdatedAt = DateTime.Parse("May 15, 2024")
+            }
+        };
+    }
+
+    <div class="panel-header-wrapper">
+        <h3 class="panel-title">Loyalty Points (@loyaltyPoints.Count)</h3>
+        <button class="btn btn-primary" onclick="showCreateForm()">+ Add Points</button>
+    </div>
+
+    @if (loyaltyPoints.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Email</th>
+                        <th>Balance</th>
+                        <th>Points Status</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var loyalty in loyaltyPoints)
+                    {
+                        <tr>
+                            <td><strong>@loyalty.CustomerName</strong></td>
+                            <td>@loyalty.Email</td>
+                            <td>
+                                <span class="points-badge">@loyalty.PointsBalance pts</span>
+                            </td>
+                            <td>
+                                @{
+                                    string statusClass = loyalty.PointsBalance >= 500 ? "status-high" : loyalty.PointsBalance >= 100 ? "status-medium" : "status-low";
+                                    string statusText = loyalty.PointsBalance >= 500 ? "High" : loyalty.PointsBalance >= 100 ? "Medium" : "Low";
+                                }
+                                <span class="status-tag @statusClass">@statusText</span>
+                            </td>
+                            <td>@loyalty.UpdatedAt.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewPoints(@loyalty.Id)">View</button>
+                                <button class="btn btn-sm btn-action edit-btn" onclick="editPoints(@loyalty.Id)">Edit</button>
+                                <button class="btn btn-sm btn-action delete-btn" onclick="deletePoints(@loyalty.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>No loyalty points found.</p>
+        </div>
+    }
+</div>
+
+<!-- View Points Details Modal (Read-only) -->
+<div id="pointsViewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="pointsViewTitle">Loyalty Points Details</h2>
+            <button class="close-btn" onclick="closePointsViewModal()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Customer:</span>
+                    <span class="detail-value" id="viewPointsCustomer"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value" id="viewPointsEmail"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Current Balance:</span>
+                    <span class="detail-value highlight-points" id="viewPointsBalance"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Created:</span>
+                    <span class="detail-value" id="viewPointsCreatedAt"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Last Updated:</span>
+                    <span class="detail-value" id="viewPointsUpdatedAt"></span>
+                </div>
+            </div>
+
+            <div class="points-info-section">
+                <h4>How Loyalty Points Work</h4>
+                <ul class="points-list">
+                    <li>Customers earn 1 point per $1 spent on services</li>
+                    <li>500 points = $50 discount voucher</li>
+                    <li>1000 points = $100 discount voucher</li>
+                    <li>Points never expire</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePointsViewModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Loyalty Points Form -->
+<div class="panel create-form" id="createPointsForm">
+    <h3 class="panel-title">Add/Edit Loyalty Points</h3>
+
+    <form asp-controller="Home" asp-action="CreateLoyaltyPoints" method="post" class="form-grid">
+        <div class="form-group">
+            <label for="customerName">Customer Name</label>
+            <input type="text" id="customerName" name="CustomerName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="Email" required />
+        </div>
+
+        <div class="form-group">
+            <label for="pointsBalance">Points Balance</label>
+            <input type="number" id="pointsBalance" name="PointsBalance" min="0" required />
+        </div>
+
+        <div class="form-group">
+            <label for="transaction">Transaction Type</label>
+            <select id="transaction" name="TransactionType" required>
+                <option value="">Select Transaction</option>
+                <option value="Earn">Earn Points</option>
+                <option value="Redeem">Redeem Points</option>
+                <option value="Adjust">Adjust Points</option>
+            </select>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="Notes" rows="3" placeholder="Add any notes about this transaction..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-reset" onclick="hideCreateForm()">Cancel</button>
+            <button type="submit" class="btn btn-success">Save Points</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function showCreateForm() {
+            document.getElementById('createPointsForm').classList.add('visible');
+            document.querySelector('html').style.overflow = 'hidden';
+        }
+
+        function hideCreateForm() {
+            document.getElementById('createPointsForm').classList.remove('visible');
+            document.querySelector('html').style.overflow = 'auto';
+        }
+
+        function editPoints(id) {
+            alert('Edit functionality for loyalty points #' + id + ' would go here');
+            showCreateForm();
+        }
+
+        function deletePoints(id) {
+            if (confirm('Are you sure you want to delete this loyalty points record?')) {
+                alert('Loyalty points record #' + id + ' deleted successfully');
+                location.reload();
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const form = document.getElementById('createPointsForm');
+            if (event.target === form) {
+                hideCreateForm();
+            }
+        });
+    </script>
+}

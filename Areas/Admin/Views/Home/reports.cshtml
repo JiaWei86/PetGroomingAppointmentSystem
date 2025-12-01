@@ -1,0 +1,99 @@
+﻿@{
+    ViewData["Title"] = "Reports & Analytics";
+    ViewData["ActivePage"] = "Reports";
+}
+
+<div class="content-header">
+    <h1 class="page-title">Reports & Analytics</h1>
+</div>
+
+<!-- Filters & Actions -->
+<div class="panel">
+    <div class="panel-header-wrapper">
+        <h3 class="panel-title">Report Filters</h3>
+        <div class="toolbar-right">
+            <button class="btn btn-success" type="button" onclick="downloadPdf()">
+                <i class="material-icons">picture_as_pdf</i> PDF
+            </button>
+            <button class="btn btn-info" type="button" onclick="downloadExcel()">
+                <i class="material-icons">grid_on</i> Excel
+            </button>
+        </div>
+    </div>
+
+    <form id="reportFilters" class="form-grid filter-form">
+        <div class="form-group">
+            <label for="reportType">Report Type</label>
+            <select class="form-control" id="reportType">
+                <option value="revenue">Revenue Report</option>
+                <option value="appointments">Appointments Report</option>
+                <option value="customers">Customer Report</option>
+                <option value="services">Services Report</option>
+                <option value="groomers">Groomer Performance</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="dateRange">Date Range</label>
+            <select class="form-control" id="dateRange">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="quarter">This Quarter</option>
+                <option value="year">This Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>From</label>
+            <input type="date" class="form-control" id="startDate" disabled />
+        </div>
+
+        <div class="form-group">
+            <label>To</label>
+            <input type="date" class="form-control" id="endDate" disabled />
+        </div>
+
+        <div class="form-actions">
+            <button type="reset" class="btn btn-reset">Reset</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="material-icons">assessment</i> Generate
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Report Content (print area) -->
+<div class="panel" id="reportArea">
+    <div class="print-header">
+        <img src="~/customer/img/logo.png" alt="Pet Grooming Logo" class="print-logo" />
+        <div class="print-header-text">
+            <h2>Business Reports</h2>
+        </div>
+    </div>
+    <div class="panel-header-wrapper">
+        <div>
+            <h3 class="panel-title" id="reportTitle">Revenue Report</h3>
+            <p class="panel-subtitle-small" id="currentReportTitle">
+                Revenue by service & date (Sample data)
+            </p>
+        </div>
+        <div class="panel-header-meta">
+            <span id="generatedTimestamp">Generated on: @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</span><br />
+            <span id="currentDateRangeLabel">Period: 2024-11-01 ~ 2024-11-30</span>
+        </div>
+    </div>
+
+    <!-- Summary cards 可以保留，也可以改成对不同 report type 有不同文案 -->
+    <div class="summary-row" id="reportSummary">
+        <!-- 同你现在的四张卡 -->
+    </div>
+
+    <!-- 这里不要再用 tabs，改成只显示一个表容器 -->
+    <div id="reportTableContainer">
+        <!-- generateReport() 根据当前 type 把对应表格注入这里 -->
+    </div>
+
+
+</div>

@@ -1,0 +1,169 @@
+﻿@{
+    ViewData["Title"] = "Service Management";
+    ViewData["ActivePage"] = "Service";
+}
+
+<div class="content-header">
+    <h1 class="page-title">Service Management</h1>
+</div>
+
+<div class="panel" style="padding: 25px; border-radius: 12px; margin-bottom: 25px;">
+    <h3 class="panel-title" style="margin-bottom: 20px;">Filter Services</h3>
+
+    <form method="get" class="form-grid">
+
+        <div class="form-group" style="grid-column: span 1;">
+            <label>Service Name</label>
+            <input type="text" name="ServiceName" placeholder="Enter service name" />
+        </div>
+
+        <div class="form-group" style="grid-column: span 1;">
+            <label>Category</label>
+            <input type="text" name="Category" placeholder="Dog, Cat, etc." />
+        </div>
+
+        <div class="form-group" style="grid-column: span 1;">
+            <label>Status</label>
+            <select name="Status">
+                <option value="">-- Any --</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <button type="reset" class="btn btn-reset">Reset</button>
+        </div>
+    </form>
+</div>
+
+
+<div class="panel">
+    <h3 class="panel-title">Existing Services</h3>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="showCreateForm()">Add New Service</button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Service ID</th>
+                <th>Service Name</th>
+                <th>Category</th>
+                <th>Price (RM)</th>
+                <th>Duration</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            @* Dummy Data Example *@
+            <tr>
+                <td>SRV001</td>
+                <td>Basic Dog Grooming</td>
+                <td>Dog</td>
+                <td>80.00</td>
+                <td>60 mins</td>
+                <td>Active</td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn">edit</button>
+                    <button class="btn btn-sm btn-action delete-btn">delete</button>
+                </td>
+            </tr>
+
+            <tr>
+                <td>SRV002</td>
+                <td>Cat Nail Trimming</td>
+                <td>Cat</td>
+                <td>25.00</td>
+                <td>15 mins</td>
+                <td>Active</td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn">edit</button>
+                    <button class="btn btn-sm btn-action delete-btn">delete</button>
+                </td>
+            </tr>
+
+            <tr>
+                <td>SRV003</td>
+                <td>Full Spa Treatment</td>
+                <td>Dog</td>
+                <td>150.00</td>
+                <td>90 mins</td>
+                <td>Inactive</td>
+                <td>
+                    <button class="btn btn-sm btn-action edit-btn">edit</button>
+                    <button class="btn btn-sm btn-action delete-btn">delete</button>
+                </td>
+            </tr>
+
+        </tbody>
+    </table>
+</div>
+
+<div class="panel create-form" id="createServiceForm">
+    <h3 class="panel-title">Create New Service</h3>
+
+    <form method="post" class="form-grid">
+        <div class="form-group">
+            <label for="serviceName">Service Name</label>
+            <input type="text" id="serviceName" name="ServiceName" required />
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="Category" required>
+                <option value="Dog">Dog</option>
+                <option value="Cat">Cat</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price (RM)</label>
+            <input type="number" step="0.01" id="price" name="Price" required />
+        </div>
+
+        <div class="form-group">
+            <label for="duration">Duration</label>
+            <input type="text" id="duration" name="Duration" placeholder="e.g., 60 mins" required />
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="Status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="description">Description</label>
+            <textarea id="description" name="Description" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Save Service</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function showCreateForm() {
+            var form = document.getElementById('createServiceForm');
+            form.style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var form = document.getElementById('createServiceForm');
+            if (form) form.style.display = 'none';
+        });
+    </script>
+}
+

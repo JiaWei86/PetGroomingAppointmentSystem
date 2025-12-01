@@ -1,5 +1,4 @@
 ﻿
-
 @{
     // Title for the browser tab
     ViewData["Title"] = "Groomer Management";
@@ -9,14 +8,14 @@
 
 <div class="content-header">
     <h1 class="page-title">Groomer Management</h1>
-    <p class="breadcrumb">Home / Groomers</p>
+
 </div>
 
 <div class="panel">
     <h3 class="panel-title">Existing Groomers</h3>
 
     <div class="actions">
-        <button class="btn btn-primary" onclick="showCreateForm()">Add Create New Groomer</button>
+        <button class="btn btn-primary" onclick="showCreateForm()">Add New Groomer</button>
     </div>
 
     <table class="data-table">
@@ -64,40 +63,50 @@
     <h3 class="panel-title">Create New Groomer</h3>
 
     <form asp-controller="Groomer" asp-action="Create" method="post" class="form-grid">
+
+        <!-- Groomer Name -->
         <div class="form-group">
             <label for="fullName">Full Name</label>
-            <input type="text" id="fullName" name="FirstName" required />
+            <input type="text" id="fullName" name="FullName" required />
         </div>
 
-        <div class="form-group">
-            <label for="specialty">Specialty</label>
-            <input type="text" id="specialty" name="Specialty" placeholder="e.g., Cat Grooming, Poodle" required />
-        </div>
-
+        <!-- Email Address -->
         <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" name="Email" required />
         </div>
 
+        <!-- Phone Number -->
         <div class="form-group">
-            <label for="status">Status</label>
-            <select id="status" name="Status">
-                <option value="Active">Active</option>
-                <option value="On Leave">On Leave</option>
-                <option value="Inactive">Inactive</option>
-            </select>
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="PhoneNumber" placeholder="012-3456789" required />
         </div>
 
+        <!-- Experience (in years) -->
+        <div class="form-group">
+            <label for="experience">Experience (Years)</label>
+            <input type="number" id="experience" name="ExperienceYears" min="0" max="50" required />
+        </div>
+
+        <!-- Specialty -->
+        <div class="form-group full-width">
+            <label for="specialty">Specialty</label>
+            <input type="text" id="specialty" name="Specialty" placeholder="e.g., Cat Grooming, Senior Care, Styling" required />
+        </div>
+
+        <!-- Notes (optional) -->
         <div class="form-group full-width">
             <label for="notes">Notes</label>
             <textarea id="notes" name="Notes" rows="3"></textarea>
         </div>
 
+        <!-- Save Button -->
         <div class="form-actions">
             <button type="submit" class="btn btn-success">Save Groomer</button>
         </div>
     </form>
 </div>
+
 
 
 @section Scripts {

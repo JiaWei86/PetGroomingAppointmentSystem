@@ -17,6 +17,7 @@
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+   
 }
     
 * {
@@ -52,6 +53,14 @@ body {
     height: 100%;
     overflow-y: auto;
     z-index: 100;
+}
+
+/* Sidebar logo size */
+#sidebar .logo img {
+    width: 200px;      
+    height: auto;
+    display: block;
+    margin: 0 auto;    /* 如果想保持置中 */
 }
 
 .logo {
@@ -190,12 +199,17 @@ body {
 }
 
 .user-profile {
+    position: fixed;
+    top: 16px;
+    right: 35px;
     display: flex;
     align-items: center;
     gap: 14px;
     font-weight: 500;
     color: var(--text-color);
+    z-index: 100;
 }
+
 
 .user-profile i {
     font-size: 32px;
@@ -716,7 +730,11 @@ body {
     margin-top: 24px;
     justify-content: flex-end;
     grid-column: 1 / -1;
+   
 }
+
+
+
 
 /* --- 11. Modal/Form Styling --- */
 
@@ -803,20 +821,22 @@ body {
     font-size: 14px;
 }
 
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    transition: all 0.3s ease;
-    background-color: #ffffff;
-}
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="number"],
+    .form-group input[type="tel"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+    }
 
 .form-group input:focus,
 .form-group select:focus,
@@ -973,6 +993,7 @@ body {
 .calendar-day.selected .day-number,
 .calendar-day.selected .appointments-count {
     color: #ffffff;
+
 }
 
 .empty-day {
@@ -1273,3 +1294,1060 @@ body {
         }
     }
 }
+
+/* ========================================
+   CUSTOMER MANAGEMENT MODAL STYLES
+   ======================================== */
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+    color: #333;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    background-color: #f8f9fa;
+}
+
+/* Details Grid */
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #333;
+    min-width: 120px;
+}
+
+.detail-value {
+    color: #666;
+    text-align: right;
+    flex: 1;
+    padding-left: 20px;
+    word-break: break-word;
+}
+
+/* Form Styles for Modals */
+.modal .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 20px;
+}
+
+.modal .form-grid > .form-group:nth-child(7),
+.modal .form-grid > .form-group:nth-child(8),
+.modal .form-grid > .form-actions {
+    grid-column: 1 / -1;
+}
+
+.modal .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal .form-group label {
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.modal .form-control {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.modal .form-control:focus {
+    outline: none;
+    border-color: #d97706;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+
+.modal .form-control::placeholder {
+    color: #999;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 10px;
+}
+
+/* Filter Form Styling */
+.filter-form {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.filter-form .form-group {
+    margin-bottom: 0;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 60px 40px;
+    text-align: center;
+    color: #999;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Button Variants */
+.btn-reset {
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+    transition: all 0.3s ease;
+}
+
+.btn-reset:hover {
+    background-color: #e8e8e8;
+    border-color: #ccc;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+/* ========================================
+   CUSTOMER DETAILS VIEW STYLES
+   ======================================== */
+
+/* Customer Details Tabs */
+.customer-details-tabs {
+    margin-top: 25px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+}
+
+.tabs-nav {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.tab-btn:hover {
+    color: #d97706;
+}
+
+.tab-btn.active {
+    color: #d97706;
+    border-bottom-color: #d97706;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Pets List */
+.pets-list-container {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.pet-item {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 4px solid #d97706;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pet-item:last-child {
+    margin-bottom: 0;
+}
+
+.pet-info {
+    flex: 1;
+}
+
+.pet-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.pet-details {
+    font-size: 12px;
+    color: #666;
+}
+
+.pet-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.empty-message {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    margin: 0;
+}
+
+/* Loyalty Summary Cards */
+.loyalty-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.loyalty-card {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+}
+
+.loyalty-label {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.loyalty-value {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.mt-3 {
+    margin-top: 20px;
+}
+
+.mt-4 {
+    margin-top: 25px;
+}
+
+/* Responsive Tabs */
+@media (max-width: 768px) {
+    .tabs-nav {
+        gap: 5px;
+    }
+
+    .tab-btn {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+
+    .loyalty-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .pets-list-container {
+        max-height: 300px;
+    }
+}
+
+/* ========================================
+   ENHANCED DASHBOARD STYLES
+   ======================================== */
+
+/* Enhanced stat cards with icons */
+.stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+
+    .stat-icon i {
+        font-size: 32px;
+        color: white;
+    }
+
+.stat-card.blue .stat-icon {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.stat-card.green .stat-icon {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.stat-card.yellow .stat-icon {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.stat-card.red .stat-icon {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.change i {
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+/* Enhanced panel headers */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+}
+
+.panel-subtitle-small {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+/* Enhanced placeholder chart */
+.placeholder-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.chart-placeholder-icon {
+    font-size: 64px;
+    color: var(--text-light);
+    opacity: 0.3;
+}
+
+.placeholder-chart small {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+/* Enhanced loyalty panel */
+.loyalty-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.loyalty-icon {
+    font-size: 48px;
+    color: var(--primary-color);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.loyalty-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.loyalty-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.loyalty-stat-label {
+    font-size: 13px;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.loyalty-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* Enhanced calendar header */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+    .calendar-header .panel-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+        .calendar-header .panel-title i {
+            color: var(--primary-color);
+        }
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.calendar-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 180px;
+    text-align: center;
+    margin: 0;
+}
+
+.btn-nav {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+}
+
+    .btn-nav i {
+        font-size: 24px;
+    }
+
+/* Enhanced sidebar header */
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+    .sidebar-title i {
+        color: var(--primary-color);
+        font-size: 22px;
+    }
+
+.selected-date-badge {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Calendar day hover effect */
+.calendar-day {
+    position: relative;
+}
+
+    .calendar-day::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .calendar-day.has-appointments::after {
+        opacity: 1;
+    }
+
+/* Enhanced appointment items */
+.appointment-item {
+    position: relative;
+    padding-left: 18px;
+}
+
+    .appointment-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: 2px;
+    }
+
+    .appointment-item.confirmed::before {
+        background: var(--green-card);
+    }
+
+    .appointment-item.pending::before {
+        background: var(--yellow-card);
+    }
+
+    .appointment-item.cancelled::before {
+        background: var(--red-card);
+    }
+
+/* Responsive enhancements for dashboard */
+@media (max-width: 768px) {
+    .stat-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+    }
+
+        .stat-icon i {
+            font-size: 28px;
+        }
+
+    .calendar-header {
+        flex-direction: column;
+    }
+
+    .sidebar-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+}
+
+/* --- 13. Appointment Page Styles --- */
+
+.filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+    .filter-form .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-form button {
+        height: fit-content;
+        margin-top: auto;
+    }
+
+.panel-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+    .form-control:focus {
+        border-color: #d97706;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+    }
+
+.btn-reset {
+    background-color: #6b7280;
+    color: #ffffff;
+}
+
+    .btn-reset:hover {
+        background-color: #4b5563;
+        box-shadow: 0 4px 6px rgba(107, 114, 128, 0.25);
+        transform: translateY(-2px);
+    }
+
+/* --- Responsive Appointment Styles --- */
+@media (max-width: 1024px) {
+    .filter-form {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-header-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+        .panel-header-wrapper .btn {
+            width: 100%;
+        }
+
+    .data-table {
+        font-size: 12px;
+    }
+
+        .data-table th,
+        .data-table td {
+            padding: 8px 10px;
+        }
+
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-form {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .panel-header-wrapper {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .data-table th {
+        font-size: 11px;
+    }
+
+    .data-table td {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+}
+
+/* --- REPORTS & ANALYTICS SPECIFIC STYLES --- */
+.report-page {
+    padding: 20px 0;
+    font-size: 14px;
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.report-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.report-subtitle {
+    margin: 5px 0 0;
+    color: #777;
+}
+
+.report-meta span {
+    display: block;
+    color: #999;
+    font-size: 12px;
+    text-align: right;
+}
+
+.report-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 15px;
+    align-items: flex-end;
+}
+
+    .toolbar-left .form-group {
+        margin-bottom: 0;
+        min-width: 150px;
+    }
+
+.toolbar-right {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    padding: 12px 15px;
+    background: #fafafa;
+}
+
+.summary-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.summary-note {
+    font-size: 12px;
+}
+
+.text-success {
+    color: #2e7d32 !important;
+}
+
+.text-danger {
+    color: #c62828 !important;
+}
+
+.panel-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 10px;
+}
+
+.panel-header-meta {
+    font-size: 12px;
+    color: #777;
+    text-align: right;
+}
+
+.panel-subtitle-small {
+    margin: 0;
+    font-size: 12px;
+    color: #777;
+}
+
+.report-tabs {
+    display: inline-flex;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 10px;
+    gap: 5px;
+}
+
+.report-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: #666;
+}
+
+    .report-tab-btn.active {
+        background: #ffffff;
+        border-color: #e0e0e0;
+        border-bottom-color: #ffffff;
+        color: #333;
+        font-weight: 500;
+    }
+
+.report-tab-content {
+    display: none;
+}
+
+    .report-tab-content.active {
+        display: block;
+    }
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+    .report-table thead th {
+        border-bottom: 1px solid #ddd;
+        padding: 8px;
+        background: #f5f5f5;
+        font-weight: 600;
+    }
+
+    .report-table tbody td {
+        border-bottom: 1px solid #eee;
+        padding: 6px 8px;
+    }
+
+    .report-table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+.text-right {
+    text-align: right;
+}
+
+.status-tag.active {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+}
+
+.report-footer {
+    margin-top: 15px;
+    border-top: 1px dashed #ddd;
+    padding-top: 8px;
+}
+
+.print-header {
+    display: none;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #reportArea, #reportArea * {
+        visibility: visible;
+    }
+
+    #reportArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+
+    #reportArea.panel {
+        margin: 0;
+        padding: 16px 20px;
+    }
+
+    #reportArea .panel-header-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    #reportArea .panel-header-meta {
+        text-align: left;
+    }
+
+    #reportArea .panel-title,
+    #reportArea .panel-subtitle-small {
+        text-align: left;
+    }
+    .print-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .print-logo {
+        width: 80px;   /* 可自行调整大小 */
+        height: auto;
+    }
+
+    .print-header-text h2 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .print-header-text p {
+        margin: 2px 0 0;
+        font-size: 12px;
+    }
+
+}
+
