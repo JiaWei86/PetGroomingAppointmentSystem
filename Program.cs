@@ -1,9 +1,14 @@
 using PetGroomingAppointmentSystem.Services;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add Chatbot Service
+builder.Services.AddScoped<IChatbotService, ChatbotService>();
+builder.Services.AddHttpClient<ChatbotService>();
 
 // Add session support
 builder.Services.AddSession(options =>
@@ -13,7 +18,11 @@ builder.Services.AddSession(options =>
 });
 
 // Add MVC with Razor Pages
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Allow ApiController attribute to work properly
+    options.Conventions.Add(new Microsoft.AspNetCore.Mvc.ApplicationModels.DefaultApiExplorer());
+});
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
@@ -47,6 +56,11 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
+// Map API routes first
+app.MapControllerRoute(
+    name: "api",
+    pattern: "api/{controller}/{action}/{id?}");
+
 app.MapControllerRoute(
     name: "customer",
     pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
@@ -62,3 +76,4 @@ app.MapControllerRoute(
 
 app.MapRazorPages();
 app.Run();
+
