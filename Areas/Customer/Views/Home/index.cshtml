@@ -1,266 +1,277 @@
-@{
+﻿@{
     ViewData["Title"] = "Home";
 }
+
 <!-- slider_area_start -->
 <div class="slider_area">
     <div class="single_slider slider_bg_1 d-flex align-items-center">
         <div class="container">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-lg-5 col-md-6">
                     <div class="slider_text">
-                        <h3>Your Pets� <br> <span>Well-being</span></h3>
-                        <p>Easy grooming appointments with gentle, reliable care for every furry companion.</p>
+                        <h3 class="wow fadeInUp" data-wow-delay="0.2s">Your Pets' <br> <span>Well-being</span></h3>
+                        <p class="wow fadeInUp" data-wow-delay="0.4s">Easy grooming appointments with gentle, reliable care for every furry companion.</p>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4 wow fadeInUp" data-wow-delay="0.6s" style="display: inline-block;">Book Now</a>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="dog_thumb d-none d-lg-block">
-            <img src="~/Customer/img/banner/dog.png" alt="">
+        <div class="dog_thumb d-none d-lg-block wow slideInRight" data-wow-delay="0.3s">
+            <img src="~/Customer/img/banner/dog.png" alt="Dog grooming" loading="lazy" decoding="async">
         </div>
     </div>
 </div>
-<!-- slider_area_end -->
-<!-- services_price_area_start  -->
-<br>
-<br> 
-<br>
-<br>
-<br>
-<br>
-<div class="slider_text">
+<!-- slider_area_end -->    
+
+<!-- services_price_area_start -->
+<section class="services_price_area py-5">
     <div class="container">
         <div class="row justify-content-center ">
             <div class="col-lg-6 col-md-10">
-                <div class="section_title text-center mb-95">
-                    <h3>Our Services & <br>
-                        Price List</h3>
+                <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
+                    <h3>Our Services & <br> Price List</h3>
                 </div>
             </div>
         </div>
-        <div class="text-center">
-            <img src="~/Customer/img/about/price_list.png" alt="" class="img-fluid" style="max-width:1100px;">
+        <div class="owl-carousel price-list-carousel">
+            <div class="text-center">
+                <img src="~/Customer/img/about/price_list.png" alt="Price list for pet grooming services" class="img-fluid wow zoomIn" data-wow-delay="0.3s" loading="lazy" decoding="async" style="max-width:1100px;">
+            </div>
+            <div class="text-center">
+                <img src="~/Customer/img/about/price_list.png" alt="Price list for pet grooming services" class="img-fluid wow zoomIn" data-wow-delay="0.3s" loading="lazy" decoding="async" style="max-width:1100px;">
+            </div>
         </div>
     </div>
-</div>
-<!-- services_price_area_start   -->
-<!-- dog service_area_start  -->
-<div class="service_area">
+</section>
+<!-- services_price_area_end -->
+
+<!-- dog service_area_start -->
+<section class="service_area py-5">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
-                <div class="section_title text-center mb-95">
-                    <h3>Services for every dog</h3>
+                <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
+                    <h3>🐕 Services for dog</h3>
                 </div>
             </div>
         </div>
-        <div class="owl-carousel service-carousel">
-            <div class="single_service">
+        <div class="owl-carousel service-carousel dog-carousel">
+            <div class="single_service wow fadeInUp" data-wow-delay="0.1s">
                 <div class="service_thumb d-flex align-items-center justify-content-center">
-                    <div>
-                        <img src="~/Customer/img/service/pet_icon.png" alt="">
-                    </div>
+                    <img src="~/Customer/img/service/pet_icon.png" alt="Dog bathing icon" loading="lazy" decoding="async">
                 </div>
                 <div class="service_content text-center">
                     <h3>Bathing</h3>
                     <p>A gentle full-body wash that cleans, freshens, and removes loose fur.</p>
-                    <br>
-                    <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                    <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                 </div>
             </div>
-            <div class="single_service">
+            <div class="single_service wow fadeInUp" data-wow-delay="0.2s">
                 <div class="service_thumb d-flex align-items-center justify-content-center">
-                    <div>
-                        <img src="~/Customer/img/service/pet_icon.png" alt="">
-                    </div>
+                    <img src="~/Customer/img/service/pet_icon.png" alt="Dog haircut icon" loading="lazy" decoding="async">
                 </div>
                 <div class="service_content text-center">
                     <h3>Haircut / Trimming</h3>
-                    <p>A neat coat trim or full haircut to keep your dog looking clean, and stylish.</p>
-                    <br>
-                    <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                    <p>A neat coat trim or full haircut to keep your dog looking clean and stylish.</p>
+                    <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                 </div>
             </div>
-            <div class="single_service">
+            <div class="single_service wow fadeInUp" data-wow-delay="0.3s">
                 <div class="service_thumb d-flex align-items-center justify-content-center">
-                    <div>
-                        <img src="~/Customer/img/service/pet_icon.png" alt="">
-                    </div>
+                    <img src="~/Customer/img/service/pet_icon.png" alt="Dog nail clipping icon" loading="lazy" decoding="async">
                 </div>
                 <div class="service_content text-center">
                     <h3>Nail Clipping / Grinding</h3>
                     <p>Safe nail trimming to maintain healthy paw care and prevent overgrowth.</p>
-                    <br>
-                    <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                    <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 <!-- dog service_area_end -->
-<!-- cat_service_area_start  -->
-<div class="service_area">
+
+<!-- cat_service_area_start -->
+<section class="service_area py-5">
     <div class="container">
-        <div class="row justify-content-center ">
+        <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
-                <div class="section_title text-center mb-95">
-                    <h3>Services for every cat</h3>
+                <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
+                    <h3>🐈 Services for cat</h3>
                 </div>
             </div>
         </div>
         <div class="row justify-content-center">
-            <div class="owl-carousel service-carousel">
-                <div class="single_service">
+            <div class="owl-carousel service-carousel cat-carousel w-100">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.1s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/pet_icon.png" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/pet_icon.png" alt="Cat bathing icon" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Bathing</h3>
                         <p>A mild, stress-free bath using cat-safe products to keep the coat clean and soft.</p>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                     </div>
                 </div>
-                <div class="single_service">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.2s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/pet_icon.png" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/pet_icon.png" alt="Cat haircut icon" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Haircut / Trimming</h3>
                         <p>Light coat trimming to reduce tangles and keep your cat tidy and comfortable.</p>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                     </div>
                 </div>
-                <div class="single_service">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.3s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/pet_icon.png" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/pet_icon.png" alt="Cat nail clipping icon" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Nail Clipping / Grinding</h3>
                         <p>Quick nail trimming to reduce sharp claws and avoid accidental scratches.</p>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Book Appointment Now</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 <!-- cat_service_area_end -->
-<!-- redeem_gift_area_start  -->
-<div class="service_area">
+
+<!-- redeem_gift_area_start -->
+<section class="service_area py-5">
     <div class="container">
-        <div class="row justify-content-center ">
+        <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
-                <div class="section_title text-center mb-95">
-                    <h3>Redeem Gift</h3>
+                <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
+                    <h3>🎁 Redeem Gift</h3>
                 </div>
             </div>
         </div>
         <div class="row justify-content-center">
-            <div class="owl-carousel service-carousel">
-                <div class="single_service">
+            <div class="owl-carousel service-carousel gift-carousel w-100">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.1s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/redeem_product1.jpg" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/redeem_product1.jpg" alt="Bathing gift package" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Bathing</h3>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Redeem Gift</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Redeem Gift</a>
                     </div>
                 </div>
-                <div class="single_service">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.2s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/redeem_product2.jpg" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/redeem_product2.jpg" alt="Haircut gift package" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Haircut / Trimming</h3>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Redeem Gift</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Redeem Gift</a>
                     </div>
                 </div>
-                <div class="single_service">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.3s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/redeem_product3.jpg" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/redeem_product3.jpg" alt="Nail care gift package" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
                         <h3>Nail Clipping / Grinding</h3>
-                        <br>
-                        <a href="contact.html" class="boxed-btn4">Redeem Gift</a>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Redeem Gift</a>
                     </div>
                 </div>
-                <div class="single_service">
+                <div class="single_service wow fadeInUp" data-wow-delay="0.4s">
                     <div class="service_thumb d-flex align-items-center justify-content-center">
-                        <div>
-                            <img src="~/Customer/img/service/redeem_product4.jpg" alt="">
-                        </div>
+                        <img src="~/Customer/img/service/redeem_product4.jpg" alt="Premium grooming gift package" loading="lazy" decoding="async">
                     </div>
                     <div class="service_content text-center">
-                        <h3>Nail Clipping / Grinding</h3>
-                        <a href="contact.html" class="boxed-btn4">Redeem Gift</a>
-                        <br>
+                        <h3>Premium Package</h3>
+                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Redeem Gift</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 <!-- redeem_gift_area_end -->
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<div class="contact_anipat anipat_bg_1">
+
+<!-- contact_anipat_start -->
+<section class="contact_anipat anipat_bg_1 py-5">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="contact_text text-center">
+                <div class="contact_text text-center wow fadeInUp" data-wow-delay="0.2s">
                     <div class="section_title text-center">
                         <h3>Why go with Anipat?</h3>
                         <p>Because we know that even the best technology is only as good as the people behind it. 24/7 tech support.</p>
                     </div>
-                    <div class="contact_btn d-flex align-items-center justify-content-center">
-                        <p><a href="#">+6011 4589 2563</a></p>
+                    <div class="contact_btn d-flex align-items-center justify-content-center mt-4">
+                        <a href="https://wa.me/601160628990" target="_blank" rel="noopener noreferrer" class="boxed-btn4">
+                            <i class="fa fa-whatsapp"></i> Contact Us: +6011 4589 2563
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+<!-- contact_anipat_end -->
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            $(".service-carousel").owlCarousel({
-                items: 3,          // <<< Show 3 items at once
-                loop: true,
-                margin: 18,
-                // dots: true,
-                // nav: false,
-                autoplay: true,
-                autoplayTimeout: 3000,
-                responsive: {
-                    0: { items: 1 },
-                    768: { items: 2 },
-                    1200: { items: 3 }
-                }
-            });
+<script src="~/Customer/js/wow.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Initialize WOW animations
+        new WOW().init();
+
+        // Initialize all service carousels
+        var carouselConfig = {
+            items: 3,
+            loop: true,
+            margin: 18,
+            autoplay: true,
+            autoplayTimeout: 4000,
+            autoplayHoverPause: true,
+            responsive: {
+                0: { items: 1 },
+                768: { items: 2 },
+                1200: { items: 3 }
+            }
+        };
+
+        $(".service-carousel").owlCarousel(carouselConfig);
+
+        // Initialize price list carousel (single item)
+        $(".price-list-carousel").owlCarousel({
+            items: 1,
+            loop: true,
+            margin: 0,
+            autoplay: true,
+            autoplayTimeout: 5000,
+            autoplayHoverPause: true,
+            responsive: {
+                0: { items: 1 },
+                768: { items: 1 },
+                1200: { items: 1 }
+            }
         });
-        owl.find(".owl-item .single_service").css("height", "380px");
-    </script>
+
+        // Fix carousel card heights responsively
+        function setCarouselHeights() {
+            $(".service-carousel").each(function () {
+                var maxHeight = 0;
+                $(this).find(".single_service").each(function () {
+                    var height = $(this).height();
+                    if (height > maxHeight) maxHeight = height;
+                });
+                $(this).find(".single_service").height(maxHeight);
+            });
+        }
+
+        // Set heights on load and window resize
+        setCarouselHeights();
+        $(window).on('resize', function () {
+            setCarouselHeights();
+        });
+    });
+</script>
 }
 

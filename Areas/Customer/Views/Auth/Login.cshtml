@@ -1,0 +1,99 @@
+﻿@{
+    ViewData["Title"] = "Customer Login";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/Customer/css/auth.css" />
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box login-box">
+            <div class="auth-header">
+                <h1>Login</h1>
+                <p>Enter your phone number and password</p>
+            </div>
+
+            @if (ViewData["Error"] != null)
+            {
+                <div class="alert alert-danger">@ViewData["Error"]</div>
+            }
+
+            @if (ViewData["Success"] != null)
+            {
+                <div class="alert alert-success">@ViewData["Success"]</div>
+            }
+
+            <form method="post" id="loginForm">
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Enter your phone number" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required />
+                </div>
+
+                @if (ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"])
+                {
+                    <div class="alert alert-warning" id="lockoutAlert">
+                        <strong>Account locked due to too many failed attempts.</strong>
+                        <br />
+                        Please try again in <span id="lockoutTimer">@ViewData["LockoutSeconds"]</span> seconds.
+                    </div>
+                    <button type="submit" class="btn-submit" disabled id="submitBtn">Login (Locked)</button>
+                }
+                else
+                {
+                    <button type="submit" class="btn-submit" id="submitBtn">Login</button>
+                }
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="@Url.Action("Register", "Auth")">Register here</a></p>
+                <p><a href="@Url.Action("ForgotPassword", "Auth")">Forgot your password?</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const lockoutSeconds = parseInt('@(ViewData["LockoutSeconds"] ?? "0")');
+            if (lockoutSeconds > 0) {
+                let remainingSeconds = lockoutSeconds;
+                const timerElement = document.getElementById('lockoutTimer');
+                const submitBtn = document.getElementById('submitBtn');
+                const lockoutAlert = document.getElementById('lockoutAlert');
+
+                const updateTimer = () => {
+                    if (timerElement) {
+                        timerElement.textContent = remainingSeconds;
+                    }
+                    
+                    remainingSeconds--;
+                    
+                    if (remainingSeconds < 0) {
+                        // Enable button and hide alert instead of reloading
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Login';
+                        }
+                        if (lockoutAlert) {
+                            lockoutAlert.style.display = 'none';
+                        }
+                    } else {
+                        setTimeout(updateTimer, 1000);
+                    }
+                };
+                updateTimer();
+            }
+        });
+    </script>
+</body>
+</html>

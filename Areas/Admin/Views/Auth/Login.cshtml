@@ -1,0 +1,274 @@
+﻿@{
+    ViewData["Title"] = "Admin Login";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #F09825 0%, #b45309 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #b45309;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #d97706;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #fed7aa;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #d97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+        }
+
+        .alert {
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background-color: #fed7aa;
+            color: #92400e;
+            border: 1px solid #fdba74;
+        }
+
+        .lockout-message {
+            text-align: center;
+            color: #92400e;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .lockout-timer {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #b45309;
+            margin: 15px 0;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .login-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(217, 119, 6, 0.3);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #fed7aa;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .login-info h4 {
+            color: #b45309;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .credentials-table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .credentials-table th {
+            background-color: #fed7aa;
+            padding: 5px;
+            text-align: left;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .credentials-table td {
+            padding: 5px;
+            border-bottom: 1px solid #fed7aa;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Admin Login</h1>
+            <p>Pet Grooming Appointment System</p>
+        </div>
+
+        @if (ViewData["Error"] != null)
+        {
+            <div class="alert alert-error">
+                @ViewData["Error"]
+            </div>
+        }
+
+        @if (ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"])
+        {
+            <div class="lockout-message">
+                Account locked due to too many failed attempts
+            </div>
+            <div class="lockout-timer" id="lockoutTimer">
+                @ViewData["LockoutSeconds"]s
+            </div>
+        }
+
+        <form method="post" id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter admin username or staff ID" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" class="login-button" id="submitBtn" @(ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"] ? "disabled" : "")>
+                Login
+            </button>
+        </form>
+
+        <div class="login-info">
+            <h4>Demo Credentials:</h4>
+            <table class="credentials-table">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Admin</td>
+                        <td>Admin</td>
+                        <td>admin123</td>
+                    </tr>
+                    <tr>
+                        <td>Groomer</td>
+                        <td>S001</td>
+                        <td>123456789012</td>
+                    </tr>
+                    <tr>
+                        <td>Groomer</td>
+                        <td>S002</td>
+                        <td>987654321098</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="margin-top: 10px; color: #92400e;">
+                Demo credentials are for testing only. Replace with real data in production.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const lockoutSeconds = parseInt('@(ViewData["LockoutSeconds"] ?? "0")');
+            if (lockoutSeconds > 0) {
+                let remainingSeconds = lockoutSeconds;
+                const timerElement = document.getElementById('lockoutTimer');
+                const submitBtn = document.getElementById('submitBtn');
+                const lockoutAlert = document.getElementById('lockoutAlert');
+
+                const updateTimer = () => {
+                    if (timerElement) {
+                        timerElement.textContent = remainingSeconds;
+                    }
+
+                    remainingSeconds--;
+
+                    if (remainingSeconds < 0) {
+                        // Enable button and hide alert instead of reloading
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Login';
+                        }
+                        if (lockoutAlert) {
+                            lockoutAlert.style.display = 'none';
+                        }
+                    } else {
+                        setTimeout(updateTimer, 1000);
+                    }
+                };
+                updateTimer();
+            }
+        });
+    </script>
+</body>
+</html>

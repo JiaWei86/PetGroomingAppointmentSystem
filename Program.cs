@@ -1,14 +1,51 @@
+using PetGroomingAppointmentSystem.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add session support
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+});
+
+// Add MVC with Razor Pages
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseSession();
 
-// Route for Customer area
+// Add custom middleware to protect admin area
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+    if (path.StartsWith("/admin") && !path.StartsWith("/admin/auth/login"))
+    {
+        var isLoggedIn = context.Session.GetString("IsAdminLoggedIn");
+        if (string.IsNullOrEmpty(isLoggedIn))
+        {
+            context.Response.Redirect("/Admin/Auth/Login");
+            return;
+        }
+    }
+    await next();
+});
 
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "customer",
@@ -23,12 +60,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Friendly route for About page (still works)
-app.MapControllerRoute(
-    name: "about",
-    pattern: "about",
-    defaults: new { controller = "Home", action = "About" });
-
-
-
+app.MapRazorPages();
 app.Run();

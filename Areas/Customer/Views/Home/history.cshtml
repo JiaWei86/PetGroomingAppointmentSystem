@@ -2,139 +2,391 @@
     ViewData["Title"] = "History";
 }
 
-<link rel="stylesheet" href="~/Customer/css/history.css" />
+<link rel="stylesheet" href="~/Customer/css/history.css"/>
 
 <section class="history-section">
     <div class="history-wrap">
+        <!-- Header with improved layout -->
         <div class="history-header">
-            <h2>History</h2>
-            <p class="muted">Review your previous appointments and redeemed items.</p>
+            <div class="header-content">
+                <h1 class="header-title">📋 Appointment & Redeem History</h1>
+                <p class="header-subtitle">Track your grooming appointments and loyalty rewards</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <span class="stat-icon">✓</span>
+                    <div>
+                        <div class="stat-value" id="totalAppointments">0</div>
+                        <div class="stat-label">Total Appointments</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🎁</span>
+                    <div>
+                        <div class="stat-value" id="totalRedeemed">0</div>
+                        <div class="stat-label">Redeemed Items</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <!-- Enhanced tabs with icons -->
         <div class="tabs">
-            <button class="tab-btn active" data-tab="appointments">Appointment History</button>
-            <button class="tab-btn" data-tab="redeem">Redeem History</button>
+            <button class="tab-btn active" data-tab="appointments">
+                <span class="tab-icon">📅</span>
+                <span>Appointment History</span>
+                <span class="tab-badge" id="apptBadge">0</span>
+            </button>
+            <button class="tab-btn" data-tab="redeem">
+                <span class="tab-icon">🎁</span>
+                <span>Redeem History</span>
+                <span class="tab-badge" id="redeemBadge">0</span>
+            </button>
         </div>
 
         <div class="tab-panels">
             <!-- APPOINTMENT HISTORY -->
             <div id="appointments" class="tab-panel active">
-                <div class="controls">
-                    <div class="left">
-                        <label>
-                            Show
-                            <select id="apptStatusFilter">
-                                <option value="all">All statuses</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="visited">Visited</option>
-                                <option value="noshow">No Show</option>
-                                <option value="pending">Pending</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </label>
-                    </div>
+                <!-- Enhanced controls -->
+                <div class="controls-section">
+                    <div class="controls">
+                        <div class="left">
+                            <div class="filter-group">
+                                <label for="apptStatusFilter">
+                                    <span class="filter-label">Filter by Status</span>
+                                </label>
+                                <select id="apptStatusFilter" class="select-filter">
+                                    <option value="all">All statuses</option>
+                                    <option value="confirmed">✓ Confirmed</option>
+                                    <option value="visited">✓ Visited</option>
+                                    <option value="pending">⏳ Pending</option>
+                                    <option value="noshow">✗ No Show</option>
+                                    <option value="cancelled">✗ Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
 
-                    <div class="right">
-                        <input id="apptSearch" placeholder="Search by pet, date, groomer..." />
+                        <div class="right">
+                            <div class="search-group">
+                                <input id="apptSearch" class="search-input" placeholder="🔍 Search appointments..." />
+                                <button class="search-clear-btn" id="apptClearSearch" title="Clear search">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-info" id="apptFilterInfo"></div>
+                </div>
+
+                <!-- Table section -->
+                <div class="table-section">
+                    <div class="table-wrap">
+                        <table id="apptTable" class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Pet(s)</th>
+                                    <th>Groomer</th>
+                                    <th>Service</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody><!-- injected --></tbody>
+                        </table>
+                    </div>
+                    <div id="apptEmptyState" class="empty-state" style="display:none;">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>No appointments found</h3>
+                        <p>Try adjusting your filters or create a new appointment</p>
                     </div>
                 </div>
 
-                <div class="table-wrap">
-                    <table id="apptTable" class="history-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Pet(s)</th>
-                                <th>Groomer</th>
-                                <th>Service</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody><!-- injected --></tbody>
-                    </table>
-                </div>
-
-                <div class="pager">
-                    <button id="apptPrev" class="small-btn">Prev</button>
-                    <span id="apptPageInfo"></span>
-                    <button id="apptNext" class="small-btn">Next</button>
+                <!-- Enhanced pagination -->
+                <div class="pager-section">
+                    <div class="pager">
+                        <button id="apptPrev" class="pager-btn pager-btn-prev">← Previous</button>
+                        <div class="pager-info">
+                            <span id="apptPageInfo">Page 1 of 1</span>
+                            <span class="pager-results" id="apptResultsInfo"></span>
+                        </div>
+                        <button id="apptNext" class="pager-btn pager-btn-next">Next →</button>
+                    </div>
                 </div>
             </div>
 
             <!-- REDEEM HISTORY -->
             <div id="redeem" class="tab-panel">
-                <div class="controls">
-                    <div class="left">
-                        <label>
-                            Show
-                            <select id="redeemStatusFilter">
-                                <option value="all">All statuses</option>
-                                <option value="used">Used</option>
-                                <option value="expired">Expired</option>
-                                <option value="available">Available</option>
-                            </select>
-                        </label>
-                    </div>
+                <!-- Enhanced controls -->
+                <div class="controls-section">
+                    <div class="controls">
+                        <div class="left">
+                            <div class="filter-group">
+                                <label for="redeemStatusFilter">
+                                    <span class="filter-label">Filter by Status</span>
+                                </label>
+                                <select id="redeemStatusFilter" class="select-filter">
+                                    <option value="all">All statuses</option>
+                                    <option value="used">✓ Used</option>
+                                    <option value="available">◯ Available</option>
+                                    <option value="expired">✗ Expired</option>
+                                </select>
+                            </div>
+                        </div>
 
-                    <div class="right">
-                        <input id="redeemSearch" placeholder="Search by item, date..." />
+                        <div class="right">
+                            <div class="search-group">
+                                <input id="redeemSearch" class="search-input" placeholder="🔍 Search rewards..." />
+                                <button class="search-clear-btn" id="redeemClearSearch" title="Clear search">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-info" id="redeemFilterInfo"></div>
+                </div>
+
+                <!-- Table section -->
+                <div class="table-section">
+                    <div class="table-wrap">
+                        <table id="redeemTable" class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Item</th>
+                                    <th>Points</th>
+                                    <th>Redeemed By</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody><!-- injected --></tbody>
+                        </table>
+                    </div>
+                    <div id="redeemEmptyState" class="empty-state" style="display:none;">
+                        <div class="empty-state-icon">🎁</div>
+                        <h3>No redeemed items found</h3>
+                        <p>Earn points on your appointments to redeem rewards</p>
                     </div>
                 </div>
 
-                <div class="table-wrap">
-                    <table id="redeemTable" class="history-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Item</th>
-                                <th>Points</th>
-                                <th>Redeemed By</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody><!-- injected --></tbody>
-                    </table>
-                </div>
-
-                <div class="pager">
-                    <button id="redeemPrev" class="small-btn">Prev</button>
-                    <span id="redeemPageInfo"></span>
-                    <button id="redeemNext" class="small-btn">Next</button>
+                <!-- Enhanced pagination -->
+                <div class="pager-section">
+                    <div class="pager">
+                        <button id="redeemPrev" class="pager-btn pager-btn-prev">← Previous</button>
+                        <div class="pager-info">
+                            <span id="redeemPageInfo">Page 1 of 1</span>
+                            <span class="pager-results" id="redeemResultsInfo"></span>
+                        </div>
+                        <button id="redeemNext" class="pager-btn pager-btn-next">Next →</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Script: client-side rendering + filtering + pagination -->
+<!-- Modal for details -->
+<div id="detailModal" class="modal" style="display:none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
 <script>
     (function(){
-      /* ---------- Config ---------- */
-      const PLACEHOLDER_IMG = '/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png'; // uploaded file path used as placeholder
+      const PLACEHOLDER_IMG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Crect fill="%23FFE0D0" width="40" height="40"/%3E%3Ccircle cx="20" cy="12" r="6" fill="%23FF7A18"/%3E%3Cpath d="M20 18 Q14 22 14 28 Q14 32 18 34 Q20 35 22 34 Q26 32 26 28 Q26 22 20 18Z" fill="%23FF7A18"/%3E%3C/svg%3E';
 
-      /* Sample appointment history data (in production replace via server JSON or Razor model) */
+      // DUMMY DATA - APPOINTMENTS
       const appointmentHistory = [
-        { id: 'a1', date:'2025-11-24', time:'10:00', pets:['Buddy'], groomer:'Alice', service:'Full Groom', status:'confirmed' },
-        { id: 'a2', date:'2025-10-20', time:'14:00', pets:['Bella'], groomer:'Ben', service:'Nail Trim', status:'visited' },
-        { id: 'a3', date:'2025-09-12', time:'09:30', pets:['Milo'], groomer:'Cara', service:'Bathing', status:'noshow' },
-        { id: 'a4', date:'2025-08-05', time:'11:00', pets:['Buddy','Bella'], groomer:'Alice', service:'Spa Package', status:'pending' },
-        { id: 'a5', date:'2025-07-30', time:'13:00', pets:['Milo'], groomer:'Ben', service:'Trimming', status:'cancelled' },
-        // ... add more for testing pagination
+        { 
+          id: 'a1', 
+          date: '2025-12-15', 
+          time: '10:00 AM', 
+          pets: ['Buddy', 'Max'], 
+          groomer: 'Alice Johnson', 
+          service: 'Full Groom Package', 
+          status: 'confirmed',
+          totalCost: 85.00,
+          notes: 'Special grooming for winter'
+        },
+        { 
+          id: 'a2', 
+          date: '2025-12-10', 
+          time: '02:00 PM', 
+          pets: ['Bella'], 
+          groomer: 'Ben Smith', 
+          service: 'Bath & Nail Trim', 
+          status: 'visited',
+          totalCost: 45.00,
+          notes: 'Completed successfully'
+        },
+        { 
+          id: 'a3', 
+          date: '2025-12-05', 
+          time: '09:30 AM', 
+          pets: ['Charlie'], 
+          groomer: 'Cara Martinez', 
+          service: 'Haircut & Styling', 
+          status: 'visited',
+          totalCost: 55.00,
+          notes: 'Customer satisfied'
+        },
+        { 
+          id: 'a4', 
+          date: '2025-12-01', 
+          time: '03:00 PM', 
+          pets: ['Daisy', 'Rocky'], 
+          groomer: 'Alice Johnson', 
+          service: 'Spa Package', 
+          status: 'noshow',
+          totalCost: 120.00,
+          notes: 'Customer did not show up'
+        },
+        { 
+          id: 'a5', 
+          date: '2025-11-28', 
+          time: '11:00 AM', 
+          pets: ['Luna'], 
+          groomer: 'David Lee', 
+          service: 'Basic Bath', 
+          status: 'cancelled',
+          totalCost: 30.00,
+          notes: 'Customer cancelled 2 days before'
+        },
+        { 
+          id: 'a6', 
+          date: '2025-11-25', 
+          time: '01:00 PM', 
+          pets: ['Cooper'], 
+          groomer: 'Ben Smith', 
+          service: 'Full Groom Package', 
+          status: 'visited',
+          totalCost: 75.00,
+          notes: 'Excellent service'
+        },
+        { 
+          id: 'a7', 
+          date: '2025-11-20', 
+          time: '04:00 PM', 
+          pets: ['Milo', 'Sadie'], 
+          groomer: 'Emma Wilson', 
+          service: 'Grooming + Wash', 
+          status: 'confirmed',
+          totalCost: 95.00,
+          notes: 'Upcoming appointment'
+        },
+        { 
+          id: 'a8', 
+          date: '2025-11-18', 
+          time: '10:30 AM', 
+          pets: ['Leo'], 
+          groomer: 'Cara Martinez', 
+          service: 'Nail Trim Only', 
+          status: 'visited',
+          totalCost: 20.00,
+          notes: 'Quick service'
+        },
+        { 
+          id: 'a9', 
+          date: '2025-11-15', 
+          time: '02:30 PM', 
+          pets: ['Zoey'], 
+          groomer: 'David Lee', 
+          service: 'Full Groom Package', 
+          status: 'pending',
+          totalCost: 80.00,
+          notes: 'Awaiting confirmation'
+        },
+        { 
+          id: 'a10', 
+          date: '2025-11-10', 
+          time: '09:00 AM', 
+          pets: ['Bailey'], 
+          groomer: 'Alice Johnson', 
+          service: 'Spa & Massage', 
+          status: 'visited',
+          totalCost: 110.00,
+          notes: 'Deluxe service completed'
+        }
       ];
 
-      /* Sample redeem history data */
+      // DUMMY DATA - REDEEM HISTORY
       const redeemHistory = [
-        { id:'r1', date:'2025-10-01', item:'10% Off Grooming', points:100, user:'Jia Wei', status:'used' },
-        { id:'r2', date:'2025-09-05', item:'Free Nail Trim', points:80, user:'Xin Ru', status:'expired' },
-        { id:'r3', date:'2025-08-20', item:'Gift Wrap', points:40, user:'Yi Teng', status:'used' },
-        { id:'r4', date:'2025-07-14', item:'Bookmark', points:10, user:'Seng Hin', status:'available' },
-        // ...
+        { 
+          id: 'r1', 
+          date: '2025-12-12', 
+          item: '15% Off Grooming Service', 
+          points: 150, 
+          user: 'Jia Wei', 
+          status: 'used',
+          expiryDate: '2025-12-31'
+        },
+        { 
+          id: 'r2', 
+          date: '2025-12-08', 
+          item: 'Free Nail Trim', 
+          points: 80, 
+          user: 'Jia Wei', 
+          status: 'used',
+          expiryDate: '2025-12-20'
+        },
+        { 
+          id: 'r3', 
+          date: '2025-12-03', 
+          item: 'Free Bath & Grooming', 
+          points: 200, 
+          user: 'Jia Wei', 
+          status: 'available',
+          expiryDate: '2026-01-15'
+        },
+        { 
+          id: 'r4', 
+          date: '2025-11-30', 
+          item: '10% Off All Services', 
+          points: 100, 
+          user: 'Jia Wei', 
+          status: 'expired',
+          expiryDate: '2025-11-28'
+        },
+        { 
+          id: 'r5', 
+          date: '2025-11-25', 
+          item: 'Free Pet Shampoo', 
+          points: 60, 
+          user: 'Jia Wei', 
+          status: 'available',
+          expiryDate: '2026-02-01'
+        },
+        { 
+          id: 'r6', 
+          date: '2025-11-20', 
+          item: 'Premium Spa Package Discount', 
+          points: 250, 
+          user: 'Jia Wei', 
+          status: 'used',
+          expiryDate: '2025-11-25'
+        },
+        { 
+          id: 'r7', 
+          date: '2025-11-15', 
+          item: 'Free Styling Session', 
+          points: 120, 
+          user: 'Jia Wei', 
+          status: 'available',
+          expiryDate: '2026-01-20'
+        },
+        { 
+          id: 'r8', 
+          date: '2025-11-10', 
+          item: '20% Off Grooming', 
+          points: 180, 
+          user: 'Jia Wei', 
+          status: 'expired',
+          expiryDate: '2025-11-08'
+        }
       ];
 
-      /* ---------- Simple pagination helper ---------- */
+      /* Pagination helper */
       function Paginator(list, pageSize=5) {
         this.list = list;
         this.pageSize = pageSize;
@@ -147,7 +399,7 @@
       }
       Paginator.prototype.setPage = function(p){ this.page = Math.min(Math.max(1,p), this.numPages()); }
 
-      /* ---------- Appointment Tab Logic ---------- */
+      /* Appointment Tab */
       const appt = {
         raw: appointmentHistory.slice(),
         filtered: appointmentHistory.slice(),
@@ -158,62 +410,68 @@
           search: document.getElementById('apptSearch'),
           prev: document.getElementById('apptPrev'),
           next: document.getElementById('apptNext'),
-          pageInfo: document.getElementById('apptPageInfo')
+          pageInfo: document.getElementById('apptPageInfo'),
+          clearBtn: document.getElementById('apptClearSearch'),
+          badge: document.getElementById('apptBadge'),
+          filterInfo: document.getElementById('apptFilterInfo'),
+          emptyState: document.getElementById('apptEmptyState'),
+          resultsInfo: document.getElementById('apptResultsInfo')
         }
       };
 
       function renderApptTable(){
-        appt.dom.tbody.innerHTML = '';
-        appt.paginator.list = appt.filtered;
-        appt.paginator.setPage(appt.paginator.page);
         const rows = appt.paginator.currentPageItems();
+        appt.dom.tbody.innerHTML = '';
 
         if(rows.length === 0){
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="7" class="muted">No appointment records found.</td>';
-          appt.dom.tbody.appendChild(tr);
+          appt.dom.emptyState.style.display = 'block';
         } else {
+          appt.dom.emptyState.style.display = 'none';
           rows.forEach(r => {
             const tr = document.createElement('tr');
-
             const petsHtml = r.pets.map(p => `<div class="pet-chip"><img src="${PLACEHOLDER_IMG}" alt="${p}" /> <span>${p}</span></div>`).join('');
-
             tr.innerHTML = `
-              <td>${r.date}</td>
-              <td>${r.time}</td>
+              <td>${formatDate(r.date)}</td>
+              <td><span class="time-badge">${r.time}</span></td>
               <td>${petsHtml}</td>
-              <td>${r.groomer}</td>
+              <td><strong>${r.groomer}</strong></td>
               <td>${r.service}</td>
               <td class="text-center"><span class="status ${r.status}">${formatStatusLabel(r.status)}</span></td>
-              <td class="text-center"><button class="small-btn view-btn" data-id="${r.id}">View</button></td>
+              <td class="text-center"><button class="action-btn view-btn" data-id="${r.id}" title="View details">View</button></td>
             `;
             appt.dom.tbody.appendChild(tr);
           });
         }
 
-        appt.dom.pageInfo.textContent = `Page ${appt.paginator.page} of ${appt.paginator.numPages()}`;
-        appt.dom.prev.disabled = (appt.paginator.page <= 1);
-        appt.dom.next.disabled = (appt.paginator.page >= appt.paginator.numPages());
+        updatePagination(appt);
+      }
+
+      function formatDate(dateStr){
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       }
 
       function formatStatusLabel(s){
-        switch(s){
-          case 'confirmed': return 'Confirmed';
-          case 'visited': return 'Visited';
-          case 'noshow': return 'No Show';
-          case 'pending': return 'Pending';
-          case 'cancelled': return 'Cancelled';
-          default: return s;
-        }
+        const labels = {
+          'confirmed': '✓ Confirmed',
+          'visited': '✓ Visited',
+          'noshow': '✗ No Show',
+          'pending': '⏳ Pending',
+          'cancelled': '✗ Cancelled',
+          'used': '✓ Used',
+          'available': '◯ Available',
+          'expired': '✗ Expired'
+        };
+        return labels[s] || s;
       }
 
       function applyApptFilters(){
         const status = appt.dom.statusFilter.value;
         const q = appt.dom.search.value.trim().toLowerCase();
+        
         appt.filtered = appt.raw.filter(item => {
           if(status !== 'all' && item.status !== status) return false;
           if(q){
-            // search in date, groomer, pet names, service
             const inDate = item.date.toLowerCase().includes(q);
             const inGroomer = (item.groomer || '').toLowerCase().includes(q);
             const inService = (item.service || '').toLowerCase().includes(q);
@@ -222,11 +480,15 @@
           }
           return true;
         });
+
+        appt.paginator.list = appt.filtered;
         appt.paginator.page = 1;
+
+        updateFilterInfo(appt, 'appt');
         renderApptTable();
       }
 
-      /* ---------- Redeem Tab Logic ---------- */
+      /* Redeem Tab */
       const red = {
         raw: redeemHistory.slice(),
         filtered: redeemHistory.slice(),
@@ -237,43 +499,44 @@
           search: document.getElementById('redeemSearch'),
           prev: document.getElementById('redeemPrev'),
           next: document.getElementById('redeemNext'),
-          pageInfo: document.getElementById('redeemPageInfo')
+          pageInfo: document.getElementById('redeemPageInfo'),
+          clearBtn: document.getElementById('redeemClearSearch'),
+          badge: document.getElementById('redeemBadge'),
+          filterInfo: document.getElementById('redeemFilterInfo'),
+          emptyState: document.getElementById('redeemEmptyState'),
+          resultsInfo: document.getElementById('redeemResultsInfo')
         }
       };
 
       function renderRedeemTable(){
-        red.dom.tbody.innerHTML = '';
-        red.paginator.list = red.filtered;
-        red.paginator.setPage(red.paginator.page);
         const rows = red.paginator.currentPageItems();
+        red.dom.tbody.innerHTML = '';
 
         if(rows.length === 0){
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" class="muted">No redeem records found.</td>';
-          red.dom.tbody.appendChild(tr);
+          red.dom.emptyState.style.display = 'block';
         } else {
+          red.dom.emptyState.style.display = 'none';
           rows.forEach(r => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td>${r.date}</td>
-              <td>${r.item}</td>
-              <td>${r.points}</td>
+              <td>${formatDate(r.date)}</td>
+              <td><strong>${r.item}</strong></td>
+              <td><span class="points-badge">${r.points}</span></td>
               <td>${r.user}</td>
-              <td class="text-center"><span class="status ${r.status}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
-              <td class="text-center"><button class="small-btn view-redeem" data-id="${r.id}">View</button></td>
+              <td class="text-center"><span class="status ${r.status}">${formatStatusLabel(r.status)}</span></td>
+              <td class="text-center"><button class="action-btn view-redeem" data-id="${r.id}" title="View details">View</button></td>
             `;
             red.dom.tbody.appendChild(tr);
           });
         }
 
-        red.dom.pageInfo.textContent = `Page ${red.paginator.page} of ${red.paginator.numPages()}`;
-        red.dom.prev.disabled = (red.paginator.page <= 1);
-        red.dom.next.disabled = (red.paginator.page >= red.paginator.numPages());
+        updatePagination(red);
       }
 
       function applyRedeemFilters(){
         const status = red.dom.statusFilter.value;
         const q = red.dom.search.value.trim().toLowerCase();
+        
         red.filtered = red.raw.filter(item => {
           if(status !== 'all' && item.status !== status) return false;
           if(q){
@@ -281,37 +544,63 @@
           }
           return true;
         });
+
+        red.paginator.list = red.filtered;
         red.paginator.page = 1;
+
+        updateFilterInfo(red, 'redeem');
         renderRedeemTable();
       }
 
-      /* ---------- Tabs wiring ---------- */
+      function updatePagination(data){
+        const total = data.paginator.numPages();
+        data.dom.pageInfo.textContent = `Page ${data.paginator.page} of ${total}`;
+        data.dom.resultsInfo.textContent = `(${data.filtered.length} total)`;
+        data.dom.prev.disabled = (data.paginator.page <= 1);
+        data.dom.next.disabled = (data.paginator.page >= total);
+        data.dom.badge.textContent = data.raw.length;
+      }
+
+      function updateFilterInfo(data, type){
+        const active = data.dom.statusFilter.value !== 'all' || data.dom.search.value.trim() !== '';
+        if(active){
+          data.dom.filterInfo.textContent = `Showing ${data.filtered.length} of ${data.raw.length} ${type === 'appt' ? 'appointments' : 'items'}`;
+          data.dom.filterInfo.style.display = 'block';
+        } else {
+          data.dom.filterInfo.style.display = 'none';
+        }
+      }
+
+      /* Tab switching */
       const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
       const panels = Array.from(document.querySelectorAll('.tab-panel'));
 
       tabButtons.forEach(btn => {
         btn.addEventListener('click', function(){
-          tabButtons.forEach(b=>b.classList.remove('active'));
+          tabButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const t = btn.getAttribute('data-tab');
           panels.forEach(p => p.id === t ? p.classList.add('active') : p.classList.remove('active'));
         });
       });
 
-      /* ---------- Event binding ---------- */
-      // Appt filters
+      /* Event binding */
       appt.dom.statusFilter.addEventListener('change', applyApptFilters);
       appt.dom.search.addEventListener('input', debounce(applyApptFilters, 250));
-      appt.dom.prev.addEventListener('click', ()=> { appt.paginator.setPage(appt.paginator.page - 1); renderApptTable(); });
-      appt.dom.next.addEventListener('click', ()=> { appt.paginator.setPage(appt.paginator.page + 1); renderApptTable(); });
+      appt.dom.clearBtn.addEventListener('click', () => { appt.dom.search.value = ''; applyApptFilters(); });
+      appt.dom.prev.addEventListener('click', () => { appt.paginator.setPage(appt.paginator.page - 1); renderApptTable(); });
+      appt.dom.next.addEventListener('click', () => { appt.paginator.setPage(appt.paginator.page + 1); renderApptTable(); });
 
-      // Redeem filters
       red.dom.statusFilter.addEventListener('change', applyRedeemFilters);
       red.dom.search.addEventListener('input', debounce(applyRedeemFilters, 250));
-      red.dom.prev.addEventListener('click', ()=> { red.paginator.setPage(red.paginator.page - 1); renderRedeemTable(); });
-      red.dom.next.addEventListener('click', ()=> { red.paginator.setPage(red.paginator.page + 1); renderRedeemTable(); });
+      red.dom.clearBtn.addEventListener('click', () => { red.dom.search.value = ''; applyRedeemFilters(); });
+      red.dom.prev.addEventListener('click', () => { red.paginator.setPage(red.paginator.page - 1); renderRedeemTable(); });
+      red.dom.next.addEventListener('click', () => { red.paginator.setPage(red.paginator.page + 1); renderRedeemTable(); });
 
-      // row-level actions (delegation)
+      /* Modal handling */
+      const modal = document.getElementById('detailModal');
+      const modalClose = document.querySelector('.modal-close');
+
       document.body.addEventListener('click', function(e){
         if(e.target.matches('.view-btn')){
           const id = e.target.getAttribute('data-id');
@@ -323,25 +612,166 @@
           const rec = redeemHistory.find(x => x.id === id);
           if(rec) showRedeemDetail(rec);
         }
+        if(e.target.matches('.modal-btn-secondary') && e.target.textContent.includes('Download')){
+          downloadReceipt(e.target);
+        }
+      });
+
+      modalClose.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if(e.target === modal) closeModal();
       });
 
       function showAppointmentDetail(rec){
-        // lightweight detail modal (native prompt demo)
-        alert(`Appointment\n\nDate: ${rec.date}\nTime: ${rec.time}\nPet(s): ${rec.pets.join(', ')}\nGroomer: ${rec.groomer}\nService: ${rec.service}\nStatus: ${rec.status}`);
-      }
-      function showRedeemDetail(rec){
-        alert(`Redeem\n\nDate: ${rec.date}\nItem: ${rec.item}\nPoints: ${rec.points}\nStatus: ${rec.status}`);
+        const html = `
+          <h2>Appointment Details</h2>
+          <div class="modal-detail-grid">
+            <div class="detail-item">
+              <label>Date</label>
+              <p>${formatDate(rec.date)}</p>
+            </div>
+            <div class="detail-item">
+              <label>Time</label>
+              <p>${rec.time}</p>
+            </div>
+            <div class="detail-item">
+              <label>Pet(s)</label>
+              <p>${rec.pets.join(', ')}</p>
+            </div>
+            <div class="detail-item">
+              <label>Groomer</label>
+              <p>${rec.groomer}</p>
+            </div>
+            <div class="detail-item">
+              <label>Service</label>
+              <p>${rec.service}</p>
+            </div>
+            <div class="detail-item">
+              <label>Amount</label>
+              <p>$${rec.totalCost.toFixed(2)}</p>
+            </div>
+            <div class="detail-item">
+              <label>Status</label>
+              <p><span class="status ${rec.status}">${formatStatusLabel(rec.status)}</span></p>
+            </div>
+            <div class="detail-item">
+              <label>Notes</label>
+              <p>${rec.notes || '-'}</p>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-primary" title="Reschedule this appointment">Reschedule</button>
+            <button class="modal-btn-secondary" title="Download receipt">Download Receipt</button>
+          </div>
+        `;
+        document.getElementById('modalBody').innerHTML = html;
+        modal.style.display = 'block';
       }
 
-      /* ---------- Utilities ---------- */
+      function showRedeemDetail(rec){
+        const html = `
+          <h2>Redeem Details</h2>
+          <div class="modal-detail-grid">
+            <div class="detail-item">
+              <label>Date</label>
+              <p>${formatDate(rec.date)}</p>
+            </div>
+            <div class="detail-item">
+              <label>Item</label>
+              <p>${rec.item}</p>
+            </div>
+            <div class="detail-item">
+              <label>Points</label>
+              <p><span class="points-badge">${rec.points}</span></p>
+            </div>
+            <div class="detail-item">
+              <label>Redeemed By</label>
+              <p>${rec.user}</p>
+            </div>
+            <div class="detail-item">
+              <label>Expiry Date</label>
+              <p>${formatDate(rec.expiryDate)}</p>
+            </div>
+            <div class="detail-item">
+              <label>Status</label>
+              <p><span class="status ${rec.status}">${formatStatusLabel(rec.status)}</span></p>
+            </div>
+          </div>
+        `;
+        document.getElementById('modalBody').innerHTML = html;
+        modal.style.display = 'block';
+      }
+
+      function closeModal(){
+        modal.style.display = 'none';
+      }
+
+      function downloadReceipt(btn){
+        const btn_original = btn.textContent;
+        btn.textContent = 'Downloading...';
+        btn.classList.add('loading');
+        btn.disabled = true;
+
+        const modalBody = document.getElementById('modalBody');
+        const detailItems = modalBody.querySelectorAll('.detail-item');
+        
+        let appointmentData = {};
+        detailItems.forEach(item => {
+          const label = item.querySelector('label').textContent;
+          const value = item.querySelector('p').textContent;
+          appointmentData[label] = value;
+        });
+
+        const receipt = `
+=====================================
+         PET GROOMING RECEIPT
+=====================================
+
+Appointment Details:
+${Object.entries(appointmentData).map(([key, value]) => `${key}: ${value}`).join('\n')}
+
+Receipt Generated: ${new Date().toLocaleString()}
+Reference ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}
+
+=====================================
+Thank you for choosing our service!
+For questions, contact: support@petgrooming.com
+Phone: (555) 123-4567
+Email: support@petgrooming.com
+=====================================
+        `.trim();
+
+        setTimeout(() => {
+          const blob = new Blob([receipt], { type: 'text/plain' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `appointment-receipt-${new Date().toISOString().slice(0,10)}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          btn.textContent = btn_original;
+          btn.classList.remove('loading');
+          btn.disabled = false;
+        }, 1500);
+      }
+
       function debounce(fn, wait){
         let t;
         return function(...args){ clearTimeout(t); t = setTimeout(()=> fn.apply(this, args), wait); };
       }
 
-      /* ---------- Initial render ---------- */
-      applyApptFilters();
-      applyRedeemFilters();
+      /* Initialize - render data on page load */
+      window.addEventListener('DOMContentLoaded', () => {
+        applyApptFilters();
+        applyRedeemFilters();
+        
+        // Update stat cards
+        document.getElementById('totalAppointments').textContent = appointmentHistory.length;
+        document.getElementById('totalRedeemed').textContent = redeemHistory.filter(r => r.status === 'used').length;
+      });
 
     })();
 </script>
