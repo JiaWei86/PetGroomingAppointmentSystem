@@ -48,9 +48,14 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 
 app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+    name: "customer",
+    pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
 
+app.MapControllerRoute(
+    name: "admin",
+    pattern: "{area=Admin}/{controller=Home}/{action=Index}/{id?}");
+
+// Default fallback route (optional)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
