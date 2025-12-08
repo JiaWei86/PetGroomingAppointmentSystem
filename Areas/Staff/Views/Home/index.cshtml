@@ -1,0 +1,111 @@
+﻿@{
+    ViewData["Title"] = "Appointment";
+    ViewData["ActivePage"] = "Appointment";
+}
+
+
+<!-- Calendar Section -->
+<div class="calendar-section">
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h3 class="panel-title">
+                <i class="material-icons">calendar_month</i>
+                Appointment Calendar
+            </h3>
+            <div class="calendar-nav">
+                <button id="prevMonth" class="btn-nav">
+                    <i class="material-icons">chevron_left</i>
+                </button>
+                <h3 id="monthYear" class="calendar-title"></h3>
+                <button id="nextMonth" class="btn-nav">
+                    <i class="material-icons">chevron_right</i>
+                </button>
+            </div>
+        </div>
+        <div id="calendar" class="calendar-grid"></div>
+    </div>
+
+    <div class="appointments-sidebar">
+        <div class="sidebar-header">
+            <h3 class="sidebar-title">
+                <i class="material-icons">event_available</i>
+                Daily Schedule
+            </h3>
+            <span id="selectedDate" class="selected-date-badge">Today</span>
+        </div>
+        <div id="appointmentsList" class="appointments-list"></div>
+    </div>
+</div>
+
+<script>
+    // ========================================
+    // DASHBOARD DATA (Page-Specific)
+    // ========================================
+
+    // Chart data
+    window.dashboardChartData = {
+        week: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            data: [12, 19, 15, 25, 22, 18, 20]
+        },
+        month: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            data: [65, 78, 82, 95]
+        },
+        day: {
+            labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
+            data: [2, 4, 3, 5, 4, 6, 3, 2, 1]
+        }
+    };
+
+    // Appointment data
+    const appointmentData = [
+        {
+            id: 1,
+            date: new Date().toISOString().split('T')[0],
+            time: "09:00",
+            petName: "Buddy",
+            groomerName: "Anna Lee",
+            serviceType: "Full Groom",
+            status: "confirmed"
+        },
+        {
+            id: 2,
+            date: new Date().toISOString().split('T')[0],
+            time: "10:30",
+            petName: "Whiskers",
+            groomerName: "Mark Chen",
+            serviceType: "Bath",
+            status: "confirmed"
+        },
+        {
+            id: 3,
+            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            time: "14:00",
+            petName: "Max",
+            groomerName: "Anna Lee",
+            serviceType: "Nail Trim",
+            status: "pending"
+        },
+        {
+            id: 4,
+            date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            time: "11:00",
+            petName: "Luna",
+            groomerName: "Mark Chen",
+            serviceType: "Full Groom",
+            status: "confirmed"
+        }
+    ];
+
+    // ========================================
+    // INITIALIZE DASHBOARD
+    // ========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize chart
+        DashboardChart.init(window.dashboardChartData);
+
+        // Initialize calendar
+        DashboardCalendar.init(appointmentData);
+    });
+</script>

@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - PetGrooming</title>
+
+    <!-- Force fresh CSS load -->
+    <link rel="stylesheet" href="~/admin/css/site.css?v=@DateTime.Now.Ticks" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app-container">
+
+        <aside id="sidebar">
+            <div class="logo">
+                <a href="@Url.Action("Index", "Home")">
+                    <img src="~/Customer/img/logo.png" alt="">
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a class="@(ViewData["ActivePage"] as string == "Appointment" ? "active" : "")" asp-area="Staff" asp-controller="Home" asp-action="Index"><i class="material-icons">event</i>Appointments</a></li>
+                    <li><a class="@(ViewData["ActivePage"] as string == "ApplyLeave" ? "active" : "")" asp-area="Staff" asp-controller="Home" asp-action="ApplyLeave"><i class="material-icons">assignment</i>Apply Leave</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div id="main-content-wrapper">
+
+            <header id="topbar">
+
+                <div class="user-profile">
+                    <span>Stebin Ben</span>
+                    <i class="material-icons">account_circle</i>
+                </div>
+            </header>
+
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+
+        </div>
+    </div>
+
+    @RenderSection("Scripts", required: false)
+    
+    <!-- Add your script here -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+            integrity="sha512-YcsIPGdh0IbnCt0A6Ld0JSafpPvM5TIVLSiDS5C7lzuWIe9okT8unU0I4ZgHn6+hWcIYgS4PpXWkU1D92dM1KQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
+</body>
+</html>
