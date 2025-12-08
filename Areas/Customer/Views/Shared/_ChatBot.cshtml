@@ -1,50 +1,89 @@
-﻿<div id="chatbot-container" class="chatbot-container">
+﻿<div id="chatbot-container" class="chatbot-container minimized">
     <div id="chatbot-header" class="chatbot-header">
         <div class="chatbot-header-content">
-            <h5>🐾 Hajimi House Assistant</h5>
+            <h5> FaQ Assistant</h5>
         </div>
-        <button id="chatbot-toggle" class="chatbot-toggle" title="Minimize">−</button>
+        <button id="chatbot-toggle" class="chatbot-toggle" title="Toggle">+</button>
     </div>
 
     <div id="chatbot-messages" class="chatbot-messages">
         <div class="greeting-container">
             <div class="greeting-header">
                 <h4>Hello! 👋</h4>
-                <p>I'm Hajimi's AI Assistant</p>
+                <p>I'm FaQ Assistant</p>
             </div>
             <div class="greeting-divider"></div>
             <div class="greeting-content">
                 <p class="greeting-question">How can I help you today?</p>
                 <div class="greeting-topics">
-                    <div class="topic-item">
+
+                    <!-- Book Appointment -->
+                    <div class="topic-item" data-topic="Book Appointment">
                         <span class="topic-emoji">🗓️</span>
-                        <span class="topic-text">Booking appointments</span>
+                        <span class="topic-text">Book an appointment</span>
                     </div>
-                    <div class="topic-item">
+
+                    <!-- Cancel / Reschedule -->
+                    <div class="topic-item" data-topic="Cancel or Reschedule">
+                        <span class="topic-emoji">🔄</span>
+                        <span class="topic-text">Cancel or reschedule appointment</span>
+                    </div>
+
+                    <!-- Services Offered -->
+                    <div class="topic-item" data-topic="Grooming Services">
+                        <span class="topic-emoji">✂️</span>
+                        <span class="topic-text">Services we offer</span>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div class="topic-item" data-topic="Pricing Information">
                         <span class="topic-emoji">💰</span>
                         <span class="topic-text">Pricing information</span>
                     </div>
-                    <div class="topic-item">
-                        <span class="topic-emoji">🐕</span>
-                        <span class="topic-text">Pet care advice</span>
+
+                    <!-- Pet Bathing Safety -->
+                    <div class="topic-item" data-topic="Pet Bathing Safety">
+                        <span class="topic-emoji">🛁</span>
+                        <span class="topic-text">Pet bathing safety</span>
                     </div>
-                    <div class="topic-item">
+
+                    <!-- Grooming Frequency -->
+                    <div class="topic-item" data-topic="Grooming Frequency">
+                        <span class="topic-emoji">⏱️</span>
+                        <span class="topic-text">How often to groom</span>
+                    </div>
+
+                    <!-- Anxious / Aggressive Pets -->
+                    <div class="topic-item" data-topic="Anxious Pets">
+                        <span class="topic-emoji">😟</span>
+                        <span class="topic-text">Anxious or aggressive pets</span>
+                    </div>
+
+                    <!-- Grooming Product Safety -->
+                    <div class="topic-item" data-topic="Grooming Product Safety">
+                        <span class="topic-emoji">🧴</span>
+                        <span class="topic-text">Safe grooming products</span>
+                    </div>
+
+                    <!-- Business Hours -->
+                    <div class="topic-item" data-topic="Business Hours">
+                        <span class="topic-emoji">⏰</span>
+                        <span class="topic-text">Business hours</span>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="topic-item" data-topic="Contact Information">
                         <span class="topic-emoji">📞</span>
                         <span class="topic-text">Contact information</span>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 
     <div class="chatbot-input-area">
-        <input type="text"
-               id="chatbot-input"
-               class="chatbot-input"
-               placeholder="Type your question..."
-               autocomplete="off">
-        <button id="chatbot-send" class="chatbot-send-btn" title="Send">
-            <i class="fa fa-paper-plane"></i>
-        </button>
+        <input id="chatbot-input" class="chatbot-input" placeholder="Type your question..." />
+        <button id="chatbot-send" class="chatbot-send-btn">Send</button>
     </div>
 </div>

@@ -18,11 +18,6 @@ builder.Services.AddSession(options =>
 });
 
 // Add MVC with Razor Pages
-builder.Services.AddControllersWithViews(options =>
-{
-    // Allow ApiController attribute to work properly
-    options.Conventions.Add(new Microsoft.AspNetCore.Mvc.ApplicationModels.DefaultApiExplorer());
-});
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
@@ -56,11 +51,6 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
-// Map API routes first
-app.MapControllerRoute(
-    name: "api",
-    pattern: "api/{controller}/{action}/{id?}");
-
 app.MapControllerRoute(
     name: "customer",
     pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
@@ -69,6 +59,16 @@ app.MapControllerRoute(
     name: "admin",
     pattern: "{area=Admin}/{controller=Home}/{action=Index}/{id?}");
 
+app.MapControllerRoute(
+    name: "staff",
+    pattern: "{area=Staff}/{controller=Home}/{action=Index}/{id?}");
+
+
+
+// Map API routes first
+app.MapControllers();
+
+
 // Default fallback route (optional)
 app.MapControllerRoute(
     name: "default",
@@ -76,4 +76,3 @@ app.MapControllerRoute(
 
 app.MapRazorPages();
 app.Run();
-

@@ -1,12 +1,12 @@
+using Microsoft.AspNetCore.Mvc;
 using PetGroomingAppointmentSystem.Services;
 using PetGroomingAppointmentSystem.Models;
-using Microsoft.AspNetCore.Mvc;
 
-namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
+namespace PetGroomingAppointmentSystem.Controllers // move out of Area
 {
-    [Route("api/[controller]")]
+    [Area("Customer")]
     [ApiController]
-
+    [Route("api/chatbot")] // explicitly match JS
     public class ChatbotController : ControllerBase
     {
         private readonly IChatbotService _chatbotService;
@@ -22,9 +22,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         public async Task<IActionResult> SendMessage([FromBody] ChatMessageRequest request)
         {
             if (string.IsNullOrWhiteSpace(request?.Message))
-            {
                 return BadRequest(new { error = "Message cannot be empty" });
-            }
 
             try
             {
@@ -38,19 +36,5 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             }
         }
 
-        [HttpGet("faq-topics")]
-        public async Task<IActionResult> GetFaqTopics()
-        {
-            try
-            {
-                var topics = await _chatbotService.GetFaqTopicsAsync();
-                return Ok(new { topics });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error fetching FAQ topics: {ex.Message}");
-                return StatusCode(500, new { error = "An error occurred fetching FAQ topics" });
-            }
-        }
     }
 }

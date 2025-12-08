@@ -1,6 +1,7 @@
-namespace PetGroomingAppointmentSystem.Models;
-
-public class ChatMessageRequest
+namespace PetGroomingAppointmentSystem.Models
 {
-    public string Message { get; set; }
+    public class ChatMessageRequest
+    {
+        public string Message { get; set; }
+    }
 }

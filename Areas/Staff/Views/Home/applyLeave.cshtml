@@ -86,13 +86,12 @@
                 <!-- Reason / Description -->
                 <div class="form-group">
                     <label for="reason" class="form-label">Reason for Leave <span class="required">*</span></label>
-                    <textarea 
-                        id="reason" 
-                        name="reason" 
-                        class="form-control textarea-control" 
-                        rows="4" 
-                        placeholder="Please provide a brief reason for your leave request..."
-                        required></textarea>
+                    <textarea id="reason"
+                              name="reason"
+                              class="form-control textarea-control"
+                              rows="4"
+                              placeholder="Please provide a brief reason for your leave request..."
+                              required></textarea>
                     <small class="form-text">Maximum 500 characters</small>
                 </div>
 
@@ -223,7 +222,7 @@
         // Form submission
         document.getElementById('leaveApplicationForm').addEventListener('submit', function(e) {
             e.preventDefault();
-        
+
             // Validate form
             if (!this.checkValidity()) {
                 alert('Please fill in all required fields');
@@ -232,7 +231,7 @@
 
             // Success message
             alert('Leave request submitted successfully! You will receive an email notification once it is reviewed.');
-        
+
             // Reset form
             this.reset();
             document.getElementById('fileList').innerHTML = '';

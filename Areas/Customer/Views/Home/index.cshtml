@@ -21,8 +21,7 @@
         </div>
     </div>
 </div>
-<!-- slider_area_end -->    
-
+<!-- slider_area_end -->
 <!-- services_price_area_start -->
 <section class="services_price_area py-5">
     <div class="container">
@@ -44,7 +43,6 @@
     </div>
 </section>
 <!-- services_price_area_end -->
-
 <!-- dog service_area_start -->
 <section class="service_area py-5">
     <div class="container">
@@ -90,7 +88,6 @@
     </div>
 </section>
 <!-- dog service_area_end -->
-
 <!-- cat_service_area_start -->
 <section class="service_area py-5">
     <div class="container">
@@ -138,7 +135,6 @@
     </div>
 </section>
 <!-- cat_service_area_end -->
-
 <!-- redeem_gift_area_start -->
 <section class="service_area py-5">
     <div class="container">
@@ -192,7 +188,6 @@
     </div>
 </section>
 <!-- redeem_gift_area_end -->
-
 <!-- contact_anipat_start -->
 <section class="contact_anipat anipat_bg_1 py-5">
     <div class="container">
@@ -200,7 +195,7 @@
             <div class="col-lg-8">
                 <div class="contact_text text-center wow fadeInUp" data-wow-delay="0.2s">
                     <div class="section_title text-center">
-                        <h3>Why go with Anipat?</h3>
+                        <h3>Why go with Us?</h3>
                         <p>Because we know that even the best technology is only as good as the people behind it. 24/7 tech support.</p>
                     </div>
                     <div class="contact_btn d-flex align-items-center justify-content-center mt-4">
@@ -214,64 +209,63 @@
     </div>
 </section>
 <!-- contact_anipat_end -->
-
 @section Scripts {
-<script src="~/Customer/js/wow.min.js"></script>
-<script>
-    $(document).ready(function () {
-        // Initialize WOW animations
-        new WOW().init();
+    <script src="~/Customer/js/wow.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Initialize WOW animations
+            new WOW().init();
 
-        // Initialize all service carousels
-        var carouselConfig = {
-            items: 3,
-            loop: true,
-            margin: 18,
-            autoplay: true,
-            autoplayTimeout: 4000,
-            autoplayHoverPause: true,
-            responsive: {
-                0: { items: 1 },
-                768: { items: 2 },
-                1200: { items: 3 }
-            }
-        };
+            // Initialize all service carousels
+            var carouselConfig = {
+                items: 3,
+                loop: true,
+                margin: 18,
+                autoplay: true,
+                autoplayTimeout: 4000,
+                autoplayHoverPause: true,
+                responsive: {
+                    0: { items: 1 },
+                    768: { items: 2 },
+                    1200: { items: 3 }
+                }
+            };
 
-        $(".service-carousel").owlCarousel(carouselConfig);
+            $(".service-carousel").owlCarousel(carouselConfig);
 
-        // Initialize price list carousel (single item)
-        $(".price-list-carousel").owlCarousel({
-            items: 1,
-            loop: true,
-            margin: 0,
-            autoplay: true,
-            autoplayTimeout: 5000,
-            autoplayHoverPause: true,
-            responsive: {
-                0: { items: 1 },
-                768: { items: 1 },
-                1200: { items: 1 }
-            }
-        });
-
-        // Fix carousel card heights responsively
-        function setCarouselHeights() {
-            $(".service-carousel").each(function () {
-                var maxHeight = 0;
-                $(this).find(".single_service").each(function () {
-                    var height = $(this).height();
-                    if (height > maxHeight) maxHeight = height;
-                });
-                $(this).find(".single_service").height(maxHeight);
+            // Initialize price list carousel (single item)
+            $(".price-list-carousel").owlCarousel({
+                items: 1,
+                loop: true,
+                margin: 0,
+                autoplay: true,
+                autoplayTimeout: 5000,
+                autoplayHoverPause: true,
+                responsive: {
+                    0: { items: 1 },
+                    768: { items: 1 },
+                    1200: { items: 1 }
+                }
             });
-        }
 
-        // Set heights on load and window resize
-        setCarouselHeights();
-        $(window).on('resize', function () {
+            // Fix carousel card heights responsively
+            function setCarouselHeights() {
+                $(".service-carousel").each(function () {
+                    var maxHeight = 0;
+                    $(this).find(".single_service").each(function () {
+                        var height = $(this).height();
+                        if (height > maxHeight) maxHeight = height;
+                    });
+                    $(this).find(".single_service").height(maxHeight);
+                });
+            }
+
+            // Set heights on load and window resize
             setCarouselHeights();
+            $(window).on('resize', function () {
+                setCarouselHeights();
+            });
         });
-    });
-</script>
+    </script>
 }
 

@@ -8,7 +8,7 @@ namespace PetGroomingAppointmentSystem.Areas.Staff.Controllers
 
         public IActionResult Index()
         {
-            ViewData["ActivePage"] = "Appointment"; 
+            ViewData["ActivePage"] = "Appointment";
             return View();
         }
 
