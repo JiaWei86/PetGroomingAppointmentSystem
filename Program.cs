@@ -1,7 +1,26 @@
 using PetGroomingAppointmentSystem.Services;
-using Microsoft.AspNetCore.Mvc;
+using PetGroomingAppointmentSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// -----------------------------
+// Register DB (LocalDB .mdf file-based) 
+// -----------------------------
+builder.Services.AddSqlServer<DB>($@"
+    Data Source=(LocalDB)\MSSQLLocalDB;
+    AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
+");
+
+// -----------------------------
+// If AddSqlServer<T> is not available in your environment, use this alternative:
+// builder.Services.AddDbContext<DB>(options =>
+//     options.UseSqlServer($@"
+//         Data Source=(LocalDB)\MSSQLLocalDB;
+//         AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
+//         Integrated Security=True;
+//     "));
+// -----------------------------
 
 // Add Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -17,11 +36,15 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
 });
 
-// Add MVC with Razor Pages
+// Add MVC (controllers + views) and Razor Pages
+builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+// -----------------------------
+// HTTP pipeline
+// -----------------------------
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -33,14 +56,14 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
 
-// Add custom middleware to protect admin area
+// Admin protection middleware (checks session UserRole set at login)
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
-    if (path.StartsWith("/admin") && !path.StartsWith("/admin/auth/login"))
+    if (path.StartsWith("/admin") && !path.StartsWith("/admin/auth/login") && !path.StartsWith("/admin/auth/logout"))
     {
-        var isLoggedIn = context.Session.GetString("IsAdminLoggedIn");
-        if (string.IsNullOrEmpty(isLoggedIn))
+        var role = context.Session.GetString("UserRole");
+        if (string.IsNullOrEmpty(role) || (role.ToLower() != "admin" && role.ToLower() != "staff"))
         {
             context.Response.Redirect("/Admin/Auth/Login");
             return;
@@ -51,6 +74,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
+// Area routes (Customer / Admin / Staff)
 app.MapControllerRoute(
     name: "customer",
     pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}");
@@ -63,13 +87,10 @@ app.MapControllerRoute(
     name: "staff",
     pattern: "{area=Staff}/{controller=Home}/{action=Index}/{id?}");
 
-
-
-// Map API routes first
+// Map API controllers
 app.MapControllers();
 
-
-// Default fallback route (optional)
+// Default fallback route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

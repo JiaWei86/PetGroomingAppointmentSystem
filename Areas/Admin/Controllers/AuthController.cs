@@ -1,27 +1,27 @@
 using Microsoft.AspNetCore.Mvc;
+using PetGroomingAppointmentSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
 {
     [Area("Admin")]
     public class AuthController : Controller
     {
+        private readonly DB _dbContext;
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
         private const int LOCKOUT_THRESHOLD = 3;
         private const int LOCKOUT_SECONDS = 15;
 
-        // Hardcoded admin credentials
+        // Hardcoded admin credentials - DO NOT CHANGE
         private static readonly Dictionary<string, string> AdminCredentials = new()
         {
             { "Admin", "admin123" }
         };
 
-        // Mock staff/groomer data - replace with database query in production
-        private static readonly List<(string staffId, string icNumber)> StaffCredentials = new()
+        public AuthController(DB dbContext)
         {
-            ("S001", "123456789012"),
-            ("S002", "987654321098"),
-            ("S003", "111222333444")
-        };
+            _dbContext = dbContext;
+        }
 
         public IActionResult Login()
         {
@@ -56,23 +56,40 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
                 return View();
             }
 
+            // First, try to validate as Admin (hardcoded credentials)
             bool isValidAdmin = ValidateAdmin(username, password);
-            bool isValidStaff = ValidateStaff(username, password);
-
-            if (isValidAdmin || isValidStaff)
+            if (isValidAdmin)
             {
                 // Clear login attempts on successful login
                 loginAttempts.Remove(username);
 
-                // Set session variables
+                // Set session variables for Admin
                 HttpContext.Session.SetString("AdminUsername", username);
-                HttpContext.Session.SetString("AdminRole", isValidAdmin ? "Admin" : "Groomer");
+                HttpContext.Session.SetString("UserRole", "admin");  // IMPORTANT: This matches middleware check
                 HttpContext.Session.SetString("IsAdminLoggedIn", "true");
 
                 return RedirectToAction("Index", "Home");
             }
 
-            // Increment failed attempts
+            // If not admin, try to validate as Staff using database (StaffId as username, IC as password)
+            var staffUser = _dbContext.Staffs
+                .FirstOrDefault(s => s.UserId == username && s.IC == password && s.Role == "staff");
+
+            if (staffUser != null)
+            {
+                // Clear login attempts on successful login
+                loginAttempts.Remove(username);
+
+                // Set session variables for Staff
+                HttpContext.Session.SetString("AdminUsername", staffUser.Name);
+                HttpContext.Session.SetString("StaffId", staffUser.UserId);
+                HttpContext.Session.SetString("UserRole", "staff");  // IMPORTANT: This matches middleware check
+                HttpContext.Session.SetString("IsAdminLoggedIn", "true");
+
+                return RedirectToAction("Index", "Home");
+            }
+
+            // Invalid credentials - increment failed attempts
             IncrementLoginAttempts(username);
             lockoutInfo = GetLockoutInfo(username);
 
@@ -95,7 +112,8 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         public IActionResult Logout()
         {
             HttpContext.Session.Remove("AdminUsername");
-            HttpContext.Session.Remove("AdminRole");
+            HttpContext.Session.Remove("StaffId");
+            HttpContext.Session.Remove("UserRole");  // IMPORTANT: Clear this key
             HttpContext.Session.Remove("IsAdminLoggedIn");
             return RedirectToAction("Login");
         }
@@ -103,11 +121,6 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         private bool ValidateAdmin(string username, string password)
         {
             return AdminCredentials.TryGetValue(username, out var storedPassword) && storedPassword == password;
-        }
-
-        private bool ValidateStaff(string username, string password)
-        {
-            return StaffCredentials.Any(staff => staff.staffId == username && staff.icNumber == password);
         }
 
         private void IncrementLoginAttempts(string username)

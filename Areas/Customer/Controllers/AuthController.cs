@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PetGroomingAppointmentSystem.Services;
+using PetGroomingAppointmentSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 {
@@ -7,19 +9,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
     public class AuthController : Controller
     {
         private readonly IEmailService _emailService;
-
-        private static List<Customer> customers = new()
-        {
-            new Customer { Id = 1, PhoneNumber = "0123456789", Name = "John Doe", IC = "123456789012", Email = "john@example.com", Password = "password123" }
-        };
+        private readonly DB _dbContext;
 
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
 
         private const int LOCKOUT_THRESHOLD = 3;
 
-        public AuthController(IEmailService emailService)
+        public AuthController(IEmailService emailService, DB dbContext)
         {
             _emailService = emailService;
+            _dbContext = dbContext;
         }
 
         public IActionResult Login()
@@ -51,10 +50,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View();
             }
 
-            // Verify credentials
-            var customer = customers.FirstOrDefault(c => c.PhoneNumber == phoneNumber && c.Password == password);
+            // Query database for customer user
+            var user = _dbContext.Customers
+                .FirstOrDefault(u => u.Phone == phoneNumber && u.Password == password && u.Role == "customer");
 
-            if (customer == null)
+            if (user == null)
             {
                 // Invalid credentials - increment failed attempts
                 IncrementFailedAttempts(phoneNumber);
@@ -77,9 +77,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             // Successful login - reset failed attempts
             ResetFailedAttempts(phoneNumber);
 
-            HttpContext.Session.SetString("CustomerId", customer.Id.ToString());
-            HttpContext.Session.SetString("CustomerName", customer.Name);
-            HttpContext.Session.SetString("CustomerPhone", customer.PhoneNumber);
+            HttpContext.Session.SetString("CustomerId", user.UserId);
+            HttpContext.Session.SetString("CustomerName", user.Name);
+            HttpContext.Session.SetString("CustomerPhone", user.Phone);
 
             return RedirectToAction("Index", "Home");
         }
@@ -98,16 +98,17 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View();
             }
 
-            var customer = customers.FirstOrDefault(c => c.PhoneNumber == phoneNumber && c.Email == email);
+            var user = _dbContext.Users
+                .FirstOrDefault(u => u.Phone == phoneNumber && u.Email == email && u.Role == "customer");
 
-            if (customer != null)
+            if (user != null)
             {
                 var resetToken = GenerateResetToken();
                 var resetLink = Url.Action("ResetPassword", "Auth", new { token = resetToken }, Request.Scheme);
 
                 try
                 {
-                    await _emailService.SendPasswordResetEmailAsync(customer.Email, customer.Name, resetLink);
+                    await _emailService.SendPasswordResetEmailAsync(user.Email, user.Name, resetLink ?? "");
                 }
                 catch
                 {
@@ -187,26 +188,52 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View();
             }
 
-            if (customers.Any(c => c.PhoneNumber == phoneNumber))
+            // Check if phone number already exists in database
+            if (_dbContext.Users.Any(u => u.Phone == phoneNumber))
             {
                 ViewData["Error"] = "Phone number already registered.";
                 return View();
             }
 
-            var newCustomer = new Customer
+            try
             {
-                Id = customers.Count + 1,
-                PhoneNumber = phoneNumber,
-                Name = name,
-                IC = ic,
-                Email = email,
-                Password = password
-            };
+                // Generate new Customer ID (e.g., C001, C002, etc.)
+                var lastCustomer = _dbContext.Customers
+                    .OrderByDescending(c => c.UserId)
+                    .FirstOrDefault();
+                
+                string lastId = lastCustomer?.UserId ?? "C000";
+                int newIdNumber = int.Parse(lastId.Substring(1)) + 1;
+                string newUserId = $"C{newIdNumber:D3}";
 
-            customers.Add(newCustomer);
+                // Create new Customer record (inherits from User)
+                var newCustomer = new Models.Customer
+                {
+                    UserId = newUserId,
+                    Name = name,
+                    IC = ic,
+                    Email = email,
+                    Phone = phoneNumber,
+                    Password = password, // TODO: Hash password using bcrypt
+                    Role = "customer",
+                    CreatedAt = DateTime.UtcNow,
+                    LoyaltyPoint = 0,
+                    Status = "active",
+                    RegisteredDate = DateTime.UtcNow
+                };
 
-            ViewData["Success"] = "Registration successful! Please login.";
-            return RedirectToAction("Login");
+                // Save to database
+                _dbContext.Customers.Add(newCustomer);
+                _dbContext.SaveChanges();
+
+                ViewData["Success"] = "Registration successful! Please login.";
+                return RedirectToAction("Login");
+            }
+            catch (Exception ex)
+            {
+                ViewData["Error"] = $"Registration failed: {ex.Message}";
+                return View();
+            }
         }
 
         public IActionResult Logout()
@@ -273,15 +300,5 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             return Guid.NewGuid().ToString("N");
         }
-    }
-
-    public class Customer
-    {
-        public int Id { get; set; }
-        public required string PhoneNumber { get; set; }
-        public required string Name { get; set; }
-        public required string IC { get; set; }
-        public required string Email { get; set; }
-        public required string Password { get; set; }
     }
 }
