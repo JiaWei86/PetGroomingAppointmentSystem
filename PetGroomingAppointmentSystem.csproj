@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\Customer\Models\**" />
+    <Content Remove="Areas\Customer\Models\**" />
+    <EmbeddedResource Remove="Areas\Customer\Models\**" />
+    <None Remove="Areas\Customer\Models\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="Areas\Customer\Views\Home\about.cshtml" />
     <None Include="Areas\Customer\Views\Home\index.cshtml" />
     <None Include="Areas\Customer\Views\Home\main.cshtml" />
@@ -23,7 +30,6 @@
 
   <ItemGroup>
     <Folder Include="Areas\Admin\Models\" />
-    <Folder Include="Areas\Customer\Models\" />
   </ItemGroup>
 
 </Project>
