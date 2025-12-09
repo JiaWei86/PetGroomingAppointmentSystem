@@ -78,8 +78,6 @@ public class User
 [Table("Admins")]
 public class Admin : User
 {
-    [MaxLength(500)]
-    public string Notes { get; set; }
 
     // Admin controls
     public List<ServiceCategory> ServiceCategories { get; set; } = new List<ServiceCategory>();
