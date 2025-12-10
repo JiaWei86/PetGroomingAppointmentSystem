@@ -1,6 +1,9 @@
-﻿@{
+﻿@using PetGroomingAppointmentSystem.Areas.Customer.ViewModels
+@model LoginViewModel
+@{
     ViewData["Title"] = "Customer Login";
     Layout = null;
+    bool isLocked = ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"];
 }
 
 <!DOCTYPE html>
@@ -9,91 +12,425 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/Customer/css/auth.css" />
+    <style>
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+            .error-message.show {
+                display: block;
+            }
+
+        .form-hint {
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .form-group input {
+            transition: all 0.3s ease;
+            border-color: #ced4da;
+            background-color: #fff;
+            padding-right: 40px;
+        }
+
+        .form-group input:disabled {
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .form-group.has-error input {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .form-group.has-success input {
+            border-color: #28a745;
+            background-color: #f5fff9;
+        }
+
+        .validation-icon {
+            position: absolute;
+            right: 12px;
+            top: 38px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+            .validation-icon.show {
+                display: flex;
+            }
+
+            .validation-icon.error {
+                color: white;
+                background-color: #dc3545;
+            }
+
+            .validation-icon.success {
+                color: white;
+                background-color: #28a745;
+            }
+
+        .password-toggle {
+            position: absolute;
+            right: 45px;
+            top: 38px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            color: #6c757d;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            font-size: 1.2rem;
+        }
+
+            .password-toggle:hover {
+                color: #495057;
+            }
+
+            .password-toggle:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+            .checkbox-group input[type="checkbox"] {
+                margin-right: 8px;
+                cursor: pointer;
+                width: 18px;
+                height: 18px;
+            }
+
+            .checkbox-group input[type="checkbox"]:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+            .checkbox-group label {
+                cursor: pointer;
+                margin: 0;
+                color: #6c757d;
+                font-size: 0.95rem;
+            }
+
+            .checkbox-group label.disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+        .btn-submit {
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .links-container {
+            display: flex;
+            justify-content: space-between;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+            .links-container a {
+                color: #ff8800;
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+                .links-container a:hover {
+                    text-decoration: underline;
+                }
+
+            .links-container a:disabled {
+                pointer-events: none;
+                opacity: 0.5;
+            }
+    </style>
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-box login-box">
+        <div class="auth-box">
             <div class="auth-header">
                 <h1>Login</h1>
                 <p>Enter your phone number and password</p>
             </div>
 
+            <div id="alertContainer"></div>
+
             @if (ViewData["Error"] != null)
             {
-                <div class="alert alert-danger">@ViewData["Error"]</div>
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> @ViewData["Error"]
+                </div>
             }
 
-            @if (ViewData["Success"] != null)
+            @if (isLocked)
             {
-                <div class="alert alert-success">@ViewData["Success"]</div>
+                <div class="alert alert-warning">
+                    <strong>Account Locked:</strong> Too many login attempts. Please try again in <span id="lockoutTimer">@ViewData["LockoutSeconds"]</span> seconds.
+                </div>
             }
 
-            <form method="post" id="loginForm">
+            <form id="loginForm" method="post" novalidate>
                 <div class="form-group">
-                    <label for="phoneNumber">Phone Number</label>
-                    <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Enter your phone number" required />
+                    <label for="phoneNumber">PHONE NUMBER</label>
+                    <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Enter your phone number" value="@Model?.PhoneNumber" maxlength="13" @(isLocked ? "disabled" : "") />
+                    <div class="validation-icon" id="phoneNumberIcon"></div>
+                    <div class="form-hint">Accepts: 012-3456789 or 0123456789</div>
+                    <div class="error-message" id="phoneNumberError"></div>
                 </div>
 
                 <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter your password" required />
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" @(isLocked ? "disabled" : "") />
+                    <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility" @(isLocked ? "disabled" : "")>
+                        <i class="bi bi-eye-slash"></i>
+                    </button>
+                    <div class="validation-icon" id="passwordIcon"></div>
+                    <div class="error-message" id="passwordError"></div>
                 </div>
 
-                @if (ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"])
-                {
-                    <div class="alert alert-warning" id="lockoutAlert">
-                        <strong>Account locked due to too many failed attempts.</strong>
-                        <br />
-                        Please try again in <span id="lockoutTimer">@ViewData["LockoutSeconds"]</span> seconds.
-                    </div>
-                    <button type="submit" class="btn-submit" disabled id="submitBtn">Login (Locked)</button>
-                }
-                else
-                {
-                    <button type="submit" class="btn-submit" id="submitBtn">Login</button>
-                }
+                <div class="checkbox-group">
+                    <input type="checkbox" id="rememberMe" name="rememberMe" @(isLocked ? "disabled" : "") />
+                    <label for="rememberMe" @(isLocked ? "class=\"disabled\"" : "")>Remember me</label>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn" @(isLocked ? "disabled" : "")>LOGIN</button>
             </form>
 
-            <div class="auth-footer">
-                <p>Don't have an account? <a href="@Url.Action("Register", "Auth")">Register here</a></p>
-                <p><a href="@Url.Action("ForgotPassword", "Auth")">Forgot your password?</a></p>
+            <div class="links-container">
+                <span>Don't have an account? <a href="@Url.Action("Register", "Auth")">Register here</a></span>
+                <a href="@Url.Action("ForgotPassword", "Auth")">Forgot your password?</a>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const lockoutSeconds = parseInt('@(ViewData["LockoutSeconds"] ?? "0")');
-            if (lockoutSeconds > 0) {
-                let remainingSeconds = lockoutSeconds;
-                const timerElement = document.getElementById('lockoutTimer');
-                const submitBtn = document.getElementById('submitBtn');
-                const lockoutAlert = document.getElementById('lockoutAlert');
+        // Check if account is locked on page load
+        const isLocked = @(isLocked ? "true" : "false");
 
-                const updateTimer = () => {
-                    if (timerElement) {
-                        timerElement.textContent = remainingSeconds;
-                    }
-                    
-                    remainingSeconds--;
-                    
-                    if (remainingSeconds < 0) {
-                        // Enable button and hide alert instead of reloading
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.textContent = 'Login';
-                        }
-                        if (lockoutAlert) {
-                            lockoutAlert.style.display = 'none';
-                        }
-                    } else {
-                        setTimeout(updateTimer, 1000);
-                    }
-                };
-                updateTimer();
+        // Disable all form inputs when locked
+        function disableFormWhenLocked() {
+            if (isLocked) {
+                document.getElementById('phoneNumber').disabled = true;
+                document.getElementById('password').disabled = true;
+                document.getElementById('passwordToggle').disabled = true;
+                document.getElementById('rememberMe').disabled = true;
+                document.getElementById('submitBtn').disabled = true;
+            }
+        }
+
+        // Phone number formatting function
+        function formatPhoneNumber(input) {
+            // Remove all non-digits
+            let phoneNum = input.replace(/\D/g, '');
+
+            // Format as 01X-XXXXXXX or 01X-XXXXXXXX (3 digits, dash, 7-8 digits)
+            if (phoneNum.length === 10) {
+                // 0121234567 -> 012-1234567
+                phoneNum = phoneNum.substring(0, 3) + '-' + phoneNum.substring(3);
+            } else if (phoneNum.length === 11) {
+                // 01212345678 -> 012-12345678
+                phoneNum = phoneNum.substring(0, 3) + '-' + phoneNum.substring(3);
+            }
+
+            return phoneNum;
+        }
+
+        // Phone number input handler - only if not locked
+        const phoneInput = document.getElementById('phoneNumber');
+        phoneInput.addEventListener('input', function (e) {
+            if (!isLocked) {
+                const formatted = formatPhoneNumber(e.target.value);
+                e.target.value = formatted;
             }
         });
+
+        // Prevent input when locked
+        phoneInput.addEventListener('keydown', function (e) {
+            if (isLocked) {
+                e.preventDefault();
+            }
+        });
+
+        // Phone number validation
+        function validatePhoneNumber(phoneNum) {
+            const cleaned = phoneNum.replace(/\D/g, '');
+            // Must be 10 or 11 digits, start with 01
+            return (cleaned.length === 10 || cleaned.length === 11) && /^01[0-9]/.test(cleaned);
+        }
+
+        // Password toggle visibility
+        document.getElementById('passwordToggle').addEventListener('click', function () {
+            if (isLocked) return;
+
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            }
+        });
+
+        // Prevent password input when locked
+        document.getElementById('password').addEventListener('keydown', function (e) {
+            if (isLocked) {
+                e.preventDefault();
+            }
+        });
+
+        // Form validation and submission
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            if (isLocked) {
+                e.preventDefault();
+                return;
+            }
+
+            e.preventDefault();
+
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const password = document.getElementById('password').value;
+            const phoneNumberError = document.getElementById('phoneNumberError');
+            const passwordError = document.getElementById('passwordError');
+            const phoneNumberGroup = document.getElementById('phoneNumber').parentElement;
+            const passwordGroup = document.getElementById('password').parentElement;
+
+            let isValid = true;
+
+            // Validate phone number
+            if (!phoneNumber) {
+                phoneNumberError.textContent = 'Phone number is required';
+                phoneNumberError.classList.add('show');
+                phoneNumberGroup.classList.add('has-error');
+                phoneNumberGroup.classList.remove('has-success');
+                isValid = false;
+            } else if (!validatePhoneNumber(phoneNumber)) {
+                phoneNumberError.textContent = 'Phone number must start with 01X and contain 7-8 digits after 01X (e.g., 012-3456789)';
+                phoneNumberError.classList.add('show');
+                phoneNumberGroup.classList.add('has-error');
+                phoneNumberGroup.classList.remove('has-success');
+                isValid = false;
+            } else {
+                phoneNumberError.classList.remove('show');
+                phoneNumberGroup.classList.remove('has-error');
+                phoneNumberGroup.classList.add('has-success');
+            }
+
+            // Validate password
+            if (!password) {
+                passwordError.textContent = 'Password is required';
+                passwordError.classList.add('show');
+                passwordGroup.classList.add('has-error');
+                passwordGroup.classList.remove('has-success');
+                isValid = false;
+            } else {
+                passwordError.classList.remove('show');
+                passwordGroup.classList.remove('has-error');
+                passwordGroup.classList.add('has-success');
+            }
+
+            if (isValid) {
+                // Submit the form
+                document.getElementById('submitBtn').disabled = true;
+                this.submit();
+            }
+        });
+
+        // Lockout timer countdown
+        const lockoutTimer = document.getElementById('lockoutTimer');
+        if (lockoutTimer) {
+            let seconds = parseInt(lockoutTimer.textContent);
+            const interval = setInterval(() => {
+                seconds--;
+                lockoutTimer.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    // Enable form and reload
+                    document.getElementById('phoneNumber').disabled = false;
+                    document.getElementById('password').disabled = false;
+                    document.getElementById('passwordToggle').disabled = false;
+                    document.getElementById('rememberMe').disabled = false;
+                    document.getElementById('submitBtn').disabled = false;
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        // Initialize on page load
+        disableFormWhenLocked();
     </script>
 </body>
 </html>
