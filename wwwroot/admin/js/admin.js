@@ -1,4 +1,45 @@
 /* ========================================
+   SCROLL EFFECT FOR TOPBAR & USER PROFILE
+   ======================================== */
+(function() {
+    let lastScrollTop = 0;
+    const topbar = document.getElementById('topbar');
+    const userProfile = document.querySelector('.user-profile');
+    
+    // Function to handle scroll
+    function handleScroll() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > lastScrollTop && scrollTop > 100) {
+            // Scrolling down
+            topbar?.classList.add('scrolled-down');
+            topbar?.classList.remove('scrolled-up');
+        } else if (scrollTop < lastScrollTop) {
+            // Scrolling up
+            topbar?.classList.remove('scrolled-down');
+            topbar?.classList.add('scrolled-up');
+        }
+        
+        // Keep user profile position fixed
+        if (scrollTop > 50) {
+            topbar?.classList.add('scrolled');
+            userProfile?.classList.add('scrolled');
+        } else {
+            topbar?.classList.remove('scrolled');
+            userProfile?.classList.remove('scrolled');
+        }
+        
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+    }
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Check on page load
+    handleScroll();
+})();
+
+/* ========================================
    ADMIN MANAGEMENT - COMBINED MODULE
    Customer, Pet, and Loyalty Points
    ======================================== */
@@ -100,15 +141,15 @@ const PetManager = (() => {
         if (!pet) return;
 
         document.getElementById('petViewTitle').textContent = pet.name;
-        document.getElementById('viewPetName').textContent = pet.name;
-        document.getElementById('viewPetOwner').textContent = pet.owner;
-        document.getElementById('viewPetType').textContent = pet.petType;
-        document.getElementById('viewPetBreed').textContent = pet.breed;
-        document.getElementById('viewPetAge').textContent = pet.age + ' years';
-        document.getElementById('viewPetColor').textContent = pet.color;
-        document.getElementById('viewPetWeight').textContent = pet.weight + ' kg';
-        document.getElementById('viewPetCreatedAt').textContent = pet.createdAt;
-        document.getElementById('viewPetUpdatedAt').textContent = pet.updatedAt;
+        document.getElementById('petViewName').textContent = pet.name;
+        document.getElementById('petViewType').textContent = pet.petType;
+        document.getElementById('petViewBreed').textContent = pet.breed;
+        document.getElementById('petViewAge').textContent = pet.age + ' years';
+        document.getElementById('petViewColor').textContent = pet.color;
+        document.getElementById('petViewWeight').textContent = pet.weight + ' kg';
+        document.getElementById('petViewOwner').textContent = pet.owner;
+        document.getElementById('petViewCreatedAt').textContent = pet.createdAt;
+        document.getElementById('petViewUpdatedAt').textContent = pet.updatedAt;
 
         document.getElementById('petViewModal').classList.add('active');
     };
@@ -132,243 +173,72 @@ const PetManager = (() => {
 })();
 
 // ========================================
-// LOYALTY POINTS MANAGEMENT MODULE
+// LOYALTY POINTS MODULE
 // ========================================
-const LoyaltyPointManager = (() => {
+const LoyaltyManager = (() => {
     const loyaltyData = {
-        1: { id: 1, customer: "John Doe", email: "john@example.com", balance: 250, createdAt: "Jan 15, 2024 10:30 AM", updatedAt: "Jan 20, 2024 02:15 PM" },
-        2: { id: 2, customer: "Sarah Johnson", email: "sarah@example.com", balance: 150, createdAt: "Feb 10, 2024 03:45 PM", updatedAt: "Feb 18, 2024 11:20 AM" },
-        3: { id: 3, customer: "Michael Smith", email: "michael@example.com", balance: 500, createdAt: "Mar 05, 2024 09:00 AM", updatedAt: "Mar 22, 2024 04:30 PM" }
+        1: { id: 1, customerName: "John Doe", currentPoints: 250, totalEarned: 500, totalRedeemed: 250, lastTransaction: "Jan 20, 2024 02:15 PM", status: "Active" },
+        2: { id: 2, customerName: "Sarah Johnson", currentPoints: 150, totalEarned: 200, totalRedeemed: 50, lastTransaction: "Feb 18, 2024 11:20 AM", status: "Active" },
+        3: { id: 3, customerName: "Michael Smith", currentPoints: 500, totalEarned: 600, totalRedeemed: 100, lastTransaction: "Mar 22, 2024 04:30 PM", status: "Active" }
     };
 
-    const viewPoints = (loyaltyId) => {
+    const showLoyaltyDetails = (loyaltyId) => {
         const loyalty = loyaltyData[loyaltyId];
         if (!loyalty) return;
 
-        document.getElementById('pointsViewTitle').textContent = `${loyalty.customer} - Loyalty Points`;
-        document.getElementById('viewPointsCustomer').textContent = loyalty.customer;
-        document.getElementById('viewPointsEmail').textContent = loyalty.email;
-        document.getElementById('viewPointsBalance').textContent = `${loyalty.balance} points`;
-        document.getElementById('viewPointsCreatedAt').textContent = loyalty.createdAt;
-        document.getElementById('viewPointsUpdatedAt').textContent = loyalty.updatedAt;
+        document.getElementById('loyaltyDetailTitle').textContent = loyalty.customerName;
+        document.getElementById('loyaltyDetailCustomer').textContent = loyalty.customerName;
+        document.getElementById('loyaltyDetailCurrent').textContent = loyalty.currentPoints + ' pts';
+        document.getElementById('loyaltyDetailEarned').textContent = loyalty.totalEarned + ' pts';
+        document.getElementById('loyaltyDetailRedeemed').textContent = loyalty.totalRedeemed + ' pts';
+        document.getElementById('loyaltyDetailLastTransaction').textContent = loyalty.lastTransaction;
+        document.getElementById('loyaltyDetailStatus').textContent = loyalty.status;
 
-        document.getElementById('pointsViewModal').classList.add('active');
+        document.getElementById('loyaltyDetailModal').classList.add('active');
     };
 
-    const closePointsViewModal = () => {
-        document.getElementById('pointsViewModal').classList.remove('active');
+    const closeLoyaltyDetailModal = () => {
+        document.getElementById('loyaltyDetailModal').classList.remove('active');
     };
 
     const init = () => {
         document.addEventListener('click', (e) => {
-            const modal = document.getElementById('pointsViewModal');
-            if (e.target === modal) closePointsViewModal();
+            const modal = document.getElementById('loyaltyDetailModal');
+            if (e.target === modal) closeLoyaltyDetailModal();
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closePointsViewModal();
+            if (e.key === 'Escape') closeLoyaltyDetailModal();
         });
     };
 
-    return { init, viewPoints, closePointsViewModal };
+    return { init, showLoyaltyDetails, closeLoyaltyDetailModal };
 })();
-
-// ========================================
-// INITIALIZE ALL MANAGEMENT MODULES
-// ========================================
-document.addEventListener('DOMContentLoaded', () => {
-    CustomerManager.init();
-    PetManager.init();
-    LoyaltyPointManager.init();
-});
-
-// expose to global scope
-window.showCustomerDetails = CustomerManager.showCustomerDetails;
-window.switchTab = CustomerManager.switchTab;
-window.closeViewModal = CustomerManager.closeViewModal;
-
-window.showPetDetails = PetManager.showPetDetails;
-window.closePetViewModal = PetManager.closePetViewModal;
-
-window.viewPoints = LoyaltyPointManager.viewPoints;
-window.closePointsViewModal = LoyaltyPointManager.closePointsViewModal;
-
-// ========================================
-// DASHBOARD CALENDAR MODULE
-// ========================================
-const DashboardCalendar = (() => {
-    let currentDate = new Date();
-    let appointmentData = [];
-
-    const setAppointmentData = (data) => {
-        appointmentData = data;
-    };
-
-    const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-        const options = { month: 'short', day: 'numeric', year: 'numeric' };
-        return date.toLocaleDateString('en-US', options);
-    };
-
-    const renderCalendar = () => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-
-        const monthNames = ["January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"];
-        document.getElementById('monthYear').textContent = monthNames[month] + ' ' + year;
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        let calendarHTML = '<div class="day-names">';
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        dayNames.forEach(day => {
-            calendarHTML += `<div class="day-name">${day}</div>`;
-        });
-        calendarHTML += '</div>';
-
-        calendarHTML += '<div class="calendar-dates">';
-
-        for (let i = 0; i < firstDay; i++) calendarHTML += '<div class="empty-day"></div>';
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const dayAppointments = appointmentData.filter(a => a.date === dateStr);
-            const hasAppointments = dayAppointments.length > 0;
-
-            calendarHTML += `
-                <div class="calendar-day ${hasAppointments ? 'has-appointments' : ''}" data-date="${dateStr}">
-                    <div class="day-number">${day}</div>
-                    ${hasAppointments ? `<div class="appointments-count">${dayAppointments.length}</div>` : ''}
-                </div>
-            `;
-        }
-
-        calendarHTML += '</div>';
-        document.getElementById('calendar').innerHTML = calendarHTML;
-
-        document.querySelectorAll('.calendar-day').forEach(day => {
-            day.addEventListener('click', function () {
-                const date = this.getAttribute('data-date');
-                showAppointmentsForDate(date);
-                document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
-                this.classList.add('selected');
-            });
-        });
-
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        showAppointmentsForDate(todayStr);
-    };
-
-    const showAppointmentsForDate = (dateStr) => {
-        const dayAppointments = appointmentData.filter(a => a.date === dateStr);
-        const appointmentsList = document.getElementById('appointmentsList');
-        const selectedDateBadge = document.getElementById('selectedDate');
-
-        if (selectedDateBadge) selectedDateBadge.textContent = formatDate(dateStr);
-
-        if (dayAppointments.length === 0) {
-            appointmentsList.innerHTML = `
-                <div class="no-appointments">
-                    <i class="material-icons" style="font-size: 48px; color: #d1d5db; margin-bottom: 10px;">event_busy</i>
-                    <p>No appointments scheduled</p>
-                    <small style="color: var(--text-light);">${formatDate(dateStr)}</small>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '<div class="appointments-group">';
-        dayAppointments.forEach(appointment => {
-            const statusIcon = appointment.status === 'confirmed' ? 'check_circle' :
-                appointment.status === 'pending' ? 'schedule' : 'cancel';
-
-            html += `
-                <div class="appointment-item ${appointment.status}">
-                    <div class="appointment-time">
-                        <i class="material-icons" style="font-size: 16px; vertical-align: middle;">access_time</i>
-                        ${appointment.time}
-                    </div>
-                    <div class="appointment-details">
-                        <div class="appointment-pet">
-                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">pets</i>
-                            ${appointment.petName}
-                        </div>
-                        <div class="appointment-groomer">
-                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">person</i>
-                            ${appointment.groomerName}
-                        </div>
-                        <div class="appointment-service">
-                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">content_cut</i>
-                            ${appointment.serviceType}
-                        </div>
-                    </div>
-                    <div class="appointment-status">
-                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">${statusIcon}</i>
-                        ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        appointmentsList.innerHTML = html;
-    };
-
-    const prevMonth = () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    };
-
-    const nextMonth = () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    };
-
-    const init = (appointments = []) => {
-        appointmentData = appointments;
-        const prevBtn = document.getElementById('prevMonth');
-        const nextBtn = document.getElementById('nextMonth');
-        if (prevBtn) prevBtn.addEventListener('click', prevMonth);
-        if (nextBtn) nextBtn.addEventListener('click', nextMonth);
-        if (document.getElementById('calendar')) renderCalendar();
-    };
-
-    return { init, setAppointmentData, renderCalendar };
-})();
-
-window.DashboardCalendar = DashboardCalendar;
 
 // ========================================
 // DASHBOARD CHART MODULE
 // ========================================
 const DashboardChart = (() => {
     let chart = null;
+    let currentView = 'week';
 
     const init = (chartData) => {
         const ctx = document.getElementById('appointmentChart');
         if (!ctx) return;
 
-        chart = new Chart(ctx.getContext('2d'), {
+        chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: chartData.week.labels,
+                labels: chartData[currentView].labels,
                 datasets: [{
                     label: 'Appointments',
-                    data: chartData.week.data,
+                    data: chartData[currentView].data,
+                    borderColor: '#d97706',
                     backgroundColor: 'rgba(217, 119, 6, 0.1)',
-                    borderColor: 'rgba(217, 119, 6, 1)',
                     borderWidth: 3,
-                    fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: 'rgba(217, 119, 6, 1)',
+                    fill: true,
+                    pointBackgroundColor: '#d97706',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointRadius: 5,
@@ -377,525 +247,394 @@ const DashboardChart = (() => {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: false
+                    },
                     tooltip: {
-                        backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         padding: 12,
                         titleColor: '#fff',
                         bodyColor: '#fff',
-                        borderColor: 'rgba(217, 119, 6, 0.5)',
-                        borderWidth: 1,
-                        displayColors: false,
-                        callbacks: {
-                            label: function (context) {
-                                return 'Appointments: ' + context.parsed.y;
-                            }
-                        }
+                        borderColor: '#d97706',
+                        borderWidth: 1
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: 5, color: '#6b7280' },
-                        grid: { color: 'rgba(229, 231, 235, 0.5)', drawBorder: false }
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
                     },
                     x: {
-                        ticks: { color: '#6b7280' },
-                        grid: { display: false, drawBorder: false }
+                        grid: {
+                            display: false
+                        }
                     }
                 }
             }
         });
     };
 
-    const update = (period, chartData) => {
-        if (!chart) return;
-        const data = chartData[period];
+    const updateChart = (view) => {
+        if (!chart || !window.dashboardChartData) return;
+        
+        currentView = view;
+        const data = window.dashboardChartData[view];
+        
         chart.data.labels = data.labels;
         chart.data.datasets[0].data = data.data;
         chart.update();
+
+        // Update button states
+        document.querySelectorAll('.btn-chart-option').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
     };
 
-    return { init, update };
+    return { init, updateChart };
 })();
 
-window.DashboardChart = DashboardChart;
-window.updateChart = (period, chartData) => {
-    document.querySelectorAll('.btn-chart-option').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    DashboardChart.update(period, window.dashboardChartData);
-};
+// Make updateChart global for button onclick
+window.updateChart = (view) => DashboardChart.updateChart(view);
 
-/* ========================================
-   REPORTS & ANALYTICS MODULE
-   ======================================== */
+// ========================================
+// DASHBOARD CALENDAR MODULE
+// ========================================
+const DashboardCalendar = (() => {
+    let currentDate = new Date();
+    let selectedDate = new Date();
+    let appointments = [];
 
-// Revenue chart (if you still use it in reports page)
-let revenueChart = null;
-const revenueData = {
-    labels: ['Full Groom', 'Bath & Trim', 'Nail Clipping', 'Teeth Cleaning', 'Ear Cleaning'],
-    datasets: [{
-        label: 'Revenue (RM)',
-        data: [13500, 7600, 4160, 3200, 2800],
-        backgroundColor: [
-            'rgba(217, 119, 6, 0.8)',
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(245, 158, 11, 0.8)',
-            'rgba(239, 68, 68, 0.8)',
-            'rgba(59, 130, 246, 0.8)'
-        ],
-        borderColor: [
-            'rgba(217, 119, 6, 1)',
-            'rgba(16, 185, 129, 1)',
-            'rgba(245, 158, 11, 1)',
-            'rgba(239, 68, 68, 1)',
-            'rgba(59, 130, 246, 1)'
-        ],
-        borderWidth: 2
-    }]
-};
+    const init = (appointmentData) => {
+        appointments = appointmentData;
+        renderCalendar();
+        renderAppointments(selectedDate.toISOString().split('T')[0]);
+        
+        // Event listeners
+        document.getElementById('prevMonth')?.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
 
-function initRevenueChart() {
-    const ctx = document.getElementById('revenueChart');
-    if (!ctx) return;
+        document.getElementById('nextMonth')?.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+    };
 
-    revenueChart = new Chart(ctx.getContext('2d'), {
-        type: 'bar',
-        data: revenueData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(31, 41, 55, 0.9)',
-                    padding: 12,
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(217, 119, 6, 0.5)',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: function (context) {
-                            return 'Revenue: RM ' + context.parsed.y.toLocaleString();
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#6b7280',
-                        callback: function (value) {
-                            return 'RM ' + value.toLocaleString();
-                        }
-                    },
-                    grid: { color: 'rgba(229, 231, 235, 0.5)', drawBorder: false }
-                },
-                x: {
-                    ticks: { color: '#6b7280' },
-                    grid: { display: false, drawBorder: false }
-                }
-            }
+    const renderCalendar = () => {
+        const calendar = document.getElementById('calendar');
+        const monthYear = document.getElementById('monthYear');
+        if (!calendar || !monthYear) return;
+
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        monthYear.textContent = new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        let calendarHTML = '';
+        
+
+        // Empty cells before first day
+        for (let i = 0; i < firstDay; i++) {
+            calendarHTML += '<div class="calendar-day empty"></div>';
         }
-    });
-}
 
+        // Days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateStr = date.toISOString().split('T')[0];
+            const hasAppointments = appointments.some(apt => apt.date === dateStr);
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const isSelected = dateStr === selectedDate.toISOString().split('T')[0];
 
-// ====== Reports page interactive data ======
-const reportData = {
-    revenue: {
-        title: 'Revenue Report',
-        subtitle: 'Revenue by service & date',
-        summary: [
-            { label: 'Total Revenue', value: 'RM 45,280', note: '+12.5% vs last period' },
-            { label: 'Completed Appointments', value: '168', note: '+8.2% vs last period' },
-            { label: 'New Customers', value: '24', note: '+15% vs last period' },
-            { label: 'Average Rating', value: '4.8 / 5.0', note: '+0.3 improvement' }
-        ],
-        columns: ['Date', 'Service Type', 'Appointments', 'Revenue (RM)', 'Growth'],
-        rows: [
-            ['2024-12-01', 'Full Groom', '12', '3,600', '+8%'],
-            ['2024-12-01', 'Bath & Trim', '8', '1,600', '+12%'],
-            ['2024-12-01', 'Nail Clipping', '15', '450', '-3%'],
-            ['2024-11-30', 'Full Groom', '10', '3,000', '+5%'],
-            ['2024-11-30', 'Bath & Trim', '6', '1,200', '+10%']
-        ]
-    },
-    appointments: {
-        title: 'Appointments Report',
-        subtitle: 'Appointment details with status',
-        summary: [
-            { label: 'Total Appointments', value: '210', note: '+5.4% vs last period' },
-            { label: 'Completed', value: '168', note: '80% completion' },
-            { label: 'Pending', value: '32', note: 'Need confirmation' },
-            { label: 'Cancelled', value: '10', note: 'Down 2% vs last period' }
-        ],
-        columns: ['Date', 'Customer', 'Pet', 'Service', 'Groomer', 'Amount (RM)', 'Status'],
-        rows: [
-            ['2024-12-01', 'John Doe', 'Buddy', 'Full Groom', 'Anna Lee', '300', 'Completed'],
-            ['2024-12-01', 'Sarah Johnson', 'Whiskers', 'Bath', 'Mark Chen', '150', 'Completed'],
-            ['2024-12-01', 'Michael Smith', 'Max', 'Nail Trim', 'Anna Lee', '80', 'Completed']
-        ]
-    },
-    services: {
-        title: 'Services Report',
-        subtitle: 'Service performance snapshot',
-        summary: [
-            { label: 'Top Service', value: 'Full Groom', note: '45 bookings' },
-            { label: 'Fastest Growing', value: 'Bath & Trim', note: '+12% revenue' },
-            { label: 'Highest Margin', value: 'Spa Package', note: 'RM 280 avg' },
-            { label: 'Avg. Ticket', value: 'RM 230', note: '+5% vs last' }
-        ],
-        columns: ['Service Name', 'Total Bookings', 'Revenue (RM)', 'Avg. Price (RM)', 'Popularity'],
-        rows: [
-            ['Full Groom', '45', '13,500', '300', 'High'],
-            ['Bath & Trim', '38', '7,600', '200', 'High'],
-            ['Nail Clipping', '52', '4,160', '80', 'Medium']
-        ]
-    },
-    customers: {
-        title: 'Customers Report',
-        subtitle: 'Customer loyalty and spend analysis',
-        summary: [
-            { label: 'Active Customers', value: '340', note: '+4.5% vs last period' },
-            { label: 'High Value', value: '68', note: 'Spend > RM3k' },
-            { label: 'Churn Risk', value: '24', note: 'No visit 90 days' },
-            { label: 'Avg. Lifetime Value', value: 'RM 2,150', note: 'Sample data' }
-        ],
-        columns: ['Customer Name', 'Total Visits', 'Total Spent (RM)', 'Loyalty Points', 'Last Visit'],
-        rows: [
-            ['John Doe', '12', '3,600', '250', '2024-12-01'],
-            ['Sarah Johnson', '8', '1,600', '150', '2024-11-30'],
-            ['Michael Smith', '15', '4,500', '500', '2024-11-29']
-        ]
-    },
-    groomers: {
-        title: 'Groomer Performance Report',
-        subtitle: 'Staff utilization and performance summary',
-        summary: [
-            { label: 'Top Groomer', value: 'Anna Lee', note: '45 appointments' },
-            { label: 'Avg. Completion Time', value: '1h 15m', note: '-5% vs last period' },
-            { label: 'Customer Rating', value: '4.85 / 5', note: '+0.2 improvement' },
-            { label: 'Total Incentives', value: 'RM 4,200', note: 'Sample data' }
-        ],
-        columns: ['Groomer', 'Appointments', 'Avg. Rating', 'Revenue (RM)', 'Specialty'],
-        rows: [
-            ['Anna Lee', '45', '4.9', '13,500', 'Full Groom'],
-            ['Mark Chen', '32', '4.7', '8,200', 'Bath & Trim'],
-            ['Lisa Wong', '28', '4.6', '6,800', 'Spa & Styling']
-        ]
-    }
-};
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+            if (isSelected) classes += ' selected';
+            if (hasAppointments) classes += ' has-appointments';
 
-function buildTable(columns, rows, type) {
-    const tableHead = columns.map((col) => {
-        const colLower = col.toLowerCase();
-        const alignRight = colLower.includes('amount') || colLower.includes('revenue') || colLower.includes('price') || colLower.includes('visits') || colLower.includes('spent') || colLower.includes('appointments');
-        return `<th${alignRight ? ' class="text-right"' : ''}>${col}</th>`;
-    }).join('');
-
-    const tableBody = rows.map((row) => {
-        return '<tr>' + row.map((cell, idx) => {
-            const colName = columns[idx].toLowerCase();
-            const alignRight = colName.includes('amount') || colName.includes('revenue') ||
-                colName.includes('price') || colName.includes('visits') || colName.includes('spent') || colName.includes('appointments');
-            let value = cell;
-
-            if (type === 'appointments' && colName === 'status') {
-                value = `<span class="status-tag ${cell.toLowerCase()}">${cell}</span>`;
-            }
-            if (type === 'revenue' && colName === 'growth') {
-                const isUp = cell.startsWith('+');
-                value = `<span class="${isUp ? 'text-success' : 'text-danger'}">${cell}</span>`;
-            }
-
-            return `<td${alignRight ? ' class="text-right"' : ''}>${value}</td>`;
-        }).join('') + '</tr>';
-    }).join('');
-
-    return `
-        <div class="table-responsive">
-            <table class="data-table report-table">
-                <thead><tr>${tableHead}</tr></thead>
-                <tbody>${tableBody}</tbody>
-            </table>
-        </div>
-    `;
-}
-
-function renderSummaryCards(summary) {
-    const summaryContainer = document.getElementById('reportSummary');
-    if (!summaryContainer) return;
-    summaryContainer.innerHTML = summary.map(item => `
-        <div class="summary-card">
-            <div class="summary-label">${item.label}</div>
-            <div class="summary-value">${item.value}</div>
-            <div class="summary-note">${item.note}</div>
-        </div>
-    `).join('');
-}
-
-function updateReportHeader(config, range, start, end) {
-    const label = document.getElementById('currentDateRangeLabel');
-    const title = document.getElementById('reportTitle');
-    const subtitle = document.getElementById('currentReportTitle');
-    const timestamp = document.getElementById('generatedTimestamp');
-
-    if (title) title.textContent = config.title;
-    if (subtitle) subtitle.textContent = `${config.subtitle} (${range})`;
-    if (timestamp) timestamp.textContent = 'Generated on: ' + new Date().toLocaleString();
-
-    if (label) {
-        if (start && end) {
-            label.textContent = `Period: ${start} ~ ${end}`;
-        } else {
-            label.textContent = 'Period: Custom range';
+            calendarHTML += `
+                <div class="${classes}" onclick="selectDate('${dateStr}')">
+                    <span class="day-number">${day}</span>
+                    ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                </div>
+            `;
         }
-    }
-}
 
-// ====== Filter logic ======
-document.addEventListener('DOMContentLoaded', () => {
-    initReportFilters();
-    generateReport(); // default view
-});
+        calendar.innerHTML = calendarHTML;
+    };
 
+    const renderAppointments = (dateStr) => {
+        const appointmentsList = document.getElementById('appointmentsList');
+        const selectedDateBadge = document.getElementById('selectedDate');
+        if (!appointmentsList) return;
+
+        const dateAppointments = appointments.filter(apt => apt.date === dateStr);
+        
+        if (selectedDateBadge) {
+            const date = new Date(dateStr);
+            selectedDateBadge.textContent = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        if (dateAppointments.length === 0) {
+            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+            return;
+        }
+
+        appointmentsList.innerHTML = dateAppointments.map(apt => `
+            <div class="appointment-item ${apt.status}">
+                <div class="appointment-time">${apt.time}</div>
+                <div class="appointment-details">
+                    <div class="appointment-pet">${apt.petName}</div>
+                    <div class="appointment-service">${apt.serviceType}</div>
+                    <div class="appointment-groomer">with ${apt.groomerName}</div>
+                </div>
+                <span class="appointment-status ${apt.status}">${apt.status}</span>
+            </div>
+        `).join('');
+    };
+
+    const selectDate = (dateStr) => {
+        selectedDate = new Date(dateStr);
+        renderCalendar();
+        renderAppointments(dateStr);
+    };
+
+    return { init, selectDate };
+})();
+
+// Make selectDate global for calendar onclick
+window.selectDate = (dateStr) => DashboardCalendar.selectDate(dateStr);
+
+// ========================================
+// REPORTS MODULE
+// ========================================
 function initReportFilters() {
-    const form = document.getElementById('reportFilters');
-    if (!form) return;
-
-    const rangeSelect = document.getElementById('dateRange');
-    const startInput = document.getElementById('startDate');
-    const endInput = document.getElementById('endDate');
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        generateReport();
-    });
-
-    form.addEventListener('reset', () => {
-        setTimeout(() => {
-            rangeSelect.value = 'month';
-            applyDateRange('month', startInput, endInput);
+    const reportTypeSelect = document.getElementById('reportType');
+    if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', function() {
             generateReport();
-        }, 0);
-    });
-
-    rangeSelect.addEventListener('change', () => {
-        applyDateRange(rangeSelect.value, startInput, endInput);
-    });
-
-    applyDateRange(rangeSelect.value, startInput, endInput);
-}
-
-function applyDateRange(rangeValue, startInput, endInput) {
-    const today = new Date();
-    let start = new Date(today);
-    let end = new Date(today);
-    let disableDates = true;
-
-    switch (rangeValue) {
-        case 'today':
-            break;
-        case 'week':
-            start.setDate(today.getDate() - 6);
-            break;
-        case 'month':
-            start = new Date(today.getFullYear(), today.getMonth(), 1);
-            end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            break;
-        case 'quarter':
-            const currentQuarter = Math.floor(today.getMonth() / 3);
-            start = new Date(today.getFullYear(), currentQuarter * 3, 1);
-            end = new Date(today.getFullYear(), currentQuarter * 3 + 3, 0);
-            break;
-        case 'year':
-            start = new Date(today.getFullYear(), 0, 1);
-            end = new Date(today.getFullYear(), 11, 31);
-            break;
-        case 'custom':
-            disableDates = false;
-            start = null;
-            end = null;
-            break;
-    }
-
-    if (disableDates) {
-        startInput.value = formatDateInput(start);
-        endInput.value = formatDateInput(end);
-        startInput.disabled = true;
-        endInput.disabled = true;
-    } else {
-        startInput.value = '';
-        endInput.value = '';
-        startInput.disabled = false;
-        endInput.disabled = false;
-    }
-}
-
-function formatDateInput(date) {
-    if (!date) return '';
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
-}
-
-// ====== Main generateReport() ======
-function generateReport() {
-    const type = document.getElementById('reportType')?.value || 'revenue';
-    const range = document.getElementById('dateRange')?.value || 'month';
-    const start = document.getElementById('startDate')?.value;  // '2024-12-01'
-    const end = document.getElementById('endDate')?.value;      // '2024-12-31'
-
-    const config = reportData[type] || reportData.revenue;
-
-    // 更新标题 / 日期区
-    updateReportHeader(config, range, start, end);
-    renderSummaryCards(config.summary);
-
-    // ===== 关键：根据日期过滤行 =====
-    let filteredRows = config.rows;
-
-    if (start || end) {
-        const startDate = start ? new Date(start) : null;
-        const endDate = end ? new Date(end) : null;
-
-        filteredRows = config.rows.filter(row => {
-            // 假设第 1 列是日期（如 '2024-12-01' 或 '2024-11-30'）
-            const rowDate = new Date(row[0]);
-            if (isNaN(rowDate)) {
-                // 解析不了日期就直接保留（例如 services 报表没有日期）
-                return true;
-            }
-
-            if (startDate && rowDate < startDate) return false;
-            if (endDate && rowDate > endDate) return false;
-            return true;
         });
     }
 
-    const container = document.getElementById('reportTableContainer');
-    if (container) {
-        container.innerHTML = buildTable(config.columns, filteredRows, type);
+    const dateFromInput = document.getElementById('dateFrom');
+    const dateToInput = document.getElementById('dateTo');
+    if (dateFromInput && dateToInput) {
+        dateFromInput.addEventListener('change', generateReport);
+        dateToInput.addEventListener('change', generateReport);
     }
 }
 
-// ====== Export & Print ======
-function printReport() {
-    window.print();
+function generateReport() {
+    const reportType = document.getElementById('reportType')?.value;
+    const dateFrom = document.getElementById('dateFrom')?.value;
+    const dateTo = document.getElementById('dateTo')?.value;
+
+    console.log(`Generating ${reportType} report from ${dateFrom} to ${dateTo}`);
 }
 
-function downloadExcel() {
-    const table = document.querySelector('#reportTableContainer table');
-    if (!table) {
-        alert('No report table to export.');
-        return;
-    }
-
-    const rows = table.querySelectorAll('tr');
-    const csv = Array.from(rows).map(row => {
-        return Array.from(row.querySelectorAll('th, td')).map(cell => {
-            const text = cell.innerText.replace(/(\r\n|\n|\r)/gm, ' ').replace(/,/g, ' ');
-            return `"${text.trim()}"`;
-        }).join(',');
-    }).join('\n');
-
-   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-const typeSelect = document.getElementById('reportType');
-const reportType = typeSelect ? typeSelect.value : 'report';
-const fileName = reportType + '_' + new Date().toISOString().slice(0, 10) + '.csv';
-
-if (navigator.msSaveBlob) {
-    navigator.msSaveBlob(blob, fileName); // IE 10+
-} else {
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
-}
-
-function downloadPdf() {
-    var report = document.getElementById('reportArea');
-    if (!report) {
-        alert('No report content to export.');
-        return;
-    }
-
-    var typeSelect = document.getElementById('reportType');
-    var reportType = typeSelect ? typeSelect.value : 'report';
-    var fileName = reportType + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
-
-    var opt = {
-        margin:       0.5,                // 英寸，可按需要调小/调大
-        filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.95 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(report).save();
-}
-
-function downloadPdf() {
-    var report = document.getElementById('reportArea');
-    if (!report) {
-        alert('No report content to export.');
-        return;
-    }
-
-    var typeSelect = document.getElementById('reportType');
-    var reportType = typeSelect ? typeSelect.value : 'report';
-    var fileName = reportType + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
-
-    var opt = {
-        margin: 0.5,                // 英寸，可按需要调小/调大
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(report).save();
+function exportReport(format) {
+    const reportType = document.getElementById('reportType')?.value;
+    console.log(`Exporting ${reportType} report as ${format}`);
+    alert(`Exporting report as ${format.toUpperCase()}...`);
 }
 
 // ========================================
-// ALERT AUTO-HIDE FUNCTIONALITY
+// ALERT AUTO-HIDE FUNCTION
 // ========================================
 function initAlertAutoHide() {
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {
         setTimeout(() => {
-            alert.style.transition = 'opacity 0.5s ease';
             alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 500);
+            setTimeout(() => alert.remove(), 300);
         }, 5000);
     });
 }
 
 // ========================================
-// INITIALIZE ON DOM LOAD
+// GROOMER CRUD CONFIRMATION MODULE
+// ======================================== 
+
+let currentForm = null;
+
+// Function to show the create form
+function showCreateForm() {
+    const form = document.getElementById('createGroomerForm');
+    if (form) {
+        form.style.display = 'block';
+    }
+}
+
+// Function to hide the create form
+function hideCreateForm() {
+    const form = document.getElementById('createGroomerForm');
+    if (form) {
+        form.style.display = 'none';
+    }
+}
+
+// Show confirmation modal
+function showConfirmModal(title, message, icon, iconColor, confirmCallback) {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+
+    const confirmBtn = document.getElementById('confirmBtn');
+    const confirmIcon = document.getElementById('confirmIcon');
+    
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    confirmIcon.textContent = icon;
+    confirmIcon.style.color = iconColor;
+    
+    modal.classList.add('show');
+    
+    // Remove previous event listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    // Add new event listener
+    newConfirmBtn.addEventListener('click', () => {
+        confirmCallback();
+        closeConfirmModal();
+    });
+}
+
+// Close confirmation modal
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    currentForm = null;
+}
+
+// Confirm Add
+function confirmAdd(event) {
+    event.preventDefault();
+    currentForm = event.target;
+    
+    const groomerName = document.getElementById('groomerName')?.value || 'this groomer';
+    const position = document.getElementById('position')?.value || 'Groomer';
+    
+    showConfirmModal(
+        'Add New Groomer?',
+        `Are you sure you want to add "${groomerName}" as ${position}?`,
+        'add_circle',
+        '#10b981',
+        () => currentForm.submit()
+    );
+    
+    return false;
+}
+
+// Confirm Edit
+function confirmEdit(event, groomerName) {
+    event.preventDefault();
+    currentForm = event.target;
+    
+    showConfirmModal(
+        'Save Changes?',
+        `Are you sure you want to save changes to "${groomerName}"?`,
+        'edit',
+        '#f59e0b',
+        () => currentForm.submit()
+    );
+    
+    return false;
+}
+
+// Confirm Delete
+function confirmDelete(event, groomerName) {
+    event.preventDefault();
+    currentForm = event.target;
+    
+    showConfirmModal(
+        'Delete Groomer?',
+        `Are you sure you want to delete "${groomerName}"? This action cannot be undone.`,
+        'warning',
+        '#ef4444',
+        () => currentForm.submit()
+    );
+    
+    return false;
+}
+
 // ========================================
-document.addEventListener('DOMContentLoaded', function () {
-    // Initialize existing modules
-    if (typeof CustomerManager !== 'undefined' && CustomerManager.init) {
-        CustomerManager.init();
+// PHOTO UPLOAD INDICATOR
+// ========================================
+function handlePhotoUpload(input, userId) {
+    const statusSpan = document.getElementById(`uploadStatus_${userId}`);
+
+    if (input.files && input.files.length > 0) {
+        const fileName = input.files[0].name;
+        const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+
+        statusSpan.style.display = 'block';
+        statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+        statusSpan.style.color = '#10b981';
+
+        if (input.files[0].size > 5 * 1024 * 1024) {
+            statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+            statusSpan.style.color = '#ef4444';
+            input.value = '';
+        }
+    } else {
+        statusSpan.style.display = 'none';
     }
-    if (typeof PetManager !== 'undefined' && PetManager.init) {
-        PetManager.init();
+}
+
+// ========================================
+// INITIALIZATION
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize modules
+    CustomerManager.init();
+    PetManager.init();
+    LoyaltyManager.init();
+
+    // Initialize Dashboard Chart with sample data
+    if (document.getElementById('appointmentChart')) {
+        window.dashboardChartData = {
+            week: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                data: [12, 15, 8, 14, 18, 10, 6]
+            },
+            month: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                data: [45, 52, 38, 48]
+            },
+            day: {
+                labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
+                data: [2, 3, 4, 2, 3, 5, 4, 2, 1]
+            }
+        };
+        DashboardChart.init(window.dashboardChartData);
     }
-    if (typeof LoyaltyPointsManager !== 'undefined' && LoyaltyPointsManager.init) {
-        LoyaltyPointsManager.init();
+
+    // Initialize Dashboard Calendar with sample data
+    if (document.getElementById('calendar')) {
+        const today = new Date();
+        const sampleAppointments = [
+            { date: today.toISOString().split('T')[0], time: '9:00 AM', petName: 'Buddy', serviceType: 'Full Grooming', groomerName: 'John Smith', status: 'confirmed' },
+            { date: today.toISOString().split('T')[0], time: '11:00 AM', petName: 'Max', serviceType: 'Bath & Brush', groomerName: 'Sarah Lee', status: 'pending' },
+            { date: new Date(today.getTime() + 86400000).toISOString().split('T')[0], time: '10:00 AM', petName: 'Whiskers', serviceType: 'Nail Trim', groomerName: 'Mike Johnson', status: 'confirmed' },
+            { date: new Date(today.getTime() + 5*86400000).toISOString().split('T')[0], time: '2:00 PM', petName: 'Luna', serviceType: 'Full Grooming', groomerName: 'John Smith', status: 'completed' }
+        ];
+        DashboardCalendar.init(sampleAppointments);
     }
 
     // Initialize alert auto-hide
@@ -905,5 +644,20 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('reportFilters')) {
         initReportFilters();
         generateReport();
+    }
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('confirmModal');
+    if (modal && e.target === modal) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal with ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
     }
 });

@@ -1,4 +1,4 @@
-@model IEnumerable<PetGroomingAppointmentSystem.Models.RedeemGift>
+﻿@model IEnumerable<PetGroomingAppointmentSystem.Models.RedeemGift>
 @{
     @if (ViewData["Error"] != null)
     {
@@ -32,7 +32,7 @@
     <div class="panel create-form" id="createGiftForm" style="display: none;">
         <h3 class="panel-title">Create New Gift</h3>
 
-        <form asp-action="RedeemGift" asp-controller="Home" method="post" enctype="multipart/form-data" class="form-grid">
+        <form id="addGiftForm" asp-action="RedeemGift" asp-controller="Home" method="post" enctype="multipart/form-data" class="form-grid" onsubmit="return confirmAdd(event)">
             @Html.AntiForgeryToken()
             <input type="hidden" name="actionType" value="add" />
 
@@ -94,14 +94,25 @@
                     {
                         // Inline edit row
                         <tr>
-                        <form asp-action="RedeemGift" asp-controller="Home" method="post">
+                        <form id="editGiftForm_@gift.GiftId" asp-action="RedeemGift" asp-controller="Home" method="post" enctype="multipart/form-data" onsubmit="return confirmEdit(event, '@gift.Name')">
+                            @Html.AntiForgeryToken()
                             <input type="hidden" name="actionType" value="edit" />
                             <input type="hidden" name="editGiftId" value="@gift.GiftId" />
                             <td>@gift.GiftId</td>
                             <td><input type="text" name="Name" value="@gift.Name" required class="form-control" /></td>
                             <td><input type="number" name="Quantity" value="@gift.Quantity" required class="form-control" /></td>
                             <td><input type="number" name="LoyaltyPointCost" value="@gift.LoyaltyPointCost" required class="form-control" /></td>
-                            <td><input type="text" name="Photo" value="@gift.Photo" class="form-control" /></td>
+                                <td>
+                                    <input type="file" name="PhotoUpload" accept="image/*" class="form-control"
+                                           id="photoInput_@gift.GiftId" onchange="handlePhotoUpload(this, '@gift.GiftId')" />
+                                    <div id="uploadStatus_@gift.GiftId" style="display: none; color: #10b981; font-size: 12px; font-weight: 600; margin-top: 5px;">
+                                        <!-- JavaScript will fill this -->
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(gift.Photo))
+                                    {
+                                        <small class="text-muted d-block mt-1" style="font-size: 12px;">Current: <img src="@gift.Photo" alt="Current" style="width: 60px; height: 60px; object-fit: cover; margin-top: 5px;" /></small>
+                                    }
+                                </td>
                             <td>
                                 <button type="submit" class="btn btn-success btn-sm">Save</button>
                                 <a asp-action="RedeemGift" asp-controller="Home" class="btn btn-secondary btn-sm">Cancel</a>
@@ -124,10 +135,11 @@
                             </td>
                             <td>
                                 <a asp-action="RedeemGift" asp-controller="Home" asp-route-editId="@gift.GiftId" class="btn btn-sm btn-action edit-btn">Edit</a>
-                                <form asp-action="RedeemGift" asp-controller="Home" method="post" style="display:inline">
+                                <form id="deleteGiftForm_@gift.GiftId" asp-action="RedeemGift" asp-controller="Home" method="post" style="display:inline" onsubmit="return confirmDelete(event, '@gift.Name')">
+                                    @Html.AntiForgeryToken()
                                     <input type="hidden" name="actionType" value="delete" />
                                     <input type="hidden" name="deleteGiftId" value="@gift.GiftId" />
-                                    <button type="submit" class="btn btn-sm btn-action delete-btn" onclick="return confirm('Delete this gift?')">
+                                    <button type="submit" class="btn btn-sm btn-action delete-btn">
                                         Delete
                                     </button>
                                 </form>
@@ -145,7 +157,32 @@
     }
 </div>
 
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 450px;">
+        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+        <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
+                <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
+            </div>
+            <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
+            <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">
+                    Cancel
+                </button>
+                <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
+    let currentForm = null;
+
     // Function to show the create form
     function showCreateForm() {
         document.getElementById('createGiftForm').style.display = 'block';
@@ -155,4 +192,123 @@
     function hideCreateForm() {
         document.getElementById('createGiftForm').style.display = 'none';
     }
+
+
+    function handlePhotoUpload(input, userId) {
+        const statusSpan = document.getElementById(`uploadStatus_${userId}`);
+
+        if (input.files && input.files.length > 0) {
+            const fileName = input.files[0].name;
+            const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+
+            statusSpan.style.display = 'block';
+            statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+            statusSpan.style.color = '#10b981';
+
+            if (input.files[0].size > 5 * 1024 * 1024) {
+                statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+                statusSpan.style.color = '#ef4444';
+                input.value = '';
+            }
+        } else {
+            statusSpan.style.display = 'none';
+        }
+    }
+
+    // Show confirmation modal
+    function showConfirmModal(title, message, icon, iconColor, confirmCallback) {
+        const modal = document.getElementById('confirmModal');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const confirmIcon = document.getElementById('confirmIcon');
+        
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        confirmIcon.textContent = icon;
+        confirmIcon.style.color = iconColor;
+        
+        modal.classList.add('show');
+        
+        // Remove previous event listeners
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Add new event listener
+        newConfirmBtn.addEventListener('click', () => {
+            confirmCallback();
+            closeConfirmModal();
+        });
+    }
+
+    // Close confirmation modal
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.remove('show');
+        currentForm = null;
+    }
+
+    // Confirm Add
+    function confirmAdd(event) {
+        event.preventDefault();
+        currentForm = event.target;
+        
+        const giftName = document.getElementById('giftName').value;
+        const quantity = document.getElementById('quantity').value;
+        const points = document.getElementById('points').value;
+        
+        showConfirmModal(
+            'Add New Gift?',
+            `Are you sure you want to add "${giftName}" (Qty: ${quantity}, Points: ${points})?`,
+            'add_circle',
+            '#10b981',
+            () => currentForm.submit()
+        );
+        
+        return false;
+    }
+
+    // Confirm Edit
+    function confirmEdit(event, giftName) {
+        event.preventDefault();
+        currentForm = event.target;
+        
+        showConfirmModal(
+            'Save Changes?',
+            `Are you sure you want to save changes to "${giftName}"?`,
+            'edit',
+            '#f59e0b',
+            () => currentForm.submit()
+        );
+        
+        return false;
+    }
+
+    // Confirm Delete
+    function confirmDelete(event, giftName) {
+        event.preventDefault();
+        currentForm = event.target;
+        
+        showConfirmModal(
+            'Delete Gift?',
+            `Are you sure you want to delete "${giftName}"? This action cannot be undone.`,
+            'warning',
+            '#ef4444',
+            () => currentForm.submit()
+        );
+        
+        return false;
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('confirmModal');
+        if (e.target === modal) {
+            closeConfirmModal();
+        }
+    });
+
+    // Close modal with ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeConfirmModal();
+        }
+    });
 </script>

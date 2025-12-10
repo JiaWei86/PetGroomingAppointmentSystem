@@ -118,7 +118,7 @@
                             <img src="@gift.Photo ?? " ~/Customer/img/service/pet_icon.png"" alt="@gift.Name icon">
                         </div>
                         <div class="service_content text-center">
-                            <h3>@gift.Name</h3>
+                            <h3>@gift.Name</h3> 
                             <p>Loyalty Cost: @gift.LoyaltyPointCost pts</p>
 
                             <button class="boxed-btn4 redeem-btn"
@@ -132,7 +132,6 @@
                         </div>
                     </div>
                 }
-
             </div>
         </div>
     </div>
@@ -190,13 +189,27 @@
                 items: 3,
                 loop: true,
                 margin: 18,
-                autoplay: true,
-                autoplayTimeout: 4000,
+                autoplay: true,  //123
                 autoplayHoverPause: true,
+                nav: true,  
+                navText: ['<i class="fa fa-chevron-left"></i>', '<i class="fa fa-chevron-right"></i>'],  
+                dots: true, 
                 responsive: {
-                    0: { items: 1 },
-                    768: { items: 2 },
-                    1200: { items: 3 }
+                    0: { 
+                        items: 1, 
+                        nav: false,  // 手机不显示箭头
+                        dots: true   // 但显示圆点
+                    },
+                    768: { 
+                        items: 2, 
+                        nav: true,   // 平板显示箭头
+                        dots: true 
+                    },
+                    1200: { 
+                        items: 3,    // 桌面显示 3 个
+                        nav: true, 
+                        dots: false  // 桌面不需要圆点
+                    }
                 }
             };
 

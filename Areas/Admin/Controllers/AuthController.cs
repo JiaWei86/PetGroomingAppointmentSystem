@@ -1,108 +1,192 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using PetGroomingAppointmentSystem.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
 {
+    // ========================================
+    // Admin Only Authorization Attribute
+    // Only users with "admin" role can access
+    // ========================================
+    public class AdminOnlyAttribute : ActionFilterAttribute
+    {
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            var session = context.HttpContext.Session;
+            var userRole = session.GetString("UserRole");
+            var isAdminLoggedIn = session.GetString("IsAdminLoggedIn");
+
+            // Check if user is logged in as admin
+            if (isAdminLoggedIn != "true" || userRole != "admin")
+            {
+                context.Result = new RedirectToActionResult(
+                    "Login",
+                    "Auth",
+                    new { area = "Admin" }
+                );
+            }
+
+            base.OnActionExecuting(context);
+        }
+    }
+
+    // ========================================
+    // Staff Only Authorization Attribute
+    // Only users with "staff" role can access
+    // ========================================
+    public class StaffOnlyAttribute : ActionFilterAttribute
+    {
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            var session = context.HttpContext.Session;
+            var userRole = session.GetString("UserRole");
+            var isStaffLoggedIn = session.GetString("IsStaffLoggedIn");
+
+            // Check if user is logged in as staff
+            if (isStaffLoggedIn != "true" || userRole != "staff")
+            {
+                context.Result = new RedirectToActionResult(
+                    "Login",
+                    "Auth",
+                    new { area = "Admin" }
+                );
+            }
+
+            base.OnActionExecuting(context);
+        }
+    }
+
+    // ========================================
+    // Authentication Controller
+    // Handles login and logout for Admin and Staff
+    // ========================================
     [Area("Admin")]
     public class AuthController : Controller
     {
         private readonly DB _dbContext;
+        
+        // Login attempt tracking (in-memory)
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
         private const int LOCKOUT_THRESHOLD = 3;
         private const int LOCKOUT_SECONDS = 15;
-
-        // Hardcoded admin credentials - DO NOT CHANGE
-        private static readonly Dictionary<string, string> AdminCredentials = new()
-        {
-            { "Admin", "admin123" }
-        };
 
         public AuthController(DB dbContext)
         {
             _dbContext = dbContext;
         }
 
+        // ========================================
+        // GET: Login Page
+        // ========================================
         public IActionResult Login()
         {
-            if (User.Identity?.IsAuthenticated == true)
+            // If already authenticated, redirect to appropriate home
+            var userRole = HttpContext.Session.GetString("UserRole");
+            var isAdminLoggedIn = HttpContext.Session.GetString("IsAdminLoggedIn");
+            var isStaffLoggedIn = HttpContext.Session.GetString("IsStaffLoggedIn");
+
+            if (isAdminLoggedIn == "true" && userRole == "admin")
             {
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Home", new { area = "Admin" });
             }
+
+            if (isStaffLoggedIn == "true" && userRole == "staff")
+            {
+                return RedirectToAction("Index", "Home", new { area = "Staff" });
+            }
+
             return View();
         }
 
+        // ========================================
+        // POST: Login Authentication
+        // ========================================
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Login(string username, string password)
         {
+            // Validate input
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
                 ViewData["Error"] = "Username and password are required.";
                 return View();
             }
 
-            // Clear expired lockouts before checking
+            // Clear expired lockouts
             ClearExpiredLockouts(username);
 
+            // Check if account is locked
             var lockoutInfo = GetLockoutInfo(username);
-
-            // Check if account is currently locked
             if (lockoutInfo.isLocked)
             {
                 var remainingSeconds = (int)(lockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
                 ViewData["IsLocked"] = true;
                 ViewData["LockoutSeconds"] = Math.Max(0, remainingSeconds);
-                ViewData["Error"] = "Too many login attempts. Please try again later.";
+                ViewData["Error"] = $"Too many login attempts. Please try again in {remainingSeconds} seconds.";
                 return View();
             }
 
-            // First, try to validate as Admin (hardcoded credentials)
-            bool isValidAdmin = ValidateAdmin(username, password);
-            if (isValidAdmin)
+            // ========================================
+            // Try Admin Login First
+            // ========================================
+            var adminUser = _dbContext.Admins
+                .FirstOrDefault(a => (a.Name == username || a.UserId == username)
+                                    && a.Password == password
+                                    && a.Role == "admin");
+
+            if (adminUser != null)
             {
-                // Clear login attempts on successful login
+                // Clear failed login attempts
                 loginAttempts.Remove(username);
 
-                // Get the Admin record from database to retrieve UserId (not AdminId)
-                var adminUser = _dbContext.Admins.FirstOrDefault(a => a.Name == username);
+                // Set Admin session variables
+                HttpContext.Session.SetString("AdminUsername", adminUser.Name);
+                HttpContext.Session.SetString("AdminId", adminUser.UserId);
+                HttpContext.Session.SetString("UserRole", "admin");
+                HttpContext.Session.SetString("IsAdminLoggedIn", "true");
                 
-                if (adminUser != null)
-                {
-                    // Set session variables for Admin
-                    HttpContext.Session.SetString("AdminUsername", username);
-                    HttpContext.Session.SetString("AdminId", adminUser.UserId);  // Use UserId instead of AdminId
-                    HttpContext.Session.SetString("UserRole", "admin");
-                    HttpContext.Session.SetString("IsAdminLoggedIn", "true");
-                }
-                else
-                {
-                    // If admin doesn't exist in database, create error
-                    ViewData["Error"] = "Admin account not found in database.";
-                    return View();
-                }
+                // Clear staff session if exists
+                HttpContext.Session.Remove("IsStaffLoggedIn");
+                HttpContext.Session.Remove("StaffId");
 
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Home", new { area = "Admin" });
             }
 
-            // If not admin, try to validate as Staff using database (StaffId as username, IC as password)
+            // ========================================
+            // Try Staff Login - UPDATED VERSION
+            // ========================================
+            // First, find the staff record
             var staffUser = _dbContext.Staffs
-                .FirstOrDefault(s => s.UserId == username && s.IC == password && s.Role == "staff");
+                .FirstOrDefault(s => s.UserId == username 
+                                    && s.Password == password 
+                                    && s.Role == "staff");
 
             if (staffUser != null)
             {
-                // Clear login attempts on successful login
+                // Get the name from Users table (because Staff inherits from User)
+                var userInfo = _dbContext.Users
+                    .FirstOrDefault(u => u.UserId == staffUser.UserId);
+
+                // Clear failed login attempts
                 loginAttempts.Remove(username);
 
-                // Set session variables for Staff
-                HttpContext.Session.SetString("AdminUsername", staffUser.Name);
+                // Set Staff session variables
+                HttpContext.Session.SetString("StaffUsername", userInfo?.Name ?? "Staff User");
                 HttpContext.Session.SetString("StaffId", staffUser.UserId);
                 HttpContext.Session.SetString("UserRole", "staff");
-                HttpContext.Session.SetString("IsAdminLoggedIn", "true");
+                HttpContext.Session.SetString("IsStaffLoggedIn", "true");
+                
+                // Clear admin session if exists
+                HttpContext.Session.Remove("IsAdminLoggedIn");
+                HttpContext.Session.Remove("AdminId");
 
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Home", new { area = "Staff" });
             }
 
-            // Invalid credentials - increment failed attempts
+            // ========================================
+            // Login Failed
+            // ========================================
             IncrementLoginAttempts(username);
             lockoutInfo = GetLockoutInfo(username);
 
@@ -116,27 +200,63 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             else
             {
                 int remainingAttempts = LOCKOUT_THRESHOLD - lockoutInfo.attempts;
-                ViewData["Error"] = $"Invalid username or password. {remainingAttempts} attempts remaining.";
+                ViewData["Error"] = $"Invalid username or password. {remainingAttempts} attempt(s) remaining.";
             }
 
             return View();
         }
 
-        public IActionResult Logout()
+        // ========================================
+        // Admin Logout
+        // ========================================
+        public IActionResult AdminLogout()
         {
+            // Clear all admin session data
             HttpContext.Session.Remove("AdminUsername");
             HttpContext.Session.Remove("AdminId");
-            HttpContext.Session.Remove("StaffId");
             HttpContext.Session.Remove("UserRole");
             HttpContext.Session.Remove("IsAdminLoggedIn");
-            return RedirectToAction("Login");
+            
+            // Clear general session
+            HttpContext.Session.Clear();
+
+            return RedirectToAction("Login", "Auth", new { area = "Admin" });
         }
 
-        private bool ValidateAdmin(string username, string password)
+        // ========================================
+        // Staff Logout
+        // ========================================
+        public IActionResult StaffLogout()
         {
-            return AdminCredentials.TryGetValue(username, out var storedPassword) && storedPassword == password;
+            // Clear all staff session data
+            HttpContext.Session.Remove("StaffUsername");
+            HttpContext.Session.Remove("StaffId");
+            HttpContext.Session.Remove("UserRole");
+            HttpContext.Session.Remove("IsStaffLoggedIn");
+            
+            // Clear general session
+            HttpContext.Session.Clear();
+
+            return RedirectToAction("Login", "Auth", new { area = "Admin" });
         }
 
+        // ========================================
+        // Universal Logout (for both Admin and Staff)
+        // ========================================
+        public IActionResult Logout()
+        {
+            var userRole = HttpContext.Session.GetString("UserRole");
+
+            // Clear all session data
+            HttpContext.Session.Clear();
+
+            // Redirect based on previous role
+            return RedirectToAction("Login", "Auth", new { area = "Admin" });
+        }
+
+        // ========================================
+        // Helper: Increment Login Attempts
+        // ========================================
         private void IncrementLoginAttempts(string username)
         {
             if (loginAttempts.ContainsKey(username))
@@ -157,6 +277,9 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             }
         }
 
+        // ========================================
+        // Helper: Get Lockout Information
+        // ========================================
         private (bool isLocked, DateTime lockoutUntil, int attempts) GetLockoutInfo(string username)
         {
             if (!loginAttempts.ContainsKey(username))
@@ -174,11 +297,15 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             return (false, lockoutUntil, attempts);
         }
 
+        // ========================================
+        // Helper: Clear Expired Lockouts
+        // ========================================
         private void ClearExpiredLockouts(string username)
         {
             if (loginAttempts.ContainsKey(username))
             {
                 var (attempts, lockoutUntil) = loginAttempts[username];
+                
                 if (DateTime.UtcNow >= lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
                 {
                     loginAttempts.Remove(username);
