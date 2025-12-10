@@ -115,7 +115,7 @@
                 {
                     <div class="single_service wow fadeInUp" data-wow-delay="0.1s">
                         <div class="service_thumb d-flex align-items-center justify-content-center">
-                            <img src="@(string.IsNullOrEmpty(gift.Photo) ? "~/Customer/img/service/pet_icon.png" : gift.Photo)" alt="@gift.Name icon">
+                            <img src="@gift.Photo ?? " ~/Customer/img/service/pet_icon.png"" alt="@gift.Name icon">
                         </div>
                         <div class="service_content text-center">
                             <h3>@gift.Name</h3> 
@@ -132,7 +132,6 @@
                         </div>
                     </div>
                 }
-
             </div>
         </div>
     </div>
@@ -187,7 +186,7 @@
 
             // Initialize all service carousels (dog, cat, gift)
             var carouselConfig = {
-                items: 3,  
+                items: 3,
                 loop: true,
                 margin: 18,
                 autoplay: true,  //123
