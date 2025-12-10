@@ -1,0 +1,158 @@
+@model IEnumerable<PetGroomingAppointmentSystem.Models.RedeemGift>
+@{
+    @if (ViewData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @ViewData["Error"]
+        </div>
+    }
+
+    ViewData["Title"] = "Redeem Gift Management";
+    ViewData["ActivePage"] = "RedeemGift";
+    string editingId = Context.Request.Query["editId"];
+    var editingGift = Model.FirstOrDefault(g => g.GiftId == editingId);
+}
+
+<div class="content-header">
+    <h1 class="page-title">Redeem Gift Management</h1>
+</div>
+<div class="panel">
+    <div class="panel-header-wrapper">
+        <h3 class="panel-title">Redeem Gifts (@Model.Count())</h3>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="showCreateForm()">
+            <i class="material-icons">add</i>
+            Add New Gift
+        </button>
+    </div>
+
+    <!-- Create New Gift Form (Hidden by default) -->
+    <div class="panel create-form" id="createGiftForm" style="display: none;">
+        <h3 class="panel-title">Create New Gift</h3>
+
+        <form asp-action="RedeemGift" asp-controller="Home" method="post" enctype="multipart/form-data" class="form-grid">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="actionType" value="add" />
+
+            <!-- Gift Name -->
+            <div class="form-group">
+                <label for="giftName">Gift Name</label>
+                <input type="text" id="giftName" name="Name" placeholder="e.g., Pet Toy, Food Voucher" required />
+            </div>
+
+            <!-- Quantity -->
+            <div class="form-group">
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" name="Quantity" min="0" placeholder="Available stock" required />
+            </div>
+
+            <!-- Points Cost -->
+            <div class="form-group">
+                <label for="points">Loyalty Points Cost</label>
+                <input type="number" id="points" name="LoyaltyPointCost" min="0" placeholder="Points required" required />
+            </div>
+
+            <!-- Photo Upload -->
+            <div class="form-group">
+                <label for="photo">Gift Photo</label>
+                <input type="file" id="photo" name="PhotoUpload" accept="image/*" required />
+            </div>
+
+            <!-- Save Button -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                    <i class="material-icons">add</i>
+                    Save Gift
+                </button>
+                <button type="button" class="btn btn-action" onclick="hideCreateForm()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Gift ID</th>
+                        <th>Name</th>
+                        <th>Qty</th>
+                        <th>Points Cost</th>
+                        <th>Photo</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var gift in Model)
+                {
+                    if (editingGift != null && editingGift.GiftId == gift.GiftId)
+                    {
+                        // Inline edit row
+                        <tr>
+                        <form asp-action="RedeemGift" asp-controller="Home" method="post">
+                            <input type="hidden" name="actionType" value="edit" />
+                            <input type="hidden" name="editGiftId" value="@gift.GiftId" />
+                            <td>@gift.GiftId</td>
+                            <td><input type="text" name="Name" value="@gift.Name" required class="form-control" /></td>
+                            <td><input type="number" name="Quantity" value="@gift.Quantity" required class="form-control" /></td>
+                            <td><input type="number" name="LoyaltyPointCost" value="@gift.LoyaltyPointCost" required class="form-control" /></td>
+                            <td><input type="text" name="Photo" value="@gift.Photo" class="form-control" /></td>
+                            <td>
+                                <button type="submit" class="btn btn-success btn-sm">Save</button>
+                                <a asp-action="RedeemGift" asp-controller="Home" class="btn btn-secondary btn-sm">Cancel</a>
+                            </td>
+                        </form>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>@gift.GiftId</td>
+                            <td>@gift.Name</td>
+                            <td>@gift.Quantity</td>
+                            <td>@gift.LoyaltyPointCost</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(gift.Photo))
+                                {
+                                    <img src="@gift.Photo" alt="Photo" style="width: 70px; height: auto;" />
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="RedeemGift" asp-controller="Home" asp-route-editId="@gift.GiftId" class="btn btn-sm btn-action edit-btn">Edit</a>
+                                <form asp-action="RedeemGift" asp-controller="Home" method="post" style="display:inline">
+                                    <input type="hidden" name="actionType" value="delete" />
+                                    <input type="hidden" name="deleteGiftId" value="@gift.GiftId" />
+                                    <button type="submit" class="btn btn-sm btn-action delete-btn" onclick="return confirm('Delete this gift?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state"><p>No redeem gifts found.</p></div>
+    }
+</div>
+
+<script>
+    // Function to show the create form
+    function showCreateForm() {
+        document.getElementById('createGiftForm').style.display = 'block';
+    }
+
+    // Function to hide the create form
+    function hideCreateForm() {
+        document.getElementById('createGiftForm').style.display = 'none';
+    }
+</script>

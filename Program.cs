@@ -10,6 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSqlServer<DB>($@"
     Data Source=(LocalDB)\MSSQLLocalDB;
     AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
+    Database=PetGroomingSystem;
+    Trusted_Connection=True;
+    MultipleActiveResultSets=true;
 ");
 
 // -----------------------------

@@ -28,9 +28,9 @@
                     <li><a class="@(ViewData["ActivePage"] as string == "Customer" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Customer"><i class="material-icons">contacts</i> Customers</a></li>
                     <li><a class="@(ViewData["ActivePage"] as string == "Pet" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Pet"><i class="material-icons">pets</i> Pets</a></li>
                     <li><a class="@(ViewData["ActivePage"] as string == "LoyaltyPoint" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="LoyaltyPoint"><i class="material-icons">card_giftcard</i> Loyalty Points</a></li>
+                    <li><a class="@(ViewData["ActivePage"] as string == "RedeemGift" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="RedeemGift"><i class="material-icons">redeem</i> Redeem Gifts</a></li>
                     
                     <li><a class="@(ViewData["ActivePage"] as string == "Service" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Service"><i class="material-icons">content_cut</i> Service</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "aboutUs" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="aboutUs"><i class="material-icons">contact_page</i> About Us</a></li>
                     <li><a class="@(ViewData["ActivePage"] as string == "customerIndex" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="customerIndex"><i class="material-icons">home</i> Customer Index</a></li>
                     <li><a class="@(ViewData["ActivePage"] as string == "reports" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="reports"><i class="material-icons">report</i> Reports</a></li>
                 </ul>

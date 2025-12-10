@@ -733,9 +733,6 @@ body {
    
 }
 
-
-
-
 /* --- 11. Modal/Form Styling --- */
 
 .modal-backdrop {
@@ -2038,64 +2035,6 @@ body {
         transform: translateY(-2px);
     }
 
-/* --- Responsive Appointment Styles --- */
-@media (max-width: 1024px) {
-    .filter-form {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .filter-form {
-        grid-template-columns: 1fr;
-    }
-
-    .panel-header-wrapper {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-
-        .panel-header-wrapper .btn {
-            width: 100%;
-        }
-
-    .data-table {
-        font-size: 12px;
-    }
-
-        .data-table th,
-        .data-table td {
-            padding: 8px 10px;
-        }
-
-    .btn-sm {
-        padding: 5px 10px;
-        font-size: 12px;
-    }
-}
-
-@media (max-width: 480px) {
-    .filter-form {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-
-    .panel-header-wrapper {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .data-table th {
-        font-size: 11px;
-    }
-
-    .data-table td {
-        font-size: 11px;
-        padding: 6px 8px;
-    }
-}
-
 /* --- REPORTS & ANALYTICS SPECIFIC STYLES --- */
 .report-page {
     padding: 20px 0;
@@ -2349,5 +2288,289 @@ body {
         font-size: 12px;
     }
 
+}
+
+/* ==============================================
+   REDEEM GIFT SPECIFIC STYLES
+   ============================================== */
+
+/* Gift Management Header */
+.gift-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.gift-header .material-icons {
+    vertical-align: middle;
+    font-size: 32px;
+    color: var(--primary-color);
+}
+
+.page-subtitle {
+    color: var(--text-light);
+    font-size: 15px;
+    margin-bottom: 25px;
+}
+
+/* Alert Styles */
+.alert {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.alert .material-icons {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.alert-danger {
+    background: #fee;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+/* Panel Headers with Gradient */
+.panel-header-gradient {
+    color: white;
+    padding: 20px;
+    border-radius: 12px 12px 0 0;
+    margin: -28px -28px 0 -28px;
+}
+
+.panel-header-gradient.purple {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.panel-header-gradient.pink {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.panel-header-gradient .panel-title {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+}
+
+.panel-header-gradient .material-icons {
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.panel-badge {
+    background: rgba(255,255,255,0.3);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+/* Form Grid for Gift Form */
+.gift-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 25px;
+    background: white;
+    border-radius: 0 0 12px 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group label .material-icons {
+    vertical-align: middle;
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+
+/* Custom File Input Styling */
+.form-control[type="file"] {
+    width: auto !important;
+    max-width: fit-content;
+    display: inline-block;
+    padding: 0;
+    border: none;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.form-control[type="file"]:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Beautiful "Choose File" Button with Orange Gradient */
+.form-control[type="file"]::-webkit-file-upload-button {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(217, 119, 6, 0.25);
+}
+
+.form-control[type="file"]::-webkit-file-upload-button:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    box-shadow: 0 6px 12px rgba(217, 119, 6, 0.35);
+    transform: translateY(-2px);
+}
+
+.form-control[type="file"]::file-selector-button {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(217, 119, 6, 0.25);
+}
+
+.form-control[type="file"]::file-selector-button:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    box-shadow: 0 6px 12px rgba(217, 119, 6, 0.35);
+    transform: translateY(-2px);
+}
+
+/* Firefox */
+.form-control[type="file"]::-ms-browse {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+}
+
+/* File name text styling */
+.form-control[type="file"] {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* Small file input for edit mode in table */
+.file-input-sm {
+    font-size: 12px;
+}
+
+.file-input-sm::-webkit-file-upload-button,
+.file-input-sm::file-selector-button {
+    padding: 6px 14px;
+    font-size: 12px;
+}
+
+/* ==============================================
+   SUBMIT BUTTON STYLING (Add New Gift)
+   ============================================== */
+
+/* Style for submit buttons without specific class */
+button[type="submit"]:not([class*="btn-"]) {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: white;
+    border: none;
+    padding: 11px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(217, 119, 6, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+button[type="submit"]:not([class*="btn-"]):hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    box-shadow: 0 6px 12px rgba(217, 119, 6, 0.35);
+    transform: translateY(-2px);
+}
+
+button[type="submit"]:not([class*="btn-"]):active {
+    transform: translateY(0);
+}
+
+/* Ensure btn-success also has icons aligned */
+.btn-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-success .material-icons {
+    font-size: 20px;
+}
+
+/* Make sure all submit buttons in forms are styled */
+.form-actions button[type="submit"] {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    min-width: 140px;
+}
+
+.form-actions button[type="submit"]:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+}
+
+/* Remove any conflicting styles */
+.form-control[type="file"]:not(.file-input-sm) {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 

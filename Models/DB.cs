@@ -113,6 +113,7 @@ public class Customer : User
 
     public DateTime? RegisteredDate { get; set; }
 
+
     // Overrides inherited Pets and Appointments (for customer-specific records)
     [NotMapped]
     public new List<Pet> Pets { get; set; } = new List<Pet>();

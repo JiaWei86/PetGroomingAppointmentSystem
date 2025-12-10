@@ -846,3 +846,64 @@ function downloadPdf() {
 
     html2pdf().set(opt).from(report).save();
 }
+
+function downloadPdf() {
+    var report = document.getElementById('reportArea');
+    if (!report) {
+        alert('No report content to export.');
+        return;
+    }
+
+    var typeSelect = document.getElementById('reportType');
+    var reportType = typeSelect ? typeSelect.value : 'report';
+    var fileName = reportType + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
+
+    var opt = {
+        margin: 0.5,                // 英寸，可按需要调小/调大
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(report).save();
+}
+
+// ========================================
+// ALERT AUTO-HIDE FUNCTIONALITY
+// ========================================
+function initAlertAutoHide() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        }, 5000);
+    });
+}
+
+// ========================================
+// INITIALIZE ON DOM LOAD
+// ========================================
+document.addEventListener('DOMContentLoaded', function () {
+    // Initialize existing modules
+    if (typeof CustomerManager !== 'undefined' && CustomerManager.init) {
+        CustomerManager.init();
+    }
+    if (typeof PetManager !== 'undefined' && PetManager.init) {
+        PetManager.init();
+    }
+    if (typeof LoyaltyPointsManager !== 'undefined' && LoyaltyPointsManager.init) {
+        LoyaltyPointsManager.init();
+    }
+
+    // Initialize alert auto-hide
+    initAlertAutoHide();
+
+    // Initialize report filters if on reports page
+    if (document.getElementById('reportFilters')) {
+        initReportFilters();
+        generateReport();
+    }
+});

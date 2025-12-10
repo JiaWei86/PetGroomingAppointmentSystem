@@ -63,10 +63,23 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
                 // Clear login attempts on successful login
                 loginAttempts.Remove(username);
 
-                // Set session variables for Admin
-                HttpContext.Session.SetString("AdminUsername", username);
-                HttpContext.Session.SetString("UserRole", "admin");  // IMPORTANT: This matches middleware check
-                HttpContext.Session.SetString("IsAdminLoggedIn", "true");
+                // Get the Admin record from database to retrieve UserId (not AdminId)
+                var adminUser = _dbContext.Admins.FirstOrDefault(a => a.Name == username);
+                
+                if (adminUser != null)
+                {
+                    // Set session variables for Admin
+                    HttpContext.Session.SetString("AdminUsername", username);
+                    HttpContext.Session.SetString("AdminId", adminUser.UserId);  // Use UserId instead of AdminId
+                    HttpContext.Session.SetString("UserRole", "admin");
+                    HttpContext.Session.SetString("IsAdminLoggedIn", "true");
+                }
+                else
+                {
+                    // If admin doesn't exist in database, create error
+                    ViewData["Error"] = "Admin account not found in database.";
+                    return View();
+                }
 
                 return RedirectToAction("Index", "Home");
             }
@@ -83,7 +96,7 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
                 // Set session variables for Staff
                 HttpContext.Session.SetString("AdminUsername", staffUser.Name);
                 HttpContext.Session.SetString("StaffId", staffUser.UserId);
-                HttpContext.Session.SetString("UserRole", "staff");  // IMPORTANT: This matches middleware check
+                HttpContext.Session.SetString("UserRole", "staff");
                 HttpContext.Session.SetString("IsAdminLoggedIn", "true");
 
                 return RedirectToAction("Index", "Home");
@@ -112,8 +125,9 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         public IActionResult Logout()
         {
             HttpContext.Session.Remove("AdminUsername");
+            HttpContext.Session.Remove("AdminId");
             HttpContext.Session.Remove("StaffId");
-            HttpContext.Session.Remove("UserRole");  // IMPORTANT: Clear this key
+            HttpContext.Session.Remove("UserRole");
             HttpContext.Session.Remove("IsAdminLoggedIn");
             return RedirectToAction("Login");
         }

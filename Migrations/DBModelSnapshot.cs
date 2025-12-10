@@ -305,6 +305,9 @@ namespace PetGroomingAppointmentSystem.Migrations
                 {
                     b.HasBaseType("PetGroomingAppointmentSystem.Models.User");
 
+                    b.Property<string>("CustomerId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("LoyaltyPoint")
                         .HasColumnType("int");
 

@@ -10,9 +10,7 @@ namespace PetGroomingAppointmentSystem.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Notes",
-                table: "Admins");
+            
         }
 
         /// <inheritdoc />
