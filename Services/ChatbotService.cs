@@ -72,7 +72,7 @@ public class ChatbotService : IChatbotService
 
                 new FaqItem
                 {
-                    Answer = "Yes, professional bathing is safe for most pets when done by trained groomers. We use pet-safe, hypoallergenic products. However, if your pet has skin conditions or health concerns, please inform us beforehand so we can take special precautions.",
+                    Answer = "Professional bathing is safe for most pets when done by trained groomers. We use pet-safe, hypoallergenic products. However, if your pet has skin conditions or health concerns, please inform us beforehand so we can take special precautions.",
                     Keywords = new[] { "bathing", "bath", "wash", "safe", "allergies" }
                 },
 
@@ -90,7 +90,7 @@ public class ChatbotService : IChatbotService
 
                 new FaqItem
                 {
-                    Answer = "Absolutely! We exclusively use premium, pet-safe, hypoallergenic grooming products that are gentle on your pet's skin and coat. All our products are tested for safety and suitability for pets.",
+                    Answer = "We exclusively use premium, pet-safe, hypoallergenic grooming products that are gentle on your pet's skin and coat. All our products are tested for safety and suitability for pets.",
                     Keywords = new[] { "products", "safe products", "ingredients", "chemical", "allergy" }
                 },
 

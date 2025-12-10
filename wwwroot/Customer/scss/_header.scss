@@ -294,3 +294,59 @@
       }
     }
 }
+
+/* FAQ Assistant Icon in Header */
+.faq-icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 20px;
+}
+
+.faq-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff3500 0%, #ff5733 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 53, 0, 0.2);
+    position: relative;
+    padding: 0;
+}
+
+    .faq-icon-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(255, 53, 0, 0.4);
+    }
+
+    .faq-icon-btn:active {
+        transform: scale(0.95);
+    }
+
+    .faq-icon-btn svg {
+        width: 20px;
+        height: 20px;
+        stroke: white;
+    }
+
+    /* Pulse animation for attention */
+    .faq-icon-btn.pulse {
+        animation: pulse-animation 2s infinite;
+    }
+
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 2px 8px rgba(255, 53, 0, 0.2);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(255, 53, 0, 0.4);
+    }
+    100% {
+        box-shadow: 0 2px 8px rgba(255, 53, 0, 0.2);
+    }
+}

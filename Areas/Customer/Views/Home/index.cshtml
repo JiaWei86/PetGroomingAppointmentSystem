@@ -33,13 +33,8 @@
                 </div>
             </div>
         </div>
-        <div class="owl-carousel price-list-carousel">
-            <div class="text-center">
-                <img src="~/Customer/img/about/price_list.png" alt="Price list for pet grooming services" class="img-fluid wow zoomIn" data-wow-delay="0.3s" loading="lazy" decoding="async" style="max-width:1100px;">
-            </div>
-            <div class="text-center">
-                <img src="~/Customer/img/about/price_list.png" alt="Price list for pet grooming services" class="img-fluid wow zoomIn" data-wow-delay="0.3s" loading="lazy" decoding="async" style="max-width:1100px;">
-            </div>
+        <div class="text-center">
+            <img src="~/Customer/img/about/price_list.png" alt="Price list for pet grooming services" class="img-fluid wow zoomIn" data-wow-delay="0.3s" loading="lazy" decoding="async" style="max-width:1100px;">
         </div>
     </div>
 </section>
@@ -108,29 +103,60 @@
         <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
                 <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
-                    <h3>🎁 Redeem Gift</h3>
+                    <h3>🎁 Redeem Gift </h3>
                 </div>
             </div>
         </div>
+
         <div class="row justify-content-center">
             <div class="owl-carousel service-carousel gift-carousel w-100">
-                @foreach (var g in Model.RedeemGifts)
+
+                @foreach (var gift in Model.RedeemGifts)
                 {
-                    <div class="single_service wow fadeInUp">
+                    <div class="single_service wow fadeInUp" data-wow-delay="0.1s">
                         <div class="service_thumb d-flex align-items-center justify-content-center">
-                            <img src="@g.Photo" alt="@g.Name" style="max-height:200px;">
+                            <img src="@gift.Photo ?? " ~/Customer/img/service/pet_icon.png"" alt="@gift.Name icon">
                         </div>
                         <div class="service_content text-center">
-                            <h3>@g.Name</h3>
-                            <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Redeem Gift</a>
+                            <h3>@gift.Name</h3>
+                            <p>Loyalty Cost: @gift.LoyaltyPointCost pts</p>
+
+                            <button class="boxed-btn4 redeem-btn"
+                                    data-gift-id="@gift.GiftId"
+                                    data-gift-name="@gift.Name"
+                                    data-cost="@gift.LoyaltyPointCost"
+                                    data-maxqty="@gift.Quantity"
+                                    data-userpoints="@Model.CustomerLoyaltyPoints">
+                                Redeem Gift
+                            </button>
                         </div>
                     </div>
                 }
+
             </div>
         </div>
     </div>
 </section>
 <!-- redeem_gift_area_end -->
+<!-- Popup -->
+<div id="redeemPopup" class="popup-container" style="display:none;">
+    <div class="popup-box">
+        <h3 id="popupGiftName"></h3>
+        <p>Cost per item: <span id="popupGiftCost"></span> pts</p>
+        <p>Your points: <span id="popupUserPoints"></span></p>
+        <p>Available quantity: <span id="popupMaxQty"></span></p>
+
+        <label>Quantity:</label>
+        <input id="popupQty" type="number" min="1" style="width:80px; text-align:center;">
+
+        <div class="button-row">
+            <button id="confirmBtn" class="boxed-btn4">Confirm</button>
+            <button id="cancelBtn" class="boxed-btn4">Cancel</button>
+        </div>
+
+    </div>
+</div>
+
 <!-- contact_anipat_start -->
 <section class="contact_anipat anipat_bg_1 py-5">
     <div class="container">
@@ -153,13 +179,13 @@
 </section>
 <!-- contact_anipat_end -->
 @section Scripts {
-    <script src="~/Customer/js/wow.min.js"></script>
     <script>
         $(document).ready(function () {
+
             // Initialize WOW animations
             new WOW().init();
 
-            // Initialize all service carousels
+            // Initialize all service carousels (dog, cat, gift)
             var carouselConfig = {
                 items: 3,
                 loop: true,
@@ -175,23 +201,8 @@
             };
 
             $(".service-carousel").owlCarousel(carouselConfig);
+            $(".gift-carousel").trigger("refresh.owl.carousel");
 
-            // Initialize price list carousel (single item)
-            $(".price-list-carousel").owlCarousel({
-                items: 1,
-                loop: true,
-                margin: 0,
-                autoplay: true,
-                autoplayTimeout: 5000,
-                autoplayHoverPause: true,
-                responsive: {
-                    0: { items: 1 },
-                    768: { items: 1 },
-                    1200: { items: 1 }
-                }
-            });
-
-            // Fix carousel card heights responsively
             function setCarouselHeights() {
                 $(".service-carousel").each(function () {
                     var maxHeight = 0;
@@ -203,12 +214,79 @@
                 });
             }
 
-            // Set heights on load and window resize
             setCarouselHeights();
-            $(window).on('resize', function () {
-                setCarouselHeights();
-            });
+            $(window).on('resize', setCarouselHeights);
+        });
+
+        // Popup / Redeem Logic
+        let redeemData = { giftId: null, giftName: "", cost: 0, maxQty: 0, userPoints: 0 };
+
+        function openRedeemPopup(data) {
+            redeemData = data;
+            $("#popupGiftName").text(data.giftName);
+            $("#popupGiftCost").text(data.cost);
+            $("#popupUserPoints").text(data.userPoints);
+            $("#popupMaxQty").text(data.maxQty);
+
+            const qtyInput = $("#popupQty");
+            qtyInput.val(1);
+            qtyInput.attr("max", data.maxQty);
+
+            $("#redeemPopup").fadeIn();
+        }
+
+        $(".redeem-btn").click(function () {
+            let data = {
+                giftId: $(this).data("gift-id"),
+                giftName: $(this).data("gift-name"),
+                cost: parseInt($(this).data("cost")),
+                maxQty: parseInt($(this).data("maxqty")),
+                userPoints: parseInt($(this).data("userpoints"))
+            };
+            openRedeemPopup(data);
+        });
+
+        $("#cancelBtn").click(() => $("#redeemPopup").fadeOut());
+
+        $("#confirmBtn").click(() => {
+            const qty = parseInt($("#popupQty").val());
+            const totalCost = qty * redeemData.cost;
+
+            if (qty <= 0) {
+                alert("Quantity must be at least 1!");
+                return;
+            }
+
+            if (qty > redeemData.maxQty) {
+                alert("Exceeds available gift stock!");
+                return;
+            }
+
+            if (totalCost > redeemData.userPoints) {
+                alert("Not enough loyalty points!");
+                return;
+            }
+
+            // AJAX request to confirm redemption
+            $.post("/Customer/Home/RedeemGiftConfirm", { giftId: redeemData.giftId, quantity: qty })
+                .done(response => {
+                    alert(response.message || "Gift redeemed successfully!");
+                    location.reload(); // reload page to update points and gift stock
+                })
+                .fail(xhr => alert(xhr.responseText || "Error redeeming gift!"));
+
+            $("#redeemPopup").fadeOut();
+        });
+
+        // Optional: dynamically update total cost when quantity changes
+        $("#popupQty").on("input", function () {
+            const qty = parseInt($(this).val());
+            const totalCost = qty * redeemData.cost;
+            if (totalCost > redeemData.userPoints) {
+                $(this).val(Math.floor(redeemData.userPoints / redeemData.cost));
+                alert("Adjusted quantity to match available loyalty points.");
+            }
         });
     </script>
-}
 
+}

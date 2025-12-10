@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="~/Customer/css/profile.css">
     <link rel="stylesheet" href="~/Customer/css/edit-profile-modal.css">
     <link rel="stylesheet" href="~/Customer/css/chatbot.css">
+    <link rel="stylesheet" href="~/Customer/css/redeemGift.css">
 
 </head>
 <body>
@@ -63,101 +64,146 @@
     <script src="~/Customer/js/main.js"></script>
     <script src="~/Customer/js/chatbot.js"></script>
 
+
+
     <script>
-                 document.addEventListener('DOMContentLoaded', () => {
-            const container = document.getElementById('chatbot-container');
-            const toggleBtn = document.getElementById('chatbot-toggle');
-            const header = document.getElementById('chatbot-header');
-            const messages = document.getElementById('chatbot-messages');
-            const input = document.getElementById('chatbot-input');
-            const sendBtn = document.getElementById('chatbot-send');
+        document.addEventListener("DOMContentLoaded", () => {
 
-            // Initialize minimized state
-            let isMinimized = container.classList.contains('minimized');
-            toggleBtn.textContent = isMinimized ? '+' : '−';
+            const chatbotContainer = document.getElementById("chatbot-container");
+            const messagesContainer = document.getElementById("chatbot-messages");
+            const toggleBtn = document.getElementById("chatbot-toggle");
+            const header = document.getElementById("chatbot-header");
+            const input = document.getElementById("chatbot-input");
+            const sendBtn = document.getElementById("chatbot-send");
 
-            // Toggle function
-            function toggleChat() {
-                isMinimized = !isMinimized;
-                container.classList.toggle('minimized', isMinimized);
-                toggleBtn.textContent = isMinimized ? '+' : '−';
+            /* ---------------------------------------
+                RESTORE STATE
+            ----------------------------------------*/
+
+            // Restore chat messages
+            const savedMessages = sessionStorage.getItem("chatbot_messages");
+            if (savedMessages) {
+                messagesContainer.innerHTML = savedMessages;
             }
 
-            toggleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleChat(); });
-            header.addEventListener('click', toggleChat);
+            // By default, start minimized with "+" button
+            const minimizedState = sessionStorage.getItem("chatbot_minimized");
+            if (minimizedState === "true") {
+                chatbotContainer.classList.add("minimized");
+            } else {
+                chatbotContainer.classList.add("minimized"); // force minimized at first visit
+                sessionStorage.setItem("chatbot_minimized", true);
+            }
 
-            // Send message function
+            toggleBtn.textContent = "+";
+
+            /* ---------------------------------------
+                TOGGLE CHAT
+            ----------------------------------------*/
+            function toggleChat() {
+                const isMin = chatbotContainer.classList.toggle("minimized");
+                toggleBtn.textContent = isMin ? "+" : "−";
+                sessionStorage.setItem("chatbot_minimized", isMin);
+            }
+
+            toggleBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleChat();
+            });
+
+            header.addEventListener("click", toggleChat);
+
+            /* ---------------------------------------
+                SAVE CHAT MESSAGES
+            ----------------------------------------*/
+            function saveChat() {
+                sessionStorage.setItem("chatbot_messages", messagesContainer.innerHTML);
+            }
+
+            /* ---------------------------------------
+                SEND MESSAGE
+            ----------------------------------------*/
             async function sendMessage(message) {
                 if (!message) return;
 
-                // Add user message
-                const userMsgDiv = document.createElement('div');
-                userMsgDiv.className = 'message user-message';
-                userMsgDiv.innerHTML = `<p>${message}</p>`;
-                messages.appendChild(userMsgDiv);
-                messages.scrollTop = messages.scrollHeight;
+                // USER MESSAGE
+                const userMsg = document.createElement("div");
+                userMsg.className = "message user-message";
+                userMsg.innerHTML = `<p>${message}</p>`;
+                messagesContainer.appendChild(userMsg);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                saveChat();
 
-                // Clear input if using text field
-                input.value = '';
+                input.value = "";
 
-                // Show loading indicator
-                const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'message bot-message';
-                loadingDiv.id = 'loading-indicator';
-                loadingDiv.innerHTML = `
+                // LOADING
+                const loading = document.createElement("div");
+                loading.className = "message bot-message";
+                loading.innerHTML = `
                     <div class="loading-indicator">
                         <div class="loading-dot"></div>
                         <div class="loading-dot"></div>
                         <div class="loading-dot"></div>
                     </div>`;
-                messages.appendChild(loadingDiv);
-                messages.scrollTop = messages.scrollHeight;
+                messagesContainer.appendChild(loading);
 
                 try {
-                    // Call your backend API
-                    const response = await fetch('/api/chatbot/message', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                    const response = await fetch("/api/chatbot/message", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ message })
                     });
+
                     const data = await response.json();
 
-                    // Remove loading
-                    loadingDiv.remove();
+                    loading.remove();
 
-                    // Add bot response
-                    const botMsgDiv = document.createElement('div');
-                    botMsgDiv.className = 'message bot-message';
-                    botMsgDiv.innerHTML = `<p>${data.response}</p>`;
-                    messages.appendChild(botMsgDiv);
-                    messages.scrollTop = messages.scrollHeight;
+                    const botMsg = document.createElement("div");
+                    botMsg.className = "message bot-message";
+                    botMsg.innerHTML = `<p>${data.response}</p>`;
+                    messagesContainer.appendChild(botMsg);
+
+                    saveChat();
 
                 } catch (err) {
-                    console.error(err);
-                    loadingDiv.remove();
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'message bot-message';
+                    loading.remove();
+
+                    const errorMsg = document.createElement("div");
+                    errorMsg.className = "message bot-message";
                     errorMsg.innerHTML = `<p>Sorry, something went wrong.</p>`;
-                    messages.appendChild(errorMsg);
+                    messagesContainer.appendChild(errorMsg);
+
+                    saveChat();
                 }
             }
 
-            // Input and send button events
-            if (sendBtn) sendBtn.addEventListener('click', () => sendMessage(input.value.trim()));
-            if (input) input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendMessage(input.value.trim());
+            /* ---------------------------------------
+                INPUT + BUTTON EVENTS
+            ----------------------------------------*/
+            sendBtn.addEventListener("click", () => sendMessage(input.value.trim()));
+
+            input.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    sendMessage(input.value.trim());
+                }
             });
 
-            // ===== NEW: Topic click events =====
-            const topics = document.querySelectorAll('.topic-item');
-            topics.forEach(topic => {
-                topic.addEventListener('click', () => {
-                    const userQuestion = topic.dataset.topic;
-                    sendMessage(userQuestion);
+            /* ---------------------------------------
+                TOPIC CLICK EVENTS
+            ----------------------------------------*/
+            document.querySelectorAll(".topic-item").forEach(topic => {
+                topic.addEventListener("click", () => {
+                    sendMessage(topic.dataset.topic);
                 });
             });
+
         });
+
+
     </script>
+
+
+
 
 
     @RenderSection("Scripts", required: false)

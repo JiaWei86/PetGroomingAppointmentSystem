@@ -121,6 +121,7 @@ public class Customer : User
     public new List<Appointment> Appointments { get; set; } = new List<Appointment>();
     
     public List<CustomerRedeemGift> Redeems { get; set; } = new List<CustomerRedeemGift>();
+    public string CustomerId { get; internal set; }
 }
 
 /* =========================
@@ -224,6 +225,8 @@ public class RedeemGift
     public string Name { get; set; }
 
     public int Quantity { get; set; } = 0;
+
+    public int LoyaltyPointCost { get; set; }  
 
     [MaxLength(300)]
     public string Photo { get; set; }
