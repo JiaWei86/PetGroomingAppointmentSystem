@@ -119,7 +119,7 @@
                         </div>
                         <div class="service_content text-center">
                             <h3>@gift.Name</h3>
-                            <p>Loyalty Cost: @gift.LoyaltyPointCost pts</p>
+                            <p>Loyalty Point Cost: @gift.LoyaltyPointCost pts</p>
 
                             <button class="boxed-btn4 redeem-btn"
                                     data-gift-id="@gift.GiftId"
@@ -180,28 +180,36 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-
-            // Initialize WOW animations
             new WOW().init();
 
-            // Initialize all service carousels (dog, cat, gift)
-            var carouselConfig = {
-                items: 3,
-                loop: false,
-                margin: 18,
-                autoplay: true,
-                autoplayTimeout: 4000,
-                autoplayHoverPause: true,
-                responsive: {
-                    0: { items: 1 },
-                    768: { items: 2 },
-                    1200: { items: 3 }
-                }
-            };
+            // read counts from model (rendered as numbers)
+            var dogCount = @Model.DogServices.Count;
+            var catCount = @Model.CatServices.Count;
+            var giftCount = @Model.RedeemGifts.Count;
 
-            $(".service-carousel").owlCarousel(carouselConfig);
-            $(".gift-carousel").trigger("refresh.owl.carousel");
+            // Generic function for initializing any carousel
+            function initCarousel(selector, count) {
+                $(selector).owlCarousel({
+                    items: 3,
+                    loop: count > 3,        // loop only when more than 3
+                    autoplay: count > 3,    // autoplay only when more than 3
+                    autoplayTimeout: 4000,
+                    autoplayHoverPause: true,
+                    margin: 18,
+                    responsive: {
+                        0: { items: 1 },
+                        768: { items: 2 },
+                        1200: { items: 3 }
+                    }
+                });
+            }
 
+            // Initialize carousels with model count
+            initCarousel(".dog-carousel", dogCount);
+            initCarousel(".cat-carousel", catCount);
+            initCarousel(".gift-carousel", giftCount);
+
+            // Equal height adjustment
             function setCarouselHeights() {
                 $(".service-carousel").each(function () {
                     var maxHeight = 0;
