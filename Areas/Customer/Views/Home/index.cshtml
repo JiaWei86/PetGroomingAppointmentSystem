@@ -179,10 +179,10 @@
 <!-- contact_anipat_end -->
 @section Scripts {
     <script>
-        $(document).ready(function () {
+               $(document).ready(function () {
             new WOW().init();
 
-            // read counts from model (rendered as numbers)
+            // ✔ read counts from model (rendered as numbers)
             var dogCount = @Model.DogServices.Count;
             var catCount = @Model.CatServices.Count;
             var giftCount = @Model.RedeemGifts.Count;
