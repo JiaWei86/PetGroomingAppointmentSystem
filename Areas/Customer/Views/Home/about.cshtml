@@ -85,34 +85,49 @@
 </section>
 <!-- why_choose_us_end -->
 <!-- team_area_start -->
-<section class="team_area">
+<section class="team_area py-5">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8 col-md-10">
-                <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
+                <div class="section_title text-center mb-5">
                     <h3>Meet Our Expert Team</h3>
                 </div>
             </div>
         </div>
+
         <div class="row justify-content-center">
             @foreach (var s in Model)
             {
                 <div class="col-lg-4 col-md-6">
-                    <div class="single_team">
+                    <div class="single_team wow fadeInUp" data-wow-delay="0.2s">
+
+                        <!-- IMAGE -->
                         <div class="thumb">
-                            <img src="@s.Photo" alt="@s.Name">
+                            <img src="@Url.Content(s.Photo)"
+                                 alt="@s.Name"
+                                 loading="lazy"
+                                 decoding="async">
                         </div>
+
+                        <!-- NAME & POSITION -->
                         <div class="member_name text-center">
-                            <h4>@s.Name</h4>
-                            <p>@s.Position</p>
+                            <div class="mamber_inner">
+                                <h4>@s.Name</h4>
+                                <p>@s.Position</p>
+                                <p>Year of Experience: @s.ExperienceYear</p>
+                            </div>
                         </div>
+
+                        <!-- DESCRIPTION -->
                         <p style="padding: 15px; text-align: center; font-size: 14px;">
                             @s.Description
                         </p>
+
                     </div>
                 </div>
             }
         </div>
+
     </div>
 </section>
 <!-- team_area_end -->
