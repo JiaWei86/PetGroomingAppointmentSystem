@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 
 namespace PetGroomingAppointmentSystem.Areas.Staff.Controllers
 {
     [Area("Staff")]
+    [StaffOnly]
     public class HomeController : Controller
     {
 
@@ -17,6 +19,8 @@ namespace PetGroomingAppointmentSystem.Areas.Staff.Controllers
             ViewData["ActivePage"] = "ApplyLeave";
             return View();
         }
+
+      
 
     }
 }

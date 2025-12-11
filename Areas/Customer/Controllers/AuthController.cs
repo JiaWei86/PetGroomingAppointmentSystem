@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PetGroomingAppointmentSystem.Services;
 using PetGroomingAppointmentSystem.Models;
+using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
@@ -27,18 +28,27 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         }
 
         [HttpPost]
-        public IActionResult Login(string phoneNumber, string password)
+        public IActionResult Login(LoginViewModel model)
         {
-            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(password))
+            if (!ModelState.IsValid)
             {
-                ViewData["Error"] = "Phone number and password are required.";
-                return View();
+                return View(model);
+            }
+
+            // Format phone number: convert 01X1234567 or 01X-1234567 to 01X-1234567 format
+            string formattedPhoneNumber = FormatPhoneNumber(model.PhoneNumber);
+
+            // Validate formatted phone number
+            if (!ValidatePhoneFormat(formattedPhoneNumber))
+            {
+                ModelState.AddModelError(nameof(model.PhoneNumber), "Invalid phone number format. Use 01X-XXXXXXX or 01X-XXXXXXXX");
+                return View(model);
             }
 
             // Clear expired lockouts before checking
-            ClearExpiredLockouts(phoneNumber);
+            ClearExpiredLockouts(formattedPhoneNumber);
 
-            var lockoutInfo = GetLockoutInfo(phoneNumber);
+            var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
             // Check if account is currently locked
             if (lockoutInfo.isLocked)
@@ -47,18 +57,18 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 ViewData["IsLocked"] = true;
                 ViewData["LockoutSeconds"] = Math.Max(0, remainingSeconds);
                 ViewData["Error"] = "Too many login attempts. Please try again later.";
-                return View();
+                return View(model);
             }
 
-            // Query database for customer user
+            // Query database with formatted phone number
             var user = _dbContext.Customers
-                .FirstOrDefault(u => u.Phone == phoneNumber && u.Password == password && u.Role == "customer");
+                .FirstOrDefault(u => u.Phone == formattedPhoneNumber && u.Password == model.Password && u.Role == "customer");
 
             if (user == null)
             {
                 // Invalid credentials - increment failed attempts
-                IncrementFailedAttempts(phoneNumber);
-                var updatedLockoutInfo = GetLockoutInfo(phoneNumber);
+                IncrementFailedAttempts(formattedPhoneNumber);
+                var updatedLockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
                 if (updatedLockoutInfo.isLocked)
                 {
@@ -71,17 +81,64 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     ViewData["Error"] = $"Invalid phone number or password. Attempt {updatedLockoutInfo.attempts}/{LOCKOUT_THRESHOLD}.";
                 }
 
-                return View();
+                return View(model);
             }
 
             // Successful login - reset failed attempts
-            ResetFailedAttempts(phoneNumber);
+            ResetFailedAttempts(formattedPhoneNumber);
 
             HttpContext.Session.SetString("CustomerId", user.UserId);
             HttpContext.Session.SetString("CustomerName", user.Name);
             HttpContext.Session.SetString("CustomerPhone", user.Phone);
 
+            if (model.RememberMe)
+            {
+                // Set cookie to remember login for 30 days
+                Response.Cookies.Append("RememberPhone", formattedPhoneNumber, new Microsoft.AspNetCore.Http.CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddDays(30),
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
+                });
+            }
+
             return RedirectToAction("Index", "Home");
+        }
+
+        /// <summary>
+        /// Formats phone number to 01X-XXXXXXX or 01X-XXXXXXXX format
+        /// Accepts: 0121234567, 01212345678, 012-1234567, 012-12345678
+        /// </summary>
+        private string FormatPhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return phoneNumber;
+
+            // Remove all non-digits
+            string cleaned = System.Text.RegularExpressions.Regex.Replace(phoneNumber, @"\D", "");
+
+            // Format as 01X-XXXXXXX or 01X-XXXXXXXX (3 digits, dash, 7-8 digits)
+            if (cleaned.Length == 10)
+            {
+                // 0121234567 -> 012-1234567
+                return cleaned.Substring(0, 3) + "-" + cleaned.Substring(3);
+            }
+            else if (cleaned.Length == 11)
+            {
+                // 01212345678 -> 012-12345678
+                return cleaned.Substring(0, 3) + "-" + cleaned.Substring(3);
+            }
+
+            return cleaned;
+        }
+
+        /// <summary>
+        /// Validates if phone number is in correct format: 01X-XXXXXXX or 01X-XXXXXXXX
+        /// </summary>
+        private bool ValidatePhoneFormat(string phoneNumber)
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch(phoneNumber, @"^01[0-9]-[0-9]{7,8}$");
         }
 
         public IActionResult ForgotPassword()
@@ -162,37 +219,47 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         public IActionResult Register()
         {
-            return View();
+            return View(new RegisterViewModel());
         }
 
         [HttpPost]
-        public IActionResult Register(string phoneNumber, string name, string ic, string email, string password, string confirmPassword)
+        public IActionResult Register(RegisterViewModel model)
         {
-            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(password) ||
-                string.IsNullOrEmpty(name) || string.IsNullOrEmpty(ic) ||
-                string.IsNullOrEmpty(email) || string.IsNullOrEmpty(confirmPassword))
-            {
-                ViewData["Error"] = "All fields are required.";
-                return View();
-            }
+            // Check if AJAX request
+            bool isAjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            if (password != confirmPassword)
+            // Validate using model state
+            if (!ModelState.IsValid)
             {
-                ViewData["Error"] = "Passwords do not match.";
-                return View();
-            }
+                if (isAjaxRequest)
+                {
+                    // Return validation errors as JSON for AJAX
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        );
 
-            if (password.Length < 6)
-            {
-                ViewData["Error"] = "Password must be at least 6 characters.";
-                return View();
+                    return Json(new { success = false, message = "Validation failed", errors = errors });
+                }
+
+                // Return view for regular form submission
+                return View(model);
             }
 
             // Check if phone number already exists in database
-            if (_dbContext.Users.Any(u => u.Phone == phoneNumber))
+            if (_dbContext.Users.Any(u => u.Phone == model.PhoneNumber))
             {
+                ModelState.AddModelError("PhoneNumber", "Phone number already registered.");
+
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = "Phone number already registered." });
+                }
+
                 ViewData["Error"] = "Phone number already registered.";
-                return View();
+                return View(model);
             }
 
             try
@@ -210,11 +277,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 var newCustomer = new Models.Customer
                 {
                     UserId = newUserId,
-                    Name = name,
-                    IC = ic,
-                    Email = email,
-                    Phone = phoneNumber,
-                    Password = password, // TODO: Hash password using bcrypt
+                    Name = model.Name,
+                    IC = model.IC,
+                    Email = model.Email,
+                    Phone = model.PhoneNumber,
+                    Password = model.Password, // TODO: Hash password using bcrypt
                     Role = "customer",
                     CreatedAt = DateTime.UtcNow,
                     LoyaltyPoint = 0,
@@ -226,20 +293,62 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 _dbContext.Customers.Add(newCustomer);
                 _dbContext.SaveChanges();
 
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = true, message = "Registration successful! Redirecting to login..." });
+                }
+
                 ViewData["Success"] = "Registration successful! Please login.";
                 return RedirectToAction("Login");
             }
             catch (Exception ex)
             {
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = $"Registration failed: {ex.Message}" });
+                }
+
                 ViewData["Error"] = $"Registration failed: {ex.Message}";
-                return View();
+                return View(model);
             }
+        }
+
+        [HttpPost]
+        public IActionResult CheckPhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrEmpty(phoneNumber))                                                  
+            {
+                var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
+                if (DateTime.UtcNow > lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
+                {
+                    loginAttempts.Remove(phoneNumber);
+                }
+                return Json(new { available = true });
+            }
+
+            // Check if phone number exists in database
+            bool phoneExists = _dbContext.Users.Any(u => u.Phone == phoneNumber);
+
+            return Json(new { available = !phoneExists });
         }
 
         public IActionResult Logout()
         {
+            // Store the referrer URL before clearing session
+            string returnUrl = Request.Headers["Referer"].ToString();
+            
             HttpContext.Session.Clear();
-            return RedirectToAction("Login");
+            
+            // Set success message in TempData
+            TempData["LogoutMessage"] = "Logout successfully";
+            
+            // If there's a valid return URL, redirect back to it; otherwise go to home
+            if (!string.IsNullOrEmpty(returnUrl) && returnUrl.Contains(Request.Host.ToString()))
+            {
+                return Redirect(returnUrl);
+            }
+            
+            return RedirectToAction("Index", "Home");
         }
 
         private (int attempts, DateTime lockoutUntil, bool isLocked) GetLockoutInfo(string phoneNumber)

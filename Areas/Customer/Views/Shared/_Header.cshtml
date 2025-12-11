@@ -1,4 +1,8 @@
-﻿<header>
+﻿@{
+    string customerName = Context.Session.GetString("CustomerName") ?? "";
+}
+
+<header>
     <div class="header-area">
         <div id="sticky-header" class="main-header-area">
             <div class="container">
@@ -17,8 +21,42 @@
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="About">About Us</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Appointment">Appointment</a></li>
-                                    <li><a asp-area="Customer" asp-controller="Home" asp-action="Profile">Profile</a></li>
-                                    <li><a asp-area="Customer" asp-controller="Auth" asp-action="Login">Login</a></li>
+                                    @if (string.IsNullOrEmpty(customerName))
+                                    {
+                                        <li><a asp-area="Customer" asp-controller="Home" asp-action="Profile">Profile</a></li>
+                                    }
+                                    <li>
+                                        @if (!string.IsNullOrEmpty(customerName))
+                                        {
+                                            <div class="nav-user-dropdown" style="display: inline-block; position: relative;">
+                                                <a href="#" id="userNavLink" style="display: inline-flex; align-items: center; gap: 6px; color: #102955; font-size: 16px; text-decoration: none; font-weight: 500; padding: 37px 0; position: relative;">
+                                                    <span id="navCustomerName">@customerName</span>
+                                                    <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
+                                                </a>
+                                                <ul id="userDropdownMenu" style="position: absolute; top: 100%; right: 0; background: white; min-width: 180px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); list-style: none; padding: 8px 0; margin: 0; display: none; z-index: 1000;">
+                                                    <li style="border-bottom: 1px solid #eee;">
+                                                        <a asp-area="Customer" asp-controller="Home" asp-action="Profile" style="display: block; padding: 10px 16px; color: #102955; text-decoration: none; font-weight: 500; white-space: nowrap;">
+                                                            <i class="bi bi-person" style="margin-right: 8px;"></i>Profile
+                                                        </a>
+                                                    </li>
+                                                    <li style="border-bottom: 1px solid #eee;">
+                                                        <a asp-area="Customer" asp-controller="Home" asp-action="Appointment" style="display: block; padding: 10px 16px; color: #102955; text-decoration: none; font-weight: 500; white-space: nowrap;">
+                                                            <i class="bi bi-calendar" style="margin-right: 8px;"></i>Appointments
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="#" id="logoutLink" style="display: block; padding: 10px 16px; color: #dc3545; text-decoration: none; font-weight: 500; white-space: nowrap;">
+                                                            <i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i>Logout
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <a asp-area="Customer" asp-controller="Auth" asp-action="Login">Login</a>
+                                        }
+                                    </li>
                                 </ul>
                             </nav>
                         </div>
@@ -31,3 +69,131 @@
         </div>
     </div>
 </header>
+
+<!-- Logout Toast Notification -->
+<div id="logoutToast" style="position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 16px 24px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; display: none; animation: slideInRight 0.3s ease-out;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="bi bi-check-circle-fill" style="font-size: 1.2rem;"></i>
+        <span id="logoutToastMessage">Logout successfully</span>
+    </div>
+</div>
+
+<style>
+    /* Ensure user dropdown aligns with other menu items */
+    .nav-user-dropdown a {
+        color: #102955 !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        display: inline-flex !important;
+    }
+
+    .nav-user-dropdown a::before {
+        position: absolute;
+        content: "";
+        background: #fff;
+        width: 100%;
+        height: 2px;
+        bottom: 0;
+        left: 0;
+        opacity: 0;
+        transform: scaleX(0);
+        transition: .3s;
+    }
+
+    .nav-user-dropdown a:hover::before {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    #userDropdownMenu li:hover a {
+        background-color: #f5f5f5;
+        color: #ff8800 !important;
+    }
+
+    #userDropdownMenu li:first-child a:hover {
+        background-color: #f5f5f5;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(400px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @@keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(400px);
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userNavLink = document.getElementById('userNavLink');
+        const userDropdownMenu = document.getElementById('userDropdownMenu');
+        const logoutLink = document.getElementById('logoutLink');
+        const logoutToast = document.getElementById('logoutToast');
+        
+        if (userNavLink && userDropdownMenu) {
+            // Toggle dropdown on click
+            userNavLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                userDropdownMenu.style.display = userDropdownMenu.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                const dropdown = document.querySelector('.nav-user-dropdown');
+                if (dropdown && !dropdown.contains(e.target)) {
+                    userDropdownMenu.style.display = 'none';
+                }
+            });
+
+            // Close dropdown when a menu item is clicked (except logout)
+            const dropdownLinks = userDropdownMenu.querySelectorAll('a:not(#logoutLink)');
+            dropdownLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    userDropdownMenu.style.display = 'none';
+                });
+            });
+        }
+
+        // Handle logout with confirmation message
+        if (logoutLink) {
+            logoutLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Show logout toast
+                showLogoutToast();
+                
+                // Redirect to logout after showing the message
+                setTimeout(function() {
+                    window.location.href = '@Url.Action("Logout", "Auth", new { area = "Customer" })';
+                }, 1500);
+            });
+        }
+
+        function showLogoutToast() {
+            logoutToast.style.display = 'flex';
+            logoutToast.style.animation = 'slideInRight 0.3s ease-out';
+            
+            // Auto-hide after 3 seconds
+            setTimeout(function() {
+                logoutToast.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(function() {
+                    logoutToast.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
+    });
+</script>

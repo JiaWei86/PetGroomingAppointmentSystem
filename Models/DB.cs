@@ -98,6 +98,14 @@ public class Staff : User
     [MaxLength(100)]
     public string Position { get; set; }
 
+    // ========== ADD THIS FIELD ==========
+    [MaxLength(10)]
+    public string AdminUserId { get; set; }  // Foreign Key to Admin
+
+    [ForeignKey(nameof(AdminUserId))]
+    public Admin Admin { get; set; }
+    // ====================================
+
     // Overrides inherited Appointments (for staff-specific appointments only)
     [NotMapped]
     public new List<Appointment> Appointments { get; set; } = new List<Appointment>();

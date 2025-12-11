@@ -112,38 +112,46 @@
     </div>
 </div>
 
-<!-- Calendar Section -->
 <div class="calendar-section">
     <div class="calendar-container">
         <div class="calendar-header">
-            <h3 class="panel-title">
-                <i class="material-icons">calendar_month</i>
-                Appointment Calendar
-            </h3>
+            <h2>Appointment Calendar</h2>
             <div class="calendar-nav">
-                <button id="prevMonth" class="btn-nav">
-                    <i class="material-icons">chevron_left</i>
-                </button>
-                <h3 id="monthYear" class="calendar-title"></h3>
-                <button id="nextMonth" class="btn-nav">
-                    <i class="material-icons">chevron_right</i>
-                </button>
+                <button id="prevMonth" class="btn-nav">&laquo;</button>
+                <span id="monthYear" class="month-year"></span>
+                <button id="nextMonth" class="btn-nav">&raquo;</button>
             </div>
         </div>
-        <div id="calendar" class="calendar-grid"></div>
+
+        <div class="calendar-grid">
+            <div class="calendar-day-header">Sun</div>
+            <div class="calendar-day-header">Mon</div>
+            <div class="calendar-day-header">Tue</div>
+            <div class="calendar-day-header">Wed</div>
+            <div class="calendar-day-header">Thu</div>
+            <div class="calendar-day-header">Fri</div>
+            <div class="calendar-day-header">Sat</div>
+
+            <div id="calendar"></div>
+        </div>
     </div>
 
     <div class="appointments-sidebar">
         <div class="sidebar-header">
-            <h3 class="sidebar-title">
-                <i class="material-icons">event_available</i>
-                Daily Schedule
-            </h3>
+            <div class="sidebar-title">
+                <i class="material-icons">event</i>
+                <span>Appointments</span>
+            </div>
             <span id="selectedDate" class="selected-date-badge">Today</span>
         </div>
-        <div id="appointmentsList" class="appointments-list"></div>
+
+        <div id="appointmentsList">
+            <p class="no-appointments">No appointments scheduled</p>
+        </div>
     </div>
 </div>
+
+
 
 <script>
     // ========================================
