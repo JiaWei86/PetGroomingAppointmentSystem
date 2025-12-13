@@ -29,6 +29,7 @@ public class DB : DbContext
     public DbSet<Appointment> Appointments { get; set; }
 
     public DbSet<CustomerRedeemGift> CustomerRedeemGifts { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 }
 
 /* =========================
@@ -121,7 +122,6 @@ public class Customer : User
 
     public DateTime? RegisteredDate { get; set; }
 
-
     // Overrides inherited Pets and Appointments (for customer-specific records)
     [NotMapped]
     public new List<Pet> Pets { get; set; } = new List<Pet>();
@@ -130,7 +130,6 @@ public class Customer : User
     public new List<Appointment> Appointments { get; set; } = new List<Appointment>();
     
     public List<CustomerRedeemGift> Redeems { get; set; } = new List<CustomerRedeemGift>();
-    public string CustomerId { get; internal set; }
 }
 
 /* =========================
@@ -326,3 +325,43 @@ public class CustomerRedeemGift
 
     public int QuantityRedeemed { get; set; }
 }
+
+/* =========================
+   PASSWORD RESET TOKEN (Verification Code Based)
+   ========================= */
+[Table("ResetPassword")]
+public class PasswordResetToken
+{
+    [Key]
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(10)]
+    public string CustomerId { get; set; }
+
+    [ForeignKey(nameof(CustomerId))]
+    public Customer Customer { get; set; }
+
+    [Required]
+    [MaxLength(150)]
+    public string Email { get; set; }
+
+    [Required]
+    [MaxLength(20)]
+    public string Phone { get; set; }
+
+    [Required]
+    [MaxLength(6)]
+    public string VerificationCode { get; set; }  // 6-digit code
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime ExpiresAt { get; set; }  // 10 minutes from creation
+
+    public bool IsVerified { get; set; } = false;
+
+    public int AttemptCount { get; set; } = 0;
+
+    public DateTime? VerifiedAt { get; set; }
+}
+

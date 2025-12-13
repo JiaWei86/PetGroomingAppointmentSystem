@@ -136,7 +136,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var redeemed = new CustomerRedeemGift
             {
                 CrgId = Guid.NewGuid().ToString("N").Substring(0, 15),
-                CustomerId = customer.CustomerId,
+                CustomerId = customer.UserId,  // Changed from CustomerId to UserId
                 GiftId = giftId,
                 QuantityRedeemed = quantity,
                 RedeemDate = DateTime.Now

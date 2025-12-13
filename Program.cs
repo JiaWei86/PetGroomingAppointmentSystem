@@ -1,4 +1,4 @@
-using PetGroomingAppointmentSystem.Services;
+﻿using PetGroomingAppointmentSystem.Services;
 using PetGroomingAppointmentSystem.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,18 +15,11 @@ builder.Services.AddSqlServer<DB>($@"
     MultipleActiveResultSets=true;
 ");
 
-// -----------------------------
-// If AddSqlServer<T> is not available in your environment, use this alternative:
-// builder.Services.AddDbContext<DB>(options =>
-//     options.UseSqlServer($@"
-//         Data Source=(LocalDB)\MSSQLLocalDB;
-//         AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
-//         Integrated Security=True;
-//     "));
-// -----------------------------
-
 // Add Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add EmailHelper Service ← ADD THIS LINE
+builder.Services.AddScoped<EmailHelper>();
 
 // Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();

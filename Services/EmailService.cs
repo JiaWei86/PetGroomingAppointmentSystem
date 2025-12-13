@@ -6,6 +6,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace PetGroomingAppointmentSystem.Services
 {
+    public interface IEmailService
+    {
+        Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode);
+        Task SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true);
+    }
+
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
@@ -15,23 +21,19 @@ namespace PetGroomingAppointmentSystem.Services
             _configuration = configuration;
         }
 
-        public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
+        public async Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode)
         {
-            var subject = "Password Reset Request";
+            var subject = "Password Reset Verification Code";
             var htmlBody = $@"
                 <html>
                     <body style='font-family: Arial, sans-serif;'>
-                        <h2 style='color: #ff9500;'>Password Reset Request</h2>
+                        <h2 style='color: #ff9500;'>Password Reset Verification Code</h2>
                         <p>Hello {toName},</p>
-                        <p>We received a request to reset your password. Click the button below to proceed:</p>
-                        <p>
-                            <a href='{resetLink}' style='background-color: #ff9500; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>
-                                Reset Password
-                            </a>
+                        <p>We received a request to reset your password. Please use the following verification code:</p>
+                        <p style='background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; color: #ff9500; border-radius: 5px; letter-spacing: 5px;'>
+                            {verificationCode}
                         </p>
-                        <p>Or copy and paste this link:</p>
-                        <p>{resetLink}</p>
-                        <p>This link will expire in 24 hours.</p>
+                        <p>This code will expire in <strong>10 minutes</strong>.</p>
                         <p>If you did not request this, please ignore this email.</p>
                         <hr>
                         <p style='color: #999; font-size: 12px;'>Pet Grooming Appointment System</p>
@@ -45,42 +47,90 @@ namespace PetGroomingAppointmentSystem.Services
         {
             try
             {
-                var smtpServer = _configuration["EmailSettings:SmtpServer"];
-                var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"] ?? "587");
-                var senderEmail = _configuration["EmailSettings:SenderEmail"];
-                var senderPassword = _configuration["EmailSettings:SenderPassword"];
-                var senderName = _configuration["EmailSettings:SenderName"];
+                // Read configuration values
+                string user = _configuration["Smtp:User"] ?? "";
+                string pass = _configuration["Smtp:Pass"] ?? "";
+                string name = _configuration["Smtp:Name"] ?? "";
+                string host = _configuration["Smtp:Host"] ?? "";
+                int port = _configuration.GetValue<int>("Smtp:Port");
+
+                Console.WriteLine($"[EMAIL DEBUG] Starting email send to {toEmail}");
+                Console.WriteLine($"[EMAIL DEBUG] SMTP Host: {host}, Port: {port}");
 
                 // Validate configuration
-                if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(host) || port == 0)
                 {
                     Console.WriteLine("[EMAIL ERROR] SMTP settings are not configured properly.");
+                    Console.WriteLine($"[EMAIL ERROR] User: {(string.IsNullOrEmpty(user) ? "MISSING" : "OK")}");
+                    Console.WriteLine($"[EMAIL ERROR] Pass: {(string.IsNullOrEmpty(pass) ? "MISSING" : "OK")}");
+                    Console.WriteLine($"[EMAIL ERROR] Host: {(string.IsNullOrEmpty(host) ? "MISSING" : "OK")}");
+                    Console.WriteLine($"[EMAIL ERROR] Port: {port}");
                     return;
                 }
 
-                using (var client = new SmtpClient(smtpServer, smtpPort))
+                // Create mail message
+                using (var mailMessage = new MailMessage())
                 {
-                    client.EnableSsl = true;
-                    client.Credentials = new NetworkCredential(senderEmail, senderPassword);
-                    client.Timeout = 10000;
+                    mailMessage.From = new MailAddress(user, name);
+                    mailMessage.To.Add(new MailAddress(toEmail));
+                    mailMessage.Subject = subject;
+                    mailMessage.Body = body;
+                    mailMessage.IsBodyHtml = isHtml;
 
-                    using (var mailMessage = new MailMessage())
+                    Console.WriteLine($"[EMAIL DEBUG] Mail message created - From: {user}, To: {toEmail}");
+
+                    // Setup SMTP client with credentials
+                    using (var smtp = new SmtpClient
                     {
-                        mailMessage.From = new MailAddress(senderEmail, senderName);
-                        mailMessage.To.Add(new MailAddress(toEmail));
-                        mailMessage.Subject = subject;
-                        mailMessage.Body = body;
-                        mailMessage.IsBodyHtml = isHtml;
+                        Host = host,
+                        Port = port,
+                        EnableSsl = false,  // Port 587 uses STARTTLS (not implicit SSL)
+                        DeliveryMethod = SmtpDeliveryMethod.Network,
+                        UseDefaultCredentials = false,
+                        Credentials = new NetworkCredential(user, pass),
+                        Timeout = 20000  // Increased timeout to 20 seconds
+                    })
+                    {
+                        // Enable STARTTLS for port 587
+                        smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
 
-                        await client.SendMailAsync(mailMessage);
-                        Console.WriteLine($"[EMAIL SUCCESS] Email sent to {toEmail}");
+                        try
+                        {
+                            Console.WriteLine($"[EMAIL DEBUG] Connecting to SMTP server {host}:{port}...");
+                            // Send email asynchronously
+                            await smtp.SendMailAsync(mailMessage);
+                            Console.WriteLine($"[EMAIL SUCCESS] Email sent successfully to {toEmail}");
+                        }
+                        catch (SmtpException smtpEx)
+                        {
+                            Console.WriteLine($"[EMAIL ERROR] SMTP Exception: {smtpEx.StatusCode} - {smtpEx.Message}");
+                            if (smtpEx.InnerException != null)
+                            {
+                                Console.WriteLine($"[EMAIL ERROR] Inner Exception: {smtpEx.InnerException.Message}");
+                            }
+                            throw;
+                        }
+                        catch (Exception innerEx)
+                        {
+                            Console.WriteLine($"[EMAIL ERROR] Inner Exception Type: {innerEx.GetType().Name}");
+                            Console.WriteLine($"[EMAIL ERROR] Inner Exception: {innerEx.Message}");
+                            if (innerEx.InnerException != null)
+                            {
+                                Console.WriteLine($"[EMAIL ERROR] Inner-Inner Exception: {innerEx.InnerException.Message}");
+                            }
+                            throw;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[EMAIL ERROR] Failed to send email to {toEmail}: {ex.Message}");
-                // Log error but don't throw to prevent application crash
+                Console.WriteLine($"[EMAIL ERROR] Failed to send email to {toEmail}");
+                Console.WriteLine($"[EMAIL ERROR] Exception Type: {ex.GetType().FullName}");
+                Console.WriteLine($"[EMAIL ERROR] Exception Message: {ex.Message}");
+                Console.WriteLine($"[EMAIL ERROR] Stack Trace: {ex.StackTrace}");
+                
+                // Log but don't throw - allows app to continue
             }
         }
     }
