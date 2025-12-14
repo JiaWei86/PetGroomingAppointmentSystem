@@ -193,585 +193,206 @@
 </div>
 
 <script>
-    (function(){
-      const PLACEHOLDER_IMG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Crect fill="%23FFE0D0" width="40" height="40"/%3E%3Ccircle cx="20" cy="12" r="6" fill="%23FF7A18"/%3E%3Cpath d="M20 18 Q14 22 14 28 Q14 32 18 34 Q20 35 22 34 Q26 32 26 28 Q26 22 20 18Z" fill="%23FF7A18"/%3E%3C/svg%3E';
+document.addEventListener('DOMContentLoaded', function() {
+    LoadHistorySummary();
+    LoadAppointmentHistory();
+    LoadRedeemHistory();
 
-      // DUMMY DATA - APPOINTMENTS
-      const appointmentHistory = [
-        { 
-          id: 'a1', 
-          date: '2025-12-15', 
-          time: '10:00 AM', 
-          pets: ['Buddy', 'Max'], 
-          groomer: 'Alice Johnson', 
-          service: 'Full Groom Package', 
-          status: 'confirmed',
-          totalCost: 85.00,
-          notes: 'Special grooming for winter'
-        },
-        { 
-          id: 'a2', 
-          date: '2025-12-10', 
-          time: '02:00 PM', 
-          pets: ['Bella'], 
-          groomer: 'Ben Smith', 
-          service: 'Bath & Nail Trim', 
-          status: 'visited',
-          totalCost: 45.00,
-          notes: 'Completed successfully'
-        },
-        { 
-          id: 'a3', 
-          date: '2025-12-05', 
-          time: '09:30 AM', 
-          pets: ['Charlie'], 
-          groomer: 'Cara Martinez', 
-          service: 'Haircut & Styling', 
-          status: 'visited',
-          totalCost: 55.00,
-          notes: 'Customer satisfied'
-        },
-        { 
-          id: 'a4', 
-          date: '2025-12-01', 
-          time: '03:00 PM', 
-          pets: ['Daisy', 'Rocky'], 
-          groomer: 'Alice Johnson', 
-          service: 'Spa Package', 
-          status: 'noshow',
-          totalCost: 120.00,
-          notes: 'Customer did not show up'
-        },
-        { 
-          id: 'a5', 
-          date: '2025-11-28', 
-          time: '11:00 AM', 
-          pets: ['Luna'], 
-          groomer: 'David Lee', 
-          service: 'Basic Bath', 
-          status: 'cancelled',
-          totalCost: 30.00,
-          notes: 'Customer cancelled 2 days before'
-        },
-        { 
-          id: 'a6', 
-          date: '2025-11-25', 
-          time: '01:00 PM', 
-          pets: ['Cooper'], 
-          groomer: 'Ben Smith', 
-          service: 'Full Groom Package', 
-          status: 'visited',
-          totalCost: 75.00,
-          notes: 'Excellent service'
-        },
-        { 
-          id: 'a7', 
-          date: '2025-11-20', 
-          time: '04:00 PM', 
-          pets: ['Milo', 'Sadie'], 
-          groomer: 'Emma Wilson', 
-          service: 'Grooming + Wash', 
-          status: 'confirmed',
-          totalCost: 95.00,
-          notes: 'Upcoming appointment'
-        },
-        { 
-          id: 'a8', 
-          date: '2025-11-18', 
-          time: '10:30 AM', 
-          pets: ['Leo'], 
-          groomer: 'Cara Martinez', 
-          service: 'Nail Trim Only', 
-          status: 'visited',
-          totalCost: 20.00,
-          notes: 'Quick service'
-        },
-        { 
-          id: 'a9', 
-          date: '2025-11-15', 
-          time: '02:30 PM', 
-          pets: ['Zoey'], 
-          groomer: 'David Lee', 
-          service: 'Full Groom Package', 
-          status: 'pending',
-          totalCost: 80.00,
-          notes: 'Awaiting confirmation'
-        },
-        { 
-          id: 'a10', 
-          date: '2025-11-10', 
-          time: '09:00 AM', 
-          pets: ['Bailey'], 
-          groomer: 'Alice Johnson', 
-          service: 'Spa & Massage', 
-          status: 'visited',
-          totalCost: 110.00,
-          notes: 'Deluxe service completed'
-        }
-      ];
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById(this.dataset.tab).classList.add('active');
+        });
+    });
 
-      // DUMMY DATA - REDEEM HISTORY
-      const redeemHistory = [
-        { 
-          id: 'r1', 
-          date: '2025-12-12', 
-          item: '15% Off Grooming Service', 
-          points: 150, 
-          user: 'Jia Wei', 
-          status: 'used',
-          expiryDate: '2025-12-31'
-        },
-        { 
-          id: 'r2', 
-          date: '2025-12-08', 
-          item: 'Free Nail Trim', 
-          points: 80, 
-          user: 'Jia Wei', 
-          status: 'used',
-          expiryDate: '2025-12-20'
-        },
-        { 
-          id: 'r3', 
-          date: '2025-12-03', 
-          item: 'Free Bath & Grooming', 
-          points: 200, 
-          user: 'Jia Wei', 
-          status: 'available',
-          expiryDate: '2026-01-15'
-        },
-        { 
-          id: 'r4', 
-          date: '2025-11-30', 
-          item: '10% Off All Services', 
-          points: 100, 
-          user: 'Jia Wei', 
-          status: 'expired',
-          expiryDate: '2025-11-28'
-        },
-        { 
-          id: 'r5', 
-          date: '2025-11-25', 
-          item: 'Free Pet Shampoo', 
-          points: 60, 
-          user: 'Jia Wei', 
-          status: 'available',
-          expiryDate: '2026-02-01'
-        },
-        { 
-          id: 'r6', 
-          date: '2025-11-20', 
-          item: 'Premium Spa Package Discount', 
-          points: 250, 
-          user: 'Jia Wei', 
-          status: 'used',
-          expiryDate: '2025-11-25'
-        },
-        { 
-          id: 'r7', 
-          date: '2025-11-15', 
-          item: 'Free Styling Session', 
-          points: 120, 
-          user: 'Jia Wei', 
-          status: 'available',
-          expiryDate: '2026-01-20'
-        },
-        { 
-          id: 'r8', 
-          date: '2025-11-10', 
-          item: '20% Off Grooming', 
-          points: 180, 
-          user: 'Jia Wei', 
-          status: 'expired',
-          expiryDate: '2025-11-08'
-        }
-      ];
+    // Modal close handlers
+    const modal = document.getElementById('detailModal');
+    const closeBtn = document.querySelector('.modal-close');
+    const overlay = document.querySelector('.modal-overlay');
+    
+    if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
+    if (overlay) overlay.addEventListener('click', () => modal.style.display = 'none');
+});
 
-      /* Pagination helper */
-      function Paginator(list, pageSize=5) {
-        this.list = list;
-        this.pageSize = pageSize;
-        this.page = 1;
-      }
-      Paginator.prototype.numPages = function(){ return Math.max(1, Math.ceil(this.list.length / this.pageSize)); }
-      Paginator.prototype.currentPageItems = function(){
-        const s = (this.page-1)*this.pageSize;
-        return this.list.slice(s, s + this.pageSize);
-      }
-      Paginator.prototype.setPage = function(p){ this.page = Math.min(Math.max(1,p), this.numPages()); }
+function LoadHistorySummary() {
+    fetch('/Customer/Home/GetHistorySummary')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('totalAppointments').textContent = data.totalAppointments;
+                document.getElementById('totalRedeemed').textContent = data.totalRedeemed;
+                document.getElementById('apptBadge').textContent = data.totalAppointments;
+                document.getElementById('redeemBadge').textContent = data.totalRedeemed;
+            }
+        })
+        .catch(e => console.error('Error loading summary:', e));
+}
 
-      /* Appointment Tab */
-      const appt = {
-        raw: appointmentHistory.slice(),
-        filtered: appointmentHistory.slice(),
-        paginator: new Paginator(appointmentHistory, 5),
-        dom: {
-          tbody: document.querySelector('#apptTable tbody'),
-          statusFilter: document.getElementById('apptStatusFilter'),
-          search: document.getElementById('apptSearch'),
-          prev: document.getElementById('apptPrev'),
-          next: document.getElementById('apptNext'),
-          pageInfo: document.getElementById('apptPageInfo'),
-          clearBtn: document.getElementById('apptClearSearch'),
-          badge: document.getElementById('apptBadge'),
-          filterInfo: document.getElementById('apptFilterInfo'),
-          emptyState: document.getElementById('apptEmptyState'),
-          resultsInfo: document.getElementById('apptResultsInfo')
-        }
-      };
+function LoadAppointmentHistory() {
+    fetch('/Customer/Home/GetAppointmentHistory')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                const tbody = document.querySelector('#apptTable tbody');
+                tbody.innerHTML = data.data.map(a => `
+                    <tr>
+                        <td>${a.date}</td>
+                        <td><span class="time-icon">🕐</span> ${a.time}</td>
+                        <td>${a.petName || 'N/A'}</td>
+                        <td>${a.groomerName}</td>
+                        <td>${a.serviceName}</td>
+                        <td class="text-center"><span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span></td>
+                        <td class="text-center"><button class="view-btn" onclick="ViewAppointment('${a.appointmentId}')">View</button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('apptEmptyState').style.display = 'none';
+            } else {
+                document.getElementById('apptEmptyState').style.display = 'block';
+            }
+        })
+        .catch(e => console.error('Error loading appointments:', e));
+}
 
-      function renderApptTable(){
-        const rows = appt.paginator.currentPageItems();
-        appt.dom.tbody.innerHTML = '';
+function LoadRedeemHistory() {
+    fetch('/Customer/Home/GetRedeemHistory')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                const tbody = document.querySelector('#redeemTable tbody');
+                tbody.innerHTML = data.data.map(r => `
+                    <tr>
+                        <td>${r.date}</td>
+                        <td><strong>${r.itemName}</strong></td>
+                        <td><span class="points-badge">⭐ ${r.pointsUsed}</span></td>
+                        <td>${r.redeemedBy}</td>
+                        <td class="text-center"><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
+                        <td class="text-center"><button class="view-btn" onclick="ViewRedeem('${r.crgId}')">View</button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('redeemEmptyState').style.display = 'none';
+            } else {
+                document.getElementById('redeemEmptyState').style.display = 'block';
+            }
+        })
+        .catch(e => console.error('Error loading redeem history:', e));
+}
 
-        if(rows.length === 0){
-          appt.dom.emptyState.style.display = 'block';
+function ViewAppointment(appointmentId) {
+    fetch(`/Customer/Home/GetAppointmentDetails?appointmentId=${appointmentId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const a = data.data;
+                const modal = document.getElementById('detailModal');
+                const modalBody = document.getElementById('modalBody');
+                
+                modalBody.innerHTML = `
+                    <div class="modal-header">
+                        <h2>Appointment Details</h2>
+                    </div>
+                    <div class="modal-details">
+                        <div class="details-row">
+                            <div class="detail-col">
+                                <label>DATE</label>
+                                <p>${a.date}</p>
+                            </div>
+                            <div class="detail-col">
+                                <label>TIME</label>
+                                <p>${a.time}</p>
+                            </div>
+                        </div>
+                        <div class="details-row">
+                            <div class="detail-col">
+                                <label>PET(S)</label>
+                                <p>${a.petNames || 'N/A'}</p>
+                            </div>
+                            <div class="detail-col">
+                                <label>GROOMER</label>
+                                <p>${a.groomerName}</p>
+                            </div>
+                        </div>
+                        <div class="details-row">
+                            <div class="detail-col">
+                                <label>SERVICE</label>
+                                <p>${a.serviceName}</p>
+                            </div>
+                            <div class="detail-col">
+                                <label>AMOUNT</label>
+                                <p>$${parseFloat(a.amount).toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="details-row">
+                            <div class="detail-col">
+                                <label>STATUS</label>
+                                <p><span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span></p>
+                            </div>
+                            <div class="detail-col">
+                                <label>DURATION</label>
+                                <p>${a.durationTime} mins</p>
+                            </div>
+                        </div>
+                        ${a.notes ? `<div class="details-row">
+                            <div class="detail-col full-width">
+                                <label>NOTES</label>
+                                <p>${a.notes}</p>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="RescheduleAppointment('${a.appointmentId}')">
+                            <span>📅</span> Reschedule
+                        </button>
+                        <div class="download-group">
+                            <button class="btn btn-secondary" onclick="DownloadReceipt('${a.appointmentId}', 'txt')">
+                                📄 TXT
+                            </button>
+                            <button class="btn btn-secondary" onclick="DownloadReceipt('${a.appointmentId}', 'pdf')">
+                                📕 PDF
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            }
+        })
+        .catch(e => console.error('Error:', e));
+}
+
+function RescheduleAppointment(appointmentId) {
+    fetch(`/Customer/Home/RescheduleAppointment`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ appointmentId: appointmentId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirectUrl;
         } else {
-          appt.dom.emptyState.style.display = 'none';
-          rows.forEach(r => {
-            const tr = document.createElement('tr');
-            const petsHtml = r.pets.map(p => `<div class="pet-chip"><img src="${PLACEHOLDER_IMG}" alt="${p}" /> <span>${p}</span></div>`).join('');
-            tr.innerHTML = `
-              <td>${formatDate(r.date)}</td>
-              <td><span class="time-badge">${r.time}</span></td>
-              <td>${petsHtml}</td>
-              <td><strong>${r.groomer}</strong></td>
-              <td>${r.service}</td>
-              <td class="text-center"><span class="status ${r.status}">${formatStatusLabel(r.status)}</span></td>
-              <td class="text-center"><button class="action-btn view-btn" data-id="${r.id}" title="View details">View</button></td>
-            `;
-            appt.dom.tbody.appendChild(tr);
-          });
+            alert('Error: ' + data.message);
         }
+    })
+    .catch(e => console.error('Error:', e));
+}
 
-        updatePagination(appt);
-      }
+function DownloadReceipt(appointmentId, format) {
+    const url = format === 'pdf' 
+        ? `/Customer/Home/DownloadReceiptPdf?appointmentId=${appointmentId}`
+        : `/Customer/Home/DownloadReceiptTxt?appointmentId=${appointmentId}`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.click();
+}
 
-      function formatDate(dateStr){
-        const date = new Date(dateStr + 'T00:00:00');
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      }
-
-      function formatStatusLabel(s){
-        const labels = {
-          'confirmed': '✓ Confirmed',
-          'visited': '✓ Visited',
-          'noshow': '✗ No Show',
-          'pending': '⏳ Pending',
-          'cancelled': '✗ Cancelled',
-          'used': '✓ Used',
-          'available': '◯ Available',
-          'expired': '✗ Expired'
-        };
-        return labels[s] || s;
-      }
-
-      function applyApptFilters(){
-        const status = appt.dom.statusFilter.value;
-        const q = appt.dom.search.value.trim().toLowerCase();
-        
-        appt.filtered = appt.raw.filter(item => {
-          if(status !== 'all' && item.status !== status) return false;
-          if(q){
-            const inDate = item.date.toLowerCase().includes(q);
-            const inGroomer = (item.groomer || '').toLowerCase().includes(q);
-            const inService = (item.service || '').toLowerCase().includes(q);
-            const inPets = item.pets.join(' ').toLowerCase().includes(q);
-            return inDate || inGroomer || inService || inPets;
-          }
-          return true;
-        });
-
-        appt.paginator.list = appt.filtered;
-        appt.paginator.page = 1;
-
-        updateFilterInfo(appt, 'appt');
-        renderApptTable();
-      }
-
-      /* Redeem Tab */
-      const red = {
-        raw: redeemHistory.slice(),
-        filtered: redeemHistory.slice(),
-        paginator: new Paginator(redeemHistory, 6),
-        dom: {
-          tbody: document.querySelector('#redeemTable tbody'),
-          statusFilter: document.getElementById('redeemStatusFilter'),
-          search: document.getElementById('redeemSearch'),
-          prev: document.getElementById('redeemPrev'),
-          next: document.getElementById('redeemNext'),
-          pageInfo: document.getElementById('redeemPageInfo'),
-          clearBtn: document.getElementById('redeemClearSearch'),
-          badge: document.getElementById('redeemBadge'),
-          filterInfo: document.getElementById('redeemFilterInfo'),
-          emptyState: document.getElementById('redeemEmptyState'),
-          resultsInfo: document.getElementById('redeemResultsInfo')
-        }
-      };
-
-      function renderRedeemTable(){
-        const rows = red.paginator.currentPageItems();
-        red.dom.tbody.innerHTML = '';
-
-        if(rows.length === 0){
-          red.dom.emptyState.style.display = 'block';
-        } else {
-          red.dom.emptyState.style.display = 'none';
-          rows.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${formatDate(r.date)}</td>
-              <td><strong>${r.item}</strong></td>
-              <td><span class="points-badge">${r.points}</span></td>
-              <td>${r.user}</td>
-              <td class="text-center"><span class="status ${r.status}">${formatStatusLabel(r.status)}</span></td>
-              <td class="text-center"><button class="action-btn view-redeem" data-id="${r.id}" title="View details">View</button></td>
-            `;
-            red.dom.tbody.appendChild(tr);
-          });
-        }
-
-        updatePagination(red);
-      }
-
-      function applyRedeemFilters(){
-        const status = red.dom.statusFilter.value;
-        const q = red.dom.search.value.trim().toLowerCase();
-        
-        red.filtered = red.raw.filter(item => {
-          if(status !== 'all' && item.status !== status) return false;
-          if(q){
-            return item.item.toLowerCase().includes(q) || item.date.toLowerCase().includes(q) || (item.user||'').toLowerCase().includes(q);
-          }
-          return true;
-        });
-
-        red.paginator.list = red.filtered;
-        red.paginator.page = 1;
-
-        updateFilterInfo(red, 'redeem');
-        renderRedeemTable();
-      }
-
-      function updatePagination(data){
-        const total = data.paginator.numPages();
-        data.dom.pageInfo.textContent = `Page ${data.paginator.page} of ${total}`;
-        data.dom.resultsInfo.textContent = `(${data.filtered.length} total)`;
-        data.dom.prev.disabled = (data.paginator.page <= 1);
-        data.dom.next.disabled = (data.paginator.page >= total);
-        data.dom.badge.textContent = data.raw.length;
-      }
-
-      function updateFilterInfo(data, type){
-        const active = data.dom.statusFilter.value !== 'all' || data.dom.search.value.trim() !== '';
-        if(active){
-          data.dom.filterInfo.textContent = `Showing ${data.filtered.length} of ${data.raw.length} ${type === 'appt' ? 'appointments' : 'items'}`;
-          data.dom.filterInfo.style.display = 'block';
-        } else {
-          data.dom.filterInfo.style.display = 'none';
-        }
-      }
-
-      /* Tab switching */
-      const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
-      const panels = Array.from(document.querySelectorAll('.tab-panel'));
-
-      tabButtons.forEach(btn => {
-        btn.addEventListener('click', function(){
-          tabButtons.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const t = btn.getAttribute('data-tab');
-          panels.forEach(p => p.id === t ? p.classList.add('active') : p.classList.remove('active'));
-        });
-      });
-
-      /* Event binding */
-      appt.dom.statusFilter.addEventListener('change', applyApptFilters);
-      appt.dom.search.addEventListener('input', debounce(applyApptFilters, 250));
-      appt.dom.clearBtn.addEventListener('click', () => { appt.dom.search.value = ''; applyApptFilters(); });
-      appt.dom.prev.addEventListener('click', () => { appt.paginator.setPage(appt.paginator.page - 1); renderApptTable(); });
-      appt.dom.next.addEventListener('click', () => { appt.paginator.setPage(appt.paginator.page + 1); renderApptTable(); });
-
-      red.dom.statusFilter.addEventListener('change', applyRedeemFilters);
-      red.dom.search.addEventListener('input', debounce(applyRedeemFilters, 250));
-      red.dom.clearBtn.addEventListener('click', () => { red.dom.search.value = ''; applyRedeemFilters(); });
-      red.dom.prev.addEventListener('click', () => { red.paginator.setPage(red.paginator.page - 1); renderRedeemTable(); });
-      red.dom.next.addEventListener('click', () => { red.paginator.setPage(red.paginator.page + 1); renderRedeemTable(); });
-
-      /* Modal handling */
-      const modal = document.getElementById('detailModal');
-      const modalClose = document.querySelector('.modal-close');
-
-      document.body.addEventListener('click', function(e){
-        if(e.target.matches('.view-btn')){
-          const id = e.target.getAttribute('data-id');
-          const rec = appointmentHistory.find(x => x.id === id);
-          if(rec) showAppointmentDetail(rec);
-        }
-        if(e.target.matches('.view-redeem')){
-          const id = e.target.getAttribute('data-id');
-          const rec = redeemHistory.find(x => x.id === id);
-          if(rec) showRedeemDetail(rec);
-        }
-        if(e.target.matches('.modal-btn-secondary') && e.target.textContent.includes('Download')){
-          downloadReceipt(e.target);
-        }
-      });
-
-      modalClose.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => {
-        if(e.target === modal) closeModal();
-      });
-
-      function showAppointmentDetail(rec){
-        const html = `
-          <h2>Appointment Details</h2>
-          <div class="modal-detail-grid">
-            <div class="detail-item">
-              <label>Date</label>
-              <p>${formatDate(rec.date)}</p>
-            </div>
-            <div class="detail-item">
-              <label>Time</label>
-              <p>${rec.time}</p>
-            </div>
-            <div class="detail-item">
-              <label>Pet(s)</label>
-              <p>${rec.pets.join(', ')}</p>
-            </div>
-            <div class="detail-item">
-              <label>Groomer</label>
-              <p>${rec.groomer}</p>
-            </div>
-            <div class="detail-item">
-              <label>Service</label>
-              <p>${rec.service}</p>
-            </div>
-            <div class="detail-item">
-              <label>Amount</label>
-              <p>$${rec.totalCost.toFixed(2)}</p>
-            </div>
-            <div class="detail-item">
-              <label>Status</label>
-              <p><span class="status ${rec.status}">${formatStatusLabel(rec.status)}</span></p>
-            </div>
-            <div class="detail-item">
-              <label>Notes</label>
-              <p>${rec.notes || '-'}</p>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button class="modal-btn-primary" title="Reschedule this appointment">Reschedule</button>
-            <button class="modal-btn-secondary" title="Download receipt">Download Receipt</button>
-          </div>
-        `;
-        document.getElementById('modalBody').innerHTML = html;
-        modal.style.display = 'block';
-      }
-
-      function showRedeemDetail(rec){
-        const html = `
-          <h2>Redeem Details</h2>
-          <div class="modal-detail-grid">
-            <div class="detail-item">
-              <label>Date</label>
-              <p>${formatDate(rec.date)}</p>
-            </div>
-            <div class="detail-item">
-              <label>Item</label>
-              <p>${rec.item}</p>
-            </div>
-            <div class="detail-item">
-              <label>Points</label>
-              <p><span class="points-badge">${rec.points}</span></p>
-            </div>
-            <div class="detail-item">
-              <label>Redeemed By</label>
-              <p>${rec.user}</p>
-            </div>
-            <div class="detail-item">
-              <label>Expiry Date</label>
-              <p>${formatDate(rec.expiryDate)}</p>
-            </div>
-            <div class="detail-item">
-              <label>Status</label>
-              <p><span class="status ${rec.status}">${formatStatusLabel(rec.status)}</span></p>
-            </div>
-          </div>
-        `;
-        document.getElementById('modalBody').innerHTML = html;
-        modal.style.display = 'block';
-      }
-
-      function closeModal(){
-        modal.style.display = 'none';
-      }
-
-      function downloadReceipt(btn){
-        const btn_original = btn.textContent;
-        btn.textContent = 'Downloading...';
-        btn.classList.add('loading');
-        btn.disabled = true;
-
-        const modalBody = document.getElementById('modalBody');
-        const detailItems = modalBody.querySelectorAll('.detail-item');
-        
-        let appointmentData = {};
-        detailItems.forEach(item => {
-          const label = item.querySelector('label').textContent;
-          const value = item.querySelector('p').textContent;
-          appointmentData[label] = value;
-        });
-
-        const receipt = `
-=====================================
-         PET GROOMING RECEIPT
-=====================================
-
-Appointment Details:
-${Object.entries(appointmentData).map(([key, value]) => `${key}: ${value}`).join('\n')}
-
-Receipt Generated: ${new Date().toLocaleString()}
-Reference ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}
-
-=====================================
-Thank you for choosing our service!
-For questions, contact: support@petgrooming.com
-Phone: (555) 123-4567
-Email: support@petgrooming.com
-=====================================
-        `.trim();
-
-        setTimeout(() => {
-          const blob = new Blob([receipt], { type: 'text/plain' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `appointment-receipt-${new Date().toISOString().slice(0,10)}.txt`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-
-          btn.textContent = btn_original;
-          btn.classList.remove('loading');
-          btn.disabled = false;
-        }, 1500);
-      }
-
-      function debounce(fn, wait){
-        let t;
-        return function(...args){ clearTimeout(t); t = setTimeout(()=> fn.apply(this, args), wait); };
-      }
-
-      /* Initialize - render data on page load */
-      window.addEventListener('DOMContentLoaded', () => {
-        applyApptFilters();
-        applyRedeemFilters();
-        
-        // Update stat cards
-        document.getElementById('totalAppointments').textContent = appointmentHistory.length;
-        document.getElementById('totalRedeemed').textContent = redeemHistory.filter(r => r.status === 'used').length;
-      });
-
-    })();
+function ViewRedeem(crgId) {
+    // Implement redeem details view similar to ViewAppointment
+    console.log('View redeem:', crgId);
+}
 </script>
