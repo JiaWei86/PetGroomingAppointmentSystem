@@ -4,14 +4,19 @@
 
 <link rel="stylesheet" href="~/Customer/css/appointment.css"/>
 
-<section class="appt-section" aria-label="Appointment booking widget">
-    <div class="appt-container">
-        <div class="appt-header">
-            <div class="appt-header-content">
-                <h1>Schedule Your Pet's Appointment</h1>
-                <p>Book a convenient time for grooming with our experienced professionals</p>
+<!-- bradcam_area_start -->
+<div class="bradcam_area breadcam_bg">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="bradcam_text text-center wow fadeInUp" data-wow-delay="0.2s">
+                    <h3>Schedule Your Pet's Appointment</h3>
+                </div>
             </div>
         </div>
+    </div>
+</div>
+
 
         <div class="appt-bg">
             <div class="appt-row">
@@ -72,11 +77,9 @@
 
                             <div class="form-group">
                                 <label for="categorySelect" class="form-label">Pet Category <span class="required">*</span></label>
-                                <select id="categorySelect" required class="form-control">
-                                    <option value="" disabled selected>-- Select category --</option>
-                                    <option value="dog">🐕 Dog</option>
-                                    <option value="cat">🐱 Cat</option>
-                                </select>
+                                <input id="categorySelect" type="text" readonly class="form-control" />
+                                <!-- Hidden input to store the value -->
+                                <input id="categoryValue" type="hidden" />
                             </div>
 
                             <div class="form-group pet-grid">
@@ -133,6 +136,12 @@
 
                         <fieldset>
                             <legend>Service Details</legend>
+
+                            <div class="form-group" id="serviceDetailsSection" style="display:none;">
+                                <label class="form-label">Select Service <span class="required">*</span></label>
+                                <div id="serviceDetailsList" class="service-details-list"></div>
+                                <small class="form-hint">Select the service you want to book</small>
+                            </div>
 
                             <div class="form-group">
                                 <label for="timeSelect" class="form-label">Preferred Time <span class="required">*</span></label>
@@ -222,12 +231,23 @@
             CLOSED_DAYS: [1] // Monday
         };
 
-        // Initial user pets
-        const userPets = [
-            { id:'p1', name:'Buddy', category:'dog', photo: CONFIG.PLACEHOLDER_IMG },
-            { id:'p2', name:'Bella', category:'dog', photo: CONFIG.PLACEHOLDER_IMG },
-            { id:'p3', name:'Milo',  category:'cat', photo: CONFIG.PLACEHOLDER_IMG }
-        ];
+        // Get parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialPetType = urlParams.get('petType');
+        const selectedServiceId = urlParams.get('serviceId');
+        const selectedServiceName = urlParams.get('serviceName') ? decodeURIComponent(urlParams.get('serviceName')) : null;
+        const selectedServiceDescription = urlParams.get('description') ? decodeURIComponent(urlParams.get('description')) : null;
+        const selectedServicePrice = urlParams.get('price');
+        const selectedServiceDuration = urlParams.get('duration');
+
+        // Initial user pets - will be loaded from database
+        let userPets = [];
+
+        // Available services by category - will be populated from database
+        const servicesByCategory = {
+            'dog': [],
+            'cat': []
+        };
 
         // DOM Elements
         const elements = {
@@ -297,6 +317,69 @@
                 option.textContent = slot;
                 elements.timeSelect.appendChild(option);
             });
+        }
+
+        // Services Display - Shows services from database
+        function renderServiceDetails() {
+            const category = elements.categorySelect.value;
+            const serviceDetailsSection = document.getElementById('serviceDetailsSection');
+            const serviceDetailsList = document.getElementById('serviceDetailsList');
+
+            if (!serviceDetailsSection) {
+                console.warn('Service details section not found in HTML');
+                return;
+            }
+
+            if (!category) {
+                serviceDetailsSection.style.display = 'none';
+                return;
+            }
+
+            const services = servicesByCategory[category] || [];
+            serviceDetailsList.innerHTML = '';
+
+            if (services.length === 0) {
+                serviceDetailsSection.style.display = 'none';
+                return;
+            }
+
+            services.forEach(service => {
+                const label = document.createElement('label');
+                label.className = 'service-item';
+
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = 'service';
+                input.value = service.id;
+                input.className = 'service-radio';
+                
+                // Auto-select if this was the service clicked from index page
+                if (selectedServiceId && service.id === selectedServiceId) {
+                    input.checked = true;
+                }
+
+                const details = document.createElement('div');
+                details.className = 'service-details';
+
+                const name = document.createElement('div');
+                name.className = 'service-name';
+                name.textContent = service.name;
+
+                const meta = document.createElement('div');
+                meta.className = 'service-meta';
+                const price = service.price || 'N/A';
+                const duration = service.duration || 'N/A';
+                meta.textContent = `${price} • ${duration}`;
+
+                details.appendChild(name);
+                details.appendChild(meta);
+
+                label.appendChild(input);
+                label.appendChild(details);
+                serviceDetailsList.appendChild(label);
+            });
+
+            serviceDetailsSection.style.display = 'block';
         }
 
         // Character counter
@@ -623,6 +706,12 @@
                 return false;
             }
 
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            if (!selectedService) {
+                showErrorToast('Please select a service');
+                return false;
+            }
+
             return true;
         }
 
@@ -651,39 +740,126 @@
             selectDate(today);
         });
 
-        elements.categorySelect.addEventListener('change', () => renderPetCards());
+        elements.categorySelect.addEventListener('change', () => {
+            renderPetCards();
+            renderServiceDetails();
+        });
+
         elements.showAddNewBtn.addEventListener('click', startAddNewPet);
         elements.cancelNewPetBtn.addEventListener('click', cancelAddNewPet);
         elements.savePetBtn.addEventListener('click', saveNewPet);
 
-        elements.submitBtn.addEventListener('click', () => {
+        elements.submitBtn.addEventListener('click', async () => {
             if (!validateForm()) return;
 
             const selectedPets = getSelectedPets();
-            const payload = {
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            
+            const appointmentData = {
                 date: elements.selectedDateText.value,
                 time: elements.timeSelect.value,
-                category: elements.categorySelect.value,
-                pets: selectedPets.map(p => ({ id: p.id, name: p.name, photo: p.photo })),
-                groomer: elements.groomerSelect.value,
+                serviceId: selectedService.value,
+                petIds: selectedPets.map(p => p.id),
+                groomer: elements.groomerSelect.value || 'any',
                 notes: elements.notes.value.trim()
             };
 
-            console.log('Appointment payload:', payload);
+            try {
+                // Disable submit button to prevent double submission
+                elements.submitBtn.disabled = true;
+                const originalText = elements.submitBtn.innerHTML;
+                elements.submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Submitting...';
 
-            // Here you would normally send this to your backend
-            // await fetch('/api/appointments', { method: 'POST', body: JSON.stringify(payload) })
+                const response = await fetch('/Customer/Home/SaveAppointment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(appointmentData)
+                });
 
-            showSuccessToast();
-            hideForm();
-            elements.apptForm.reset();
-            elements.notes.dispatchEvent(new Event('input'));
-            renderCalendar();
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccessToast();
+                    
+                    // Clear form after successful submission
+                    setTimeout(() => {
+                        hideForm();
+                        elements.apptForm.reset();
+                        elements.notes.dispatchEvent(new Event('input'));
+                        renderCalendar();
+                        renderPetCards();
+                        
+                        // Reset button state
+                        elements.submitBtn.disabled = false;
+                        elements.submitBtn.innerHTML = originalText;
+                    }, 1500);
+                } else {
+                    showErrorToast(result.message || 'Failed to save appointment');
+                    elements.submitBtn.disabled = false;
+                    elements.submitBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorToast('An error occurred while saving the appointment');
+                elements.submitBtn.disabled = false;
+                elements.submitBtn.innerHTML = originalText;
+            }
         });
 
-        // Initialize
-        populateTimeSlots();
-        renderCalendar();
-        renderPetCards();
+        // Fetch services and pets from backend
+        async function loadServices() {
+            try {
+                const response = await fetch('/Customer/Home/GetServices');
+                const data = await response.json();
+                
+                if (data && data.dogServices) {
+                    servicesByCategory['dog'] = data.dogServices.map(s => ({
+                        id: s.serviceId,
+                        name: s.name,
+                        price: s.price ? `$${s.price}` : 'N/A',
+                        duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
+                    }));
+                }
+                
+                if (data && data.catServices) {
+                    servicesByCategory['cat'] = data.catServices.map(s => ({
+                        id: s.serviceId,
+                        name: s.name,
+                        price: s.price ? `$${s.price}` : 'N/A',
+                        duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
+                    }));
+                }
+                
+                // After services are loaded, initialize
+                initializeForm();
+            } catch (error) {
+                console.error('Error loading services:', error);
+                // Fallback to empty services
+                initializeForm();
+            }
+        }
+
+        function initializeForm() {
+            // Initialize - set pet type from URL parameter
+            if (initialPetType && (initialPetType === 'dog' || initialPetType === 'cat')) {
+                elements.categorySelect.value = initialPetType === 'dog' ? 'Dog' : 'Cat';
+                document.getElementById('categoryValue').value = initialPetType;
+                elements.categorySelect.disabled = true; // Make it read-only
+                renderPetCards();
+                renderServiceDetails();
+            } else {
+                // Fallback: enable category selection if no petType parameter
+                elements.categorySelect.disabled = false;
+                renderPetCards();
+            }
+
+            populateTimeSlots();
+            renderCalendar();
+        }
+
+        // Load services on page load
+        loadServices();
     })();
 </script>

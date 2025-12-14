@@ -194,7 +194,7 @@ html, body {
 
     .nav-btn:hover {
         background: var(--accent);
-        color: white;
+        color: orangered;
         border-color: var(--accent);
     }
 
@@ -765,54 +765,63 @@ select.form-control:focus {
     width: 100%;
 }
 
-/* Toasts - Minimal */
+/* Toasts - Centered */
 .appt-toast {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    min-width: 320px;
-    max-width: 420px;
+    top: 50%;
+    left: 88%;
+    transform: translate(-50%, -50%) translateX(500px);
+    max-width: 450px;
+    width: 90%;
     background: white;
-    border-radius: 10px;
-    box-shadow: var(--shadow-lg);
-    border-left: 4px solid var(--accent);
-    display: none;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: var(--transition);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
     z-index: 9999;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-    .appt-toast.show {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.appt-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+}
+
+.appt-toast--success {
+    border-left: 5px solid #28a745;
+    background: #f0fdf4;
+}
+
+.appt-toast--success .toast-icon {
+    color: #28a745;
+}
+
+.appt-toast--error {
+    border-left: 5px solid #dc3545;
+    background: #fef2f2;
+}
+
+.appt-toast--error .toast-icon {
+    color: #dc3545;
+}
 
 .toast-content {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 16px;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
 }
 
 .toast-icon {
     flex-shrink: 0;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-}
-
-.appt-toast--success .toast-icon {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success);
-}
-
-.appt-toast--error .toast-icon {
-    background: rgba(255, 122, 24, 0.1);
-    color: var(--accent);
 }
 
 .toast-body {
@@ -821,107 +830,111 @@ select.form-control:focus {
 
 .toast-title {
     font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
     color: var(--text);
-    font-size: 13px;
-    margin-bottom: 2px;
 }
 
 .toast-message {
-    font-size: 12px;
-    color: var(--muted);
+    font-size: 14px;
+    opacity: 0.85;
+    color: var(--text);
+    line-height: 1.4;
 }
 
 .toast-close {
-    background: transparent;
+    flex-shrink: 0;
+    background: none;
     border: none;
-    color: var(--muted);
+    font-size: 24px;
     cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s;
     padding: 0;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    color: var(--text);
+}
+
+.toast-close:hover {
+    opacity: 0.8;
+}
+
+/* Service Details Styles */
+.service-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.service-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
     transition: var(--transition);
 }
 
-    .toast-close:hover {
-        color: var(--text);
-    }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .appt-header {
-        padding: 80px 16px 60px 16px;
-    }
-
-    .appt-header-content h1 {
-        font-size: 32px;
-    }
-
-    .appt-header-content p {
-        font-size: 15px;
-    }
-
-    .appt-row {
-        gap: 16px;
-    }
-
-    .calendar-card,
-    .form-card {
-        max-width: 100%;
-    }
-
-    .pet-card {
-        width: 120px;
-    }
-
-    .appt-toast {
-        left: 12px;
-        right: 12px;
-        min-width: auto;
-    }
+.service-item:hover {
+    border-color: var(--accent);
+    background-color: rgba(255, 122, 24, 0.05);
 }
 
-@media (max-width: 480px) {
-    .appt-header {
-        padding: 60px 12px 50px 12px;
-    }
-
-    .appt-header-content h1 {
-        font-size: 24px;
-        margin-bottom: 12px;
-    }
-
-    .appt-header-content p {
-        font-size: 14px;
-    }
-
-    .card {
-        padding: 16px;
-    }
-
-    .cal-title {
-        font-size: 18px;
-    }
-
-    .legend-row {
-        gap: 8px;
-        font-size: 11px;
-    }
-
-    .pet-card {
-        width: 100px;
-    }
-
-    .btn-lg {
-        padding: 10px 16px;
-        font-size: 12px;
-    }
-
-    .appt-toast {
-        bottom: 0;
-        left: 0;
-        right: 0;
-        border-radius: 10px 10px 0 0;
-    }
+.service-item input[type="radio"] {
+    margin-right: 12px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
 }
+
+.service-item input[type="radio"]:checked + .service-details {
+    color: var(--accent);
+}
+
+.service-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 16px;
+}
+
+.service-name {
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+}
+
+.service-meta {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.form-hint {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-weight: 400;
+}
+
+/* Ensure service section is visible when populated */
+#serviceDetailsSection {
+    margin-bottom: 16px;
+}
+
+    #serviceDetailsSection.visible {
+        display: block !important;
+    }
+
+    #serviceDetailsSection[style*="display: block"] {
+        animation: slideIn 0.3s ease-out;
+    }

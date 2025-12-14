@@ -59,7 +59,16 @@
                     <div class="service_content text-center">
                         <h3>@s.Name</h3>
                         <p>@s.Description</p>
-                        <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
+                        <a asp-controller="Home" asp-action="Appointment" 
+                           asp-route-petType="dog" 
+                           asp-route-serviceId="@s.ServiceId"
+                           asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
+                           asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
+                           asp-route-price="@s.Price"
+                           asp-route-duration="@s.DurationTime"
+                           class="boxed-btn4">
+                            Book Now
+                        </a>
                     </div>
                 </div>
             }
@@ -88,7 +97,16 @@
                         <div class="service_content text-center">
                             <h3>@s.Name</h3>
                             <p>@s.Description</p>
-                            <a asp-controller="Home" asp-action="Appointment" class="boxed-btn4">Book Now</a>
+                            <a asp-controller="Home" asp-action="Appointment" 
+                               asp-route-petType="cat"
+                               asp-route-serviceId="@s.ServiceId"
+                               asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
+                               asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
+                               asp-route-price="@s.Price"
+                               asp-route-duration="@s.DurationTime"
+                               class="boxed-btn4">
+                                Book Now
+                            </a>
                         </div>
                     </div>
                 }
