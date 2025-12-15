@@ -342,6 +342,107 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             }
         }
 
+        // Add this action to your HomeController
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProfileMultiPhoto(
+            string name,
+            string email,
+            string ic,
+            string phone,
+            string allPhotosData)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Json(new { success = false, message = "Not logged in" });
+
+                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
+                if (customer == null)
+                    return Json(new { success = false, message = "Customer not found" });
+
+                // Update basic info
+                customer.Name = name;
+                customer.Email = email;
+                customer.IC = ic;
+                customer.Phone = phone;
+
+                // Process photos from JSON array
+                var photoPaths = new List<string>();
+
+                if (!string.IsNullOrEmpty(allPhotosData))
+                {
+                    try
+                    {
+                        var photoDataArray = System.Text.Json.JsonSerializer.Deserialize<List<string>>(allPhotosData);
+
+                        if (photoDataArray != null)
+                        {
+                            for (int i = 0; i < photoDataArray.Count; i++)
+                            {
+                                var photoData = photoDataArray[i];
+
+                                if (string.IsNullOrEmpty(photoData))
+                                    continue;
+
+                                // If it's a base64 image (new upload), save it
+                                if (photoData.StartsWith("data:image"))
+                                {
+                                    try
+                                    {
+                                        var base64Data = photoData.Substring(photoData.IndexOf(",") + 1);
+                                        var imageBytes = Convert.FromBase64String(base64Data);
+
+                                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
+                                        if (!Directory.Exists(uploadsFolder))
+                                            Directory.CreateDirectory(uploadsFolder);
+
+                                        var uniqueFileName = $"{userId}_photo{i}_{Guid.NewGuid():N}.jpg";
+                                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                                        await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                                        photoPaths.Add($"/uploads/customers/{uniqueFileName}");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"Error saving photo {i}: {ex.Message}");
+                                    }
+                                }
+                                // If it's already a path (existing photo), keep it
+                                else if (photoData.StartsWith("/"))
+                                {
+                                    photoPaths.Add(photoData);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing photos JSON: {ex.Message}");
+                    }
+                }
+
+                // Store as comma-separated paths (no limit!)
+                customer.Photo = photoPaths.Any() ? string.Join(",", photoPaths) : null;
+
+                _db.Customers.Update(customer);
+                await _db.SaveChangesAsync();
+
+                HttpContext.Session.SetString("CustomerName", customer.Name);
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Profile updated successfully!",
+                    photoCount = photoPaths.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
 
         public IActionResult About()

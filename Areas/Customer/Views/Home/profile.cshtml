@@ -2,7 +2,22 @@
     ViewData["Title"] = "My Profile";
     var customer = ViewBag.Customer as PetGroomingAppointmentSystem.Models.Customer;
     var pets = ViewBag.Pets as List<PetGroomingAppointmentSystem.Models.Pet> ?? new List<PetGroomingAppointmentSystem.Models.Pet>();
+    
+    // Parse multiple photos from comma-separated string
+    var photoList = new List<string>();
+    if (!string.IsNullOrEmpty(customer?.Photo))
+    {
+        photoList = customer.Photo.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+    if (!photoList.Any())
+    {
+        photoList.Add("/Customer/img/default-avatar.png");
+    }
+    var hasMultiplePhotos = photoList.Count > 1 || (photoList.Count == 1 && photoList[0] != "/Customer/img/default-avatar.png");
 }
+
+<!-- Link to external CSS -->
+<link rel="stylesheet" href="~/Customer/css/multi-avatar.css" />
 
 <div class="bradcam_area breadcam_bg">
     <div class="container">
@@ -17,27 +32,48 @@
 </div>
 
 <div class="profile-page-wrapper">
-
     <div class="container py-4">
         <div class="row">
             <!-- Left column: profile card -->
             <div class="col-lg-4 mb-4">
                 <div class="card shadow-sm profile-card-main">
                     <div class="card-body text-center">
-                        <!-- Avatar -->
-                        <img src="@(string.IsNullOrEmpty(customer?.Photo) ? "/Customer/img/default-avatar.png" : customer.Photo)"
-                             alt="avatar"
-                             class="rounded-circle mb-3 profile-avatar"
-                             id="profileAvatarDisplay"
-                             style="object-fit:cover;" />
+                        <!-- Animated Avatar -->
+                        <div class="animated-avatar-container" id="animatedAvatarContainer">
+                            @for (int i = 0; i < photoList.Count; i++)
+                            {
+                                <img src="@photoList[i]" 
+                                     alt="avatar @(i + 1)"
+                                     class="avatar-photo @(i == 0 ? "active" : "")"
+                                     data-index="@i" />
+                            }
+                            @if (photoList.Count > 1)
+                            {
+                                <span class="photo-count-badge">@photoList.Count photos</span>
+                            }
+                        </div>
+                        
+                        <!-- Photo Indicators -->
+                        @if (photoList.Count > 1)
+                        {
+                            <div class="avatar-indicators" id="avatarIndicators">
+                                @for (int i = 0; i < photoList.Count; i++)
+                                {
+                                    <button type="button" 
+                                            class="avatar-indicator @(i == 0 ? "active" : "")" 
+                                            data-index="@i"
+                                            onclick="goToPhoto(@i)"></button>
+                                }
+                            </div>
+                            
+                        }
 
-                        <h4 class="card-title mb-0" id="profileName">@customer?.Name</h4>
+                        <h4 class="card-title mb-0 mt-3" id="profileName">@customer?.Name</h4>
                         <div class="text-muted mb-2" id="profilePhone">@customer?.Phone</div>
-
                         <p class="small text-muted" id="profileEmail">@customer?.Email</p>
 
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-orange-primary" id="editProfileBtn" onclick="openEditModal()">Edit Profile</button>
+                            <button type="button" class="btn btn-orange-primary" onclick="openEditModal()">Edit Profile</button>
                             <a href="/Customer/Home/History" class="btn btn-orange-outline">
                                 <i class="fa fa-history"></i> View History
                             </a>
@@ -49,63 +85,49 @@
                             <strong>Member since:</strong>
                             <span class="float-right">@customer?.RegisteredDate?.ToString("MMM yyyy")</span>
                         </li>
-
                         <li class="list-group-item">
                             <strong>Status:</strong>
                             <span class="badge-orange float-right">@(string.IsNullOrEmpty(customer?.Status) ? "ACTIVE" : customer.Status.ToUpper())</span>
                         </li>
-
                         <li class="list-group-item">
                             <strong>Loyalty Points:</strong>
-                            <span class="float-right text-warning font-weight-bold" id="loyaltyPointsDisplay">@customer?.LoyaltyPoint</span>
+                            <span class="float-right text-warning font-weight-bold">@customer?.LoyaltyPoint</span>
                         </li>
                     </ul>
                 </div>
 
-
-                <!-- Quick Actions card -->
+                <!-- Quick Actions -->
                 <div class="card mt-3 quick-actions-card">
                     <div class="card-body">
                         <h6 class="card-title">Quick Actions</h6>
                         <div class="d-grid gap-2">
                             <button onclick="openAddPetModal()" class="btn btn-orange-primary btn-sm">+ Add Pet</button>
                             <a href="/Customer/Home/Appointment" class="btn btn-orange-outline btn-sm">Book Service</a>
-                            <a href="/Customer/Home/History" class="btn btn-orange-outline btn-sm">View History</a>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Suggested promotion / voucher -->
-                <div class="card mt-3 promotion-card">
-                    <div class="card-body">
-                        <h6 class="card-title">Exclusive Offer</h6>
-                        <p class="small mb-2">You have a <strong>10% discount</strong> available for your grooming service!</p>
-                        <a href="/Customer/Home/Appointment" class="btn btn-redeem btn-sm">Book Now</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Right column: tabs for Pets / Loyalty / Tips -->
+            <!-- Right column: tabs -->
             <div class="col-lg-8">
                 <div class="card profile-card-main">
                     <div class="card-body">
-                        <!-- Tabs -->
                         <ul class="nav nav-tabs nav-tabs-orange" id="profileTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link active" id="pets-tab" data-toggle="tab" href="#pets" role="tab" aria-controls="pets" aria-selected="true">Pets (@pets.Count)</a>
+                            <li class="nav-item">
+                                <a class="nav-link active" data-toggle="tab" href="#pets">Pets (@pets.Count)</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" id="loyalty-tab" data-toggle="tab" href="#loyalty" role="tab" aria-controls="loyalty" aria-selected="false">Loyalty & Rewards</a>
+                            <li class="nav-item">
+                                <a class="nav-link" data-toggle="tab" href="#loyalty">Loyalty & Rewards</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link" id="tips-tab" data-toggle="tab" href="#tips" role="tab" aria-controls="tips" aria-selected="false">Pet Care Tips</a>
+                            <li class="nav-item">
+                                <a class="nav-link" data-toggle="tab" href="#tips">Pet Care Tips</a>
                             </li>
                         </ul>
 
-                        <div class="tab-content pt-3" id="profileTabContent">
-                            <!-- Pets tab -->
-                            <div class="tab-pane fade show active" id="pets" role="tabpanel" aria-labelledby="pets-tab">
-                                <div class="row gy-3" id="petsContainer">
+                        <div class="tab-content pt-3">
+                            <!-- Pets Tab -->
+                            <div class="tab-pane fade show active" id="pets">
+                                <div class="row gy-3">
                                     @if (pets.Any())
                                     {
                                         @foreach (var pet in pets)
@@ -115,8 +137,7 @@
                                                     <div class="row no-gutters align-items-center">
                                                         <div class="col-4 text-center p-3">
                                                             <img src="@(string.IsNullOrEmpty(pet.Photo) ? "/Customer/img/default-pet.png" : pet.Photo)" 
-                                                                 alt="@pet.Name"
-                                                                 class="rounded-circle" 
+                                                                 alt="@pet.Name" class="rounded-circle" 
                                                                  style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
                                                         </div>
                                                         <div class="col-8">
@@ -125,8 +146,8 @@
                                                                 <p class="small text-muted mb-1">@pet.Type - @pet.Breed</p>
                                                                 <p class="small text-muted mb-1">Age: @pet.Age years</p>
                                                                 <div class="d-flex gap-2">
-                                                                    <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
-                                                                    <button type="button" class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
+                                                                    <button class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
+                                                                    <button class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -137,31 +158,28 @@
                                     }
                                     else
                                     {
-                                        <div class="col-12">
-                                            <p class="text-center text-muted">No pets yet. Add your first pet!</p>
+                                        <div class="col-12 text-center text-muted">
+                                            <p>No pets yet. Add your first pet!</p>
                                         </div>
                                     }
                                 </div>
-
                                 <div class="mt-3 text-center">
                                     <button onclick="openAddPetModal()" class="btn btn-sm btn-orange-primary">+ Add New Pet</button>
                                 </div>
                             </div>
 
-                            <!-- Loyalty tab -->
-                            <div class="tab-pane fade" id="loyalty" role="tabpanel" aria-labelledby="loyalty-tab">
+                            <!-- Loyalty Tab -->
+                            <div class="tab-pane fade" id="loyalty">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
-                                            <h6 class="mb-3">Points Balance</h6>
-                                            <div class="loyalty-points-display" id="loyaltyBalance">@customer?.LoyaltyPoint pts</div>
-                                            <p class="small text-muted">Earn points for every booking. Redeem for rewards.</p>
+                                            <h6>Points Balance</h6>
+                                            <div class="loyalty-points-display">@customer?.LoyaltyPoint pts</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
-                                            <h6 class="mb-3">Tier Status</h6>
-                                            <p class="small text-muted">You are a valued member!</p>
+                                            <h6>Tier Status</h6>
                                             <a href="/Customer/Home/Index#redeem_gift_area_start" class="btn btn-sm btn-orange-primary">
                                                 <i class="fa fa-gift"></i> Redeem Rewards
                                             </a>
@@ -170,120 +188,94 @@
                                 </div>
                             </div>
 
-                            <!-- Tips tab -->
-                            <div class="tab-pane fade" id="tips" role="tabpanel" aria-labelledby="tips-tab">
+                            <!-- Tips Tab -->
+                            <div class="tab-pane fade" id="tips">
                                 <div class="list-group list-group-flush">
                                     <div class="list-group-item tips-item">
                                         <h6 class="mb-1">Grooming tip: Brushing</h6>
-                                        <p class="small text-muted mb-0">Brush your pet twice a week to reduce shedding and mats.</p>
+                                        <p class="small text-muted mb-0">Brush your pet twice a week.</p>
                                     </div>
                                     <div class="list-group-item tips-item">
                                         <h6 class="mb-1">Health tip: Vaccination</h6>
-                                        <p class="small text-muted mb-0">Keep your pet vaccinations up to date. Contact us for reminders.</p>
+                                        <p class="small text-muted mb-0">Keep vaccinations up to date.</p>
                                     </div>
-                                    <div class="list-group-item tips-item">
-                                        <h6 class="mb-1">Seasonal: Cooling</h6>
-                                        <p class="small text-muted mb-0">In hot weather, keep short walks and provide water breaks.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div> <!-- end tab content -->
-                    </div> <!-- end card body -->
-                </div> <!-- end card -->
-                <!-- Recommended Services / Suggestions -->
-                <div class="card profile-card-main mt-3">
-                    <div class="card-body">
-                        <h6 class="card-title mb-3">Recommended for your pets</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="service-box">
-                                    <div class="mb-2"><strong>Full Groom</strong></div>
-                                    <div class="small text-muted mb-2">Complete grooming package</div>
-                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="service-box">
-                                    <div class="mb-2"><strong>Nail Trim</strong></div>
-                                    <div class="small text-muted mb-2">Quick & safe</div>
-                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="service-box">
-                                    <div class="mb-2"><strong>Bath & Brush</strong></div>
-                                    <div class="small text-muted mb-2">Fresh & clean</div>
-                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-            </div> <!-- end right column -->
-        </div> <!-- end row -->
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Edit User Profile Modal -->
+<!-- Edit Profile Modal -->
 <div id="editProfileOverlay" class="custom-modal-overlay">
-    <div class="custom-modal-dialog">
+    <div class="custom-modal-dialog" style="max-width: 600px;">
         <div class="custom-modal-content edit-profile-modal">
             <div class="custom-modal-header edit-profile-header">
-                <h5 class="custom-modal-title">
-                    <i class="fa fa-user-edit"></i> Account Settings
-                </h5>
-                <button type="button" class="custom-close-btn" onclick="closeEditModal()">
-                    <span>&times;</span>
-                </button>
+                <h5 class="custom-modal-title"><i class="fa fa-user-edit"></i> Edit Profile</h5>
+                <button type="button" class="custom-close-btn" onclick="closeEditModal()"><span>&times;</span></button>
             </div>
 
             <div class="custom-modal-body edit-profile-body">
-                <!-- Tabs for Edit Profile and Change Password -->
-                <ul class="nav nav-tabs nav-tabs-orange mb-3" id="accountSettingsTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link active" id="edit-profile-tab" data-toggle="tab" href="#edit-profile-content" role="tab" aria-controls="edit-profile-content" aria-selected="true">
-                            <i class="fa fa-user"></i> Edit Profile
+                <!-- Tab Navigation for Profile Edit -->
+                <ul class="nav nav-tabs nav-tabs-orange mb-3" id="editProfileTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="profile-info-tab" data-toggle="tab" href="#profileInfoTab" role="tab">
+                            <i class="fa fa-user"></i> Profile Info
                         </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link" id="change-password-tab" data-toggle="tab" href="#change-password-content" role="tab" aria-controls="change-password-content" aria-selected="false">
+                    <li class="nav-item">
+                        <a class="nav-link" id="change-password-tab" data-toggle="tab" href="#changePasswordTab" role="tab">
                             <i class="fa fa-lock"></i> Change Password
                         </a>
                     </li>
                 </ul>
 
-                <div class="tab-content" id="accountSettingsTabContent">
-                    <!-- Edit Profile Tab -->
-                    <div class="tab-pane fade show active" id="edit-profile-content" role="tabpanel" aria-labelledby="edit-profile-tab">
+                <div class="tab-content" id="editProfileTabContent">
+                    <!-- Profile Info Tab -->
+                    <div class="tab-pane fade show active" id="profileInfoTab" role="tabpanel">
                         <form id="editProfileForm" enctype="multipart/form-data" onsubmit="submitEditProfile(event)">
-                            <!-- Photo Upload Section -->
-                            <div class="photo-upload-section mb-4">
-                                <div class="text-center">
-                                    <!-- Image Preview -->
-                                    <div class="photo-preview-wrapper mb-3" id="photoPreviewWrapper">
-                                        <img id="photoPreview" 
-                                             src="@(string.IsNullOrEmpty(customer?.Photo) ? "/Customer/img/default-avatar.png" : customer.Photo)"
-                                             alt="Profile Photo"
-                                             class="rounded-circle"
-                                             style="width:120px;height:120px;object-fit:cover;border:3px solid #ff9500;cursor:pointer;" 
-                                             onclick="openImageEditor()" />
-                                        <small style="display: block; margin-top: 8px; color: #999;">Click to edit</small>
-                                    </div>
-
-                                    <!-- File Upload Input -->
-                                    <div class="photo-upload-input mt-3">
-                                        <input type="file" 
-                                               id="photoInput" 
-                                               name="photoFile" 
-                                               accept="image/*" 
-                                               class="form-control"
-                                               onchange="previewPhoto(event)" />
-                                        <small class="text-muted d-block mt-2">
-                                            <i class="fa fa-info-circle"></i> Recommended: 300x300px, Max 5MB
-                                        </small>
+                            
+                            <!-- Multi-Photo Upload Section -->
+                            <div class="multi-photo-section text-center">
+                                <h6><i class="fa fa-images"></i> Profile Photos</h6>
+                                <p class="section-subtitle">Upload multiple photos - they will animate on your profile!</p>
+                                
+                                <!-- Drag & Drop Zone -->
+                                <div class="drop-zone" id="dropZone" onclick="document.getElementById('multiFileInput').click()">
+                                    <i class="fa fa-cloud-upload-alt"></i>
+                                    <p>Drag & drop photos here or click to browse</p>
+                                    <p class="drop-zone-hint">Select multiple files at once!</p>
+                                </div>
+                                
+                                <!-- Hidden Multi-File Input -->
+                                <input type="file" id="multiFileInput" accept="image/*" multiple style="display:none;" onchange="handleMultiFileSelect(event)" />
+                                
+                                <!-- Photo Upload Buttons -->
+                                <div class="photo-upload-buttons mt-3">
+                                    <button type="button" class="btn btn-upload" onclick="document.getElementById('multiFileInput').click()">
+                                        <i class="fa fa-images"></i> Select Photos
+                                    </button>
+                                    <button type="button" class="btn btn-webcam" onclick="openWebcamModal()">
+                                        <i class="fa fa-camera"></i> Use Webcam
+                                    </button>
+                                    <button type="button" class="btn btn-clear" onclick="clearAllPhotos()" id="clearPhotosBtn" style="display:none;">
+                                        <i class="fa fa-trash"></i> Clear All
+                                    </button>
+                                </div>
+                                
+                                <!-- Photo Thumbnails Preview -->
+                                <div class="photo-thumbnails-grid" id="photoThumbnailsGrid">
+                                    <div class="empty-message" id="emptyPhotosMessage">
+                                        <i class="fa fa-image"></i>
+                                        <span>No photos added yet</span>
                                     </div>
                                 </div>
+                                
+                                <!-- Hidden input to store all photo data as JSON -->
+                                <input type="hidden" id="allPhotosData" name="allPhotosData" />
                             </div>
 
                             <hr>
@@ -291,324 +283,196 @@
                             <!-- Form Fields -->
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="fullName" class="form-label">
-                                        <strong>Full Name</strong>
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control edit-profile-input" 
-                                           id="fullName" 
-                                           name="name"
-                                           value="@customer?.Name"
-                                           required />
+                                    <label class="form-label"><strong>Full Name</strong> <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="fullName" name="name" value="@customer?.Name" required />
                                 </div>
-
                                 <div class="col-md-6 mb-3">
-                                    <label for="icNumber" class="form-label">
-                                        <strong>IC Number</strong>
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control edit-profile-input" 
-                                           id="icNumber" 
-                                           name="ic"
-                                           value="@customer?.IC"
-                                           required />
+                                    <label class="form-label"><strong>IC Number</strong></label>
+                                    <input type="text" class="form-control" id="icNumber" name="ic" value="@customer?.IC" />
                                 </div>
                             </div>
-
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">
-                                        <strong>Email Address</strong>
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="email" 
-                                           class="form-control edit-profile-input" 
-                                           id="email" 
-                                           name="email"
-                                           value="@customer?.Email"
-                                           required />
+                                    <label class="form-label"><strong>Email</strong> <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="email" name="email" value="@customer?.Email" required />
                                 </div>
-
                                 <div class="col-md-6 mb-3">
-                                    <label for="phone" class="form-label">
-                                        <strong>Phone Number</strong>
-                                    </label>
-                                    <input type="tel" 
-                                           class="form-control edit-profile-input" 
-                                           id="phone" 
-                                           name="phone"
-                                           value="@customer?.Phone" />
+                                    <label class="form-label"><strong>Phone</strong></label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" value="@customer?.Phone" />
                                 </div>
                             </div>
 
-                            <!-- Success Message -->
-                            <div id="successMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
-                                <i class="fa fa-check-circle"></i> Profile updated successfully!
-                                <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-
-                            <!-- Error Message -->
-                            <div id="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
-                                <i class="fa fa-exclamation-circle"></i> <span id="errorText"></span>
-                                <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
+                            <div id="successMessage" class="alert alert-success" style="display:none;"></div>
+                            <div id="errorMessage" class="alert alert-danger" style="display:none;"></div>
+                            
+                            <div class="text-right mt-3">
+                                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                                <button type="submit" class="btn btn-orange-primary">
+                                    <i class="fa fa-save"></i> Save Changes
                                 </button>
                             </div>
                         </form>
                     </div>
 
                     <!-- Change Password Tab -->
-                    <div class="tab-pane fade" id="change-password-content" role="tabpanel" aria-labelledby="change-password-tab">
+                    <div class="tab-pane fade" id="changePasswordTab" role="tabpanel">
                         <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
-                            <div class="mb-3">
-                                <label for="currentPassword" class="form-label">
-                                    <strong>Current Password</strong>
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input type="password" 
-                                       class="form-control edit-profile-input" 
-                                       id="currentPassword" 
-                                       name="currentPassword"
-                                       required />
+                            <div class="text-center mb-4">
+                                <div style="width: 80px; height: 80px; margin: 0 auto; background: linear-gradient(135deg, #ff9500, #ff6b00); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fa fa-key" style="font-size: 32px; color: white;"></i>
+                                </div>
+                                <h6 class="mt-3">Change Your Password</h6>
+                                <p class="text-muted small">Enter your current password and choose a new one</p>
                             </div>
 
                             <div class="mb-3">
-                                <label for="newPassword" class="form-label">
-                                    <strong>New Password</strong>
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input type="password" 
-                                       class="form-control edit-profile-input" 
-                                       id="newPassword" 
-                                       name="newPassword"
-                                       required />
-                                <small class="text-muted d-block mt-2">
-                                    <i class="fa fa-info-circle"></i> Password must be at least 8 characters long
-                                </small>
+                                <label class="form-label"><strong>Current Password</strong> <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" required placeholder="Enter current password" />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('currentPassword', this)">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="confirmPassword" class="form-label">
-                                    <strong>Confirm New Password</strong>
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input type="password" 
-                                       class="form-control edit-profile-input" 
-                                       id="confirmPassword" 
-                                       name="confirmPassword"
-                                       required />
+                                <label class="form-label"><strong>New Password</strong> <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="newPassword" name="newPassword" required placeholder="Enter new password" minlength="8" oninput="checkPasswordStrength()" />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
+                                <!-- Password Strength Indicator -->
+                                <div class="password-strength mt-2" id="passwordStrengthContainer" style="display:none;">
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small id="passwordStrengthText" class="text-muted"></small>
+                                </div>
+                                <small class="text-muted">Password must be at least 8 characters</small>
                             </div>
 
-                            <div id="passwordSuccessMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
-                                <i class="fa fa-check-circle"></i> Password changed successfully!
-                                <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
+                            <div class="mb-3">
+                                <label class="form-label"><strong>Confirm New Password</strong> <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required placeholder="Confirm new password" minlength="8" oninput="checkPasswordMatch()" />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword', this)">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
+                                <small id="passwordMatchText" class="text-muted"></small>
                             </div>
 
-                            <div id="passwordErrorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
-                                <i class="fa fa-exclamation-circle"></i> <span id="passwordErrorText"></span>
-                                <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
+                            <div id="passwordSuccessMessage" class="alert alert-success" style="display:none;"></div>
+                            <div id="passwordErrorMessage" class="alert alert-danger" style="display:none;"></div>
+
+                            <div class="text-right mt-4">
+                                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                                <button type="submit" class="btn btn-orange-primary" id="changePasswordBtn">
+                                    <i class="fa fa-lock"></i> Change Password
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="custom-modal-footer edit-profile-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-orange-primary" id="submitBtn" form="editProfileForm">
-                    <i class="fa fa-save"></i> Save Changes
-                </button>
+<!-- Webcam Modal -->
+<div id="webcamOverlay" class="custom-modal-overlay">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+        <div class="custom-modal-content">
+            <div class="custom-modal-header" style="background: linear-gradient(90deg, #28a745 0%, #20c997 100%);">
+                <h5 class="custom-modal-title" style="color: white;"><i class="fa fa-camera"></i> Take Photo</h5>
+                <button type="button" class="custom-close-btn" onclick="closeWebcamModal()"><span>&times;</span></button>
+            </div>
+            <div class="custom-modal-body" style="padding: 20px; text-align: center;">
+                <div class="webcam-video-container" id="webcamContainer">
+                    <video id="webcamVideo" autoplay playsinline></video>
+                    <div class="webcam-guide-circle"></div>
+                </div>
+                
+                <div class="webcam-preview-container" id="capturedPreviewContainer" style="display:none;">
+                    <img id="capturedPreview" />
+                    <p>Preview</p>
+                </div>
+                
+                <div id="webcamError" class="alert alert-danger" style="display:none;">
+                    <i class="fa fa-exclamation-triangle"></i> <span id="webcamErrorText"></span>
+                </div>
+                
+                <div class="webcam-controls" id="webcamControls">
+                    <button type="button" class="btn-capture" onclick="capturePhoto()">
+                        <i class="fa fa-camera"></i> Capture
+                    </button>
+                </div>
+                
+                <div class="webcam-controls" id="afterCaptureControls" style="display:none;">
+                    <button type="button" class="btn-retake" onclick="retakePhoto()">
+                        <i class="fa fa-redo"></i> Retake
+                    </button>
+                    <button type="button" class="btn-use" onclick="useWebcamPhoto()">
+                        <i class="fa fa-check"></i> Add Photo
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Pet Modal -->
+<!-- Add Pet Modal (simplified) -->
 <div id="addPetOverlay" class="custom-modal-overlay pet-modal-overlay">
     <div class="custom-modal-dialog pet-modal-dialog">
         <div class="custom-modal-content edit-pet-modal">
             <div class="custom-modal-header edit-pet-header">
-                <div class="pet-header-content">
-                    <h5 class="custom-modal-title">
-                        <i class="fa fa-paw"></i> <span id="petModalTitle">Add New Pet</span>
-                    </h5>
-                    <p class="pet-header-subtitle mb-0">Create a new pet profile</p>
-                </div>
-                <button type="button" class="custom-close-btn" onclick="closeAddPetModal()">
-                    <span>&times;</span>
-                </button>
+                <h5 class="custom-modal-title"><i class="fa fa-paw"></i> <span id="petModalTitle">Add Pet</span></h5>
+                <button type="button" class="custom-close-btn" onclick="closeAddPetModal()"><span>&times;</span></button>
             </div>
-
             <div class="custom-modal-body edit-pet-body">
                 <form id="editPetForm" enctype="multipart/form-data" onsubmit="submitPetForm(event)">
-                    <input type="hidden" id="petIdInput" name="petId" value="" />
-
-                    <div class="pet-photo-upload-section mb-4">
-                        <div class="text-center">
-                            <div class="pet-photo-preview-wrapper mb-3">
-                                <img id="petPhotoPreview" 
-                                     src="/Customer/img/default-pet.png"
-                                     alt="Pet Photo"
-                                     class="rounded-circle"
-                                     style="width:130px;height:130px;object-fit:cover;border:4px dashed #ff9500;" />
-                                <div class="pet-photo-overlay">
-                                    <i class="fa fa-camera"></i>
-                                </div>
-                            </div>
-                            <div class="pet-photo-upload-input">
-                                <input type="file" 
-                                       id="petPhotoInput" 
-                                       name="petPhotoFile" 
-                                       accept="image/*" 
-                                       class="form-control"
-                                       onchange="previewPetPhoto(event)" />
-                                <small class="text-muted d-block mt-2">
-                                    <i class="fa fa-upload"></i> Click to upload pet photo
-                                </small>
-                            </div>
+                    <input type="hidden" id="petIdInput" name="petId" />
+                    <div class="text-center mb-3">
+                        <img id="petPhotoPreview" src="/Customer/img/default-pet.png" class="rounded-circle" style="width:100px;height:100px;object-fit:cover;border:3px solid #ff9500;" />
+                        <input type="file" id="petPhotoInput" name="petPhotoFile" accept="image/*" class="form-control mt-2" onchange="previewPetPhoto(event)" />
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label><strong>Pet Name</strong> *</label>
+                            <input type="text" class="form-control" id="petName" name="name" required />
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label><strong>Age</strong></label>
+                            <input type="number" class="form-control" id="petAge" name="age" min="0" max="50" />
                         </div>
                     </div>
-
-                    <hr class="pet-divider">
-
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="petName" class="form-label pet-form-label">
-                                <i class="fa fa-tag"></i> <strong>Pet Name</strong>
-                                <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" 
-                                   class="form-control edit-pet-input" 
-                                   id="petName" 
-                                   name="name"
-                                   required />
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="petAge" class="form-label pet-form-label">
-                                <i class="fa fa-birthday-cake"></i> <strong>Age (Years)</strong>
-                            </label>
-                            <input type="number" 
-                                   class="form-control edit-pet-input" 
-                                   id="petAge" 
-                                   name="age"
-                                   min="0"
-                                   max="50"
-                                   step="0.5" />
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="petType" class="form-label pet-form-label">
-                                <i class="fa fa-paw"></i> <strong>Pet Type</strong>
-                                <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-control edit-pet-input" id="petType" name="type" required>
-                                <option value="">Select pet type</option>
+                        <div class="col-6 mb-3">
+                            <label><strong>Type</strong> *</label>
+                            <select class="form-control" id="petType" name="type" required>
+                                <option value="">Select</option>
                                 <option value="Dog">🐕 Dog</option>
                                 <option value="Cat">🐱 Cat</option>
                             </select>
                         </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="petBreed" class="form-label pet-form-label">
-                                <i class="fa fa-paw"></i> <strong>Breed</strong>
-                            </label>
-                            <input type="text" 
-                                   class="form-control edit-pet-input" 
-                                   id="petBreed" 
-                                   name="breed" />
+                        <div class="col-6 mb-3">
+                            <label><strong>Breed</strong></label>
+                            <input type="text" class="form-control" id="petBreed" name="breed" />
                         </div>
                     </div>
-
                     <div class="mb-3">
-                        <label for="petRemark" class="form-label pet-form-label">
-                            <i class="fa fa-sticky-note"></i> <strong>Remarks / Special Notes</strong>
-                        </label>
-                        <textarea class="form-control edit-pet-input" 
-                                  id="petRemark" 
-                                  name="remark"
-                                  rows="3"
-                                  placeholder="Any allergies, behaviors, or special care requirements..."></textarea>
+                        <label><strong>Remarks</strong></label>
+                        <textarea class="form-control" id="petRemark" name="remark" rows="2"></textarea>
                     </div>
-
-                    <div id="petSuccessMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
-                        <i class="fa fa-check-circle"></i> <span id="petSuccessText">Pet added successfully!</span>
-                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-
-                    <div id="petErrorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
-                        <i class="fa fa-exclamation-circle"></i> <span id="petErrorText"></span>
-                        <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
+                    <div id="petSuccessMessage" class="alert alert-success" style="display:none;"></div>
+                    <div id="petErrorMessage" class="alert alert-danger" style="display:none;"></div>
                 </form>
             </div>
-
-            <div class="custom-modal-footer edit-pet-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">
-                    <i class="fa fa-times"></i> Cancel
-                </button>
-                <button type="submit" class="btn btn-primary edit-pet-save-btn" form="editPetForm">
-                    <i class="fa fa-heart"></i> Save Pet
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Image Editor Modal -->
-<div id="imageEditorOverlay" class="custom-modal-overlay">
-    <div class="custom-modal-dialog">
-        <div class="custom-modal-content">
-            <div class="custom-modal-header" style="background: linear-gradient(90deg, #ff9500 0%, #ff6b35 100%);">
-                <h5 class="custom-modal-title" style="color: white;">
-                    <i class="fa fa-crop"></i> Edit Photo
-                </h5>
-                <button type="button" class="custom-close-btn" onclick="closeImageEditor()">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="custom-modal-body" style="padding: 20px; text-align: center;">
-                <div id="imageEditorContainer">
-                    <img id="editorImage" style="max-width: 100%; max-height: 400px; margin-bottom: 20px;">
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center, flex-wrap: wrap; margin-bottom: 20px;">
-                    <button type="button" class="btn btn-sm" style="background: #ff9500; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="rotateImage(90)">
-                        <i class="fa fa-rotate-right"></i> Rotate
-                    </button>
-                    <button type="button" class="btn btn-sm" style="background: #ff9500; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="zoomImage(1.1)">
-                        <i class="fa fa-search-plus"></i> Zoom In
-                    </button>
-                    <button type="button" class="btn btn-sm" style="background: #ff9500; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="zoomImage(0.9)">
-                        <i class="fa fa-search-minus"></i> Zoom Out
-                    </button>
-                    <button type="button" class="btn btn-sm" style="background: #ff9500; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="resetImage()">
-                        <i class="fa fa-undo"></i> Reset
-                    </button>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-secondary" style="background: #e9ecef; color: #495057; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="closeImageEditor()">
-                        Cancel
-                    </button>
-                    <button type="button" class="btn" style="background: linear-gradient(90deg, #ff9500 0%, #ff6b35 100%); color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="confirmImageEdit()">
-                        <i class="fa fa-check"></i> Apply
-                    </button>
-                </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">Cancel</button>
+                <button type="submit" class="btn btn-orange-primary" form="editPetForm"><i class="fa fa-save"></i> Save</button>
             </div>
         </div>
     </div>
@@ -616,18 +480,290 @@
 
 <canvas id="webcamCanvas" style="display:none;"></canvas>
 
-<script>
-    let imageEditorData = {
-        originalSrc: '',
-        rotation: 0,
-        scale: 1,
-        targetElement: null,
-        isWebcamImage: false
-    };
+<style>
+    /* Password Strength Indicator Styles */
+    .password-strength .progress {
+        background-color: #e9ecef;
+        border-radius: 3px;
+    }
+    .password-strength .progress-bar.bg-danger { background-color: #dc3545 !important; }
+    .password-strength .progress-bar.bg-warning { background-color: #ffc107 !important; }
+    .password-strength .progress-bar.bg-info { background-color: #17a2b8 !important; }
+    .password-strength .progress-bar.bg-success { background-color: #28a745 !important; }
+    
+    #passwordMatchText.text-success { color: #28a745 !important; }
+    #passwordMatchText.text-danger { color: #dc3545 !important; }
+    
+    /* Tab styling in modal */
+    #editProfileTabs .nav-link {
+        color: #666;
+        border: none;
+        padding: 10px 20px;
+    }
+    #editProfileTabs .nav-link.active {
+        color: #ff9500;
+        border-bottom: 2px solid #ff9500;
+        background: transparent;
+    }
+    #editProfileTabs .nav-link:hover {
+        color: #ff9500;
+    }
+</style>
 
+<script>
+    // ========== PHOTO DATA STORAGE ==========
+    let uploadedPhotos = []; // Array of { id, src, isExisting }
+    
+    // Initialize with existing photos
+    @if (hasMultiplePhotos)
+    {
+        <text>
+        uploadedPhotos = [
+            @for (int i = 0; i < photoList.Count; i++)
+            {
+                if (photoList[i] != "/Customer/img/default-avatar.png")
+                {
+                    @:{ id: '@i', src: '@photoList[i]', isExisting: true },
+                }
+            }
+        ];
+        </text>
+    }
+
+    // ========== AVATAR ANIMATION ==========
+    let currentPhotoIndex = 0;
+    let avatarAnimationInterval = null;
+    let isAnimationPaused = false;
+    const ANIMATION_DELAY = 3000;
+
+    function initAvatarAnimation() {
+        const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
+        if (photos.length <= 1) return;
+        
+        avatarAnimationInterval = setInterval(() => {
+            if (isAnimationPaused) return;
+            
+            photos[currentPhotoIndex].classList.remove('active');
+            const indicators = document.querySelectorAll('.avatar-indicator');
+            if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
+            
+            currentPhotoIndex = (currentPhotoIndex + 1) % photos.length;
+            
+            photos[currentPhotoIndex].classList.add('active');
+            if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
+        }, ANIMATION_DELAY);
+    }
+
+    function goToPhoto(index) {
+        const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
+        const indicators = document.querySelectorAll('.avatar-indicator');
+        
+        photos[currentPhotoIndex].classList.remove('active');
+        if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
+        
+        currentPhotoIndex = index;
+        
+        photos[currentPhotoIndex].classList.add('active');
+        if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
+    }
+
+    function toggleAnimation() {
+        isAnimationPaused = !isAnimationPaused;
+        const icon = document.getElementById('pauseIcon');
+        if (isAnimationPaused) {
+            icon.className = 'fa fa-play';
+        } else {
+            icon.className = 'fa fa-pause';
+        }
+    }
+
+    // ========== MULTI-FILE UPLOAD ==========
+    function handleMultiFileSelect(event) {
+        const files = event.target.files;
+        if (!files.length) return;
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                addPhotoToGrid(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Clear input so same files can be selected again
+        event.target.value = '';
+    }
+
+    function addPhotoToGrid(imageSrc) {
+        const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        uploadedPhotos.push({ id: photoId, src: imageSrc, isExisting: false });
+        renderPhotoGrid();
+        updatePhotosInput();
+    }
+
+    function removePhoto(photoId) {
+        uploadedPhotos = uploadedPhotos.filter(p => p.id !== photoId);
+        renderPhotoGrid();
+        updatePhotosInput();
+    }
+
+    function clearAllPhotos() {
+        if (!confirm('Remove all photos?')) return;
+        uploadedPhotos = [];
+        renderPhotoGrid();
+        updatePhotosInput();
+    }
+
+    function renderPhotoGrid() {
+        const grid = document.getElementById('photoThumbnailsGrid');
+        const emptyMsg = document.getElementById('emptyPhotosMessage');
+        const clearBtn = document.getElementById('clearPhotosBtn');
+        
+        // Clear existing thumbnails (except empty message)
+        grid.querySelectorAll('.photo-thumbnail').forEach(el => el.remove());
+        
+        if (uploadedPhotos.length === 0) {
+            emptyMsg.style.display = 'flex';
+            clearBtn.style.display = 'none';
+            grid.classList.remove('has-photos');
+        } else {
+            emptyMsg.style.display = 'none';
+            clearBtn.style.display = 'inline-flex';
+            grid.classList.add('has-photos');
+            
+            uploadedPhotos.forEach((photo, index) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'photo-thumbnail';
+                thumb.innerHTML = `
+                    <img src="${photo.src}" alt="Photo ${index + 1}" />
+                    <span class="photo-number">${index + 1}</span>
+                    <button type="button" class="remove-btn" onclick="removePhoto('${photo.id}')">
+                        <i class="fa fa-times"></i>
+                    </button>
+                `;
+                grid.appendChild(thumb);
+            });
+        }
+    }
+
+    function updatePhotosInput() {
+        const photosData = uploadedPhotos.map(p => p.src);
+        document.getElementById('allPhotosData').value = JSON.stringify(photosData);
+    }
+
+    // ========== DRAG & DROP ==========
+    const dropZone = document.getElementById('dropZone');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone?.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone?.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone?.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+    });
+
+    dropZone?.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        for (let i = 0; i < files.length; i++) {
+            if (!files[i].type.startsWith('image/')) continue;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                addPhotoToGrid(ev.target.result);
+            };
+            reader.readAsDataURL(files[i]);
+        }
+    }, false);
+
+    // ========== WEBCAM ==========
+    let webcamData = { stream: null, capturedImage: null };
+
+    async function openWebcamModal() {
+        document.getElementById('webcamOverlay').classList.add('show');
+        document.getElementById('webcamContainer').style.display = 'block';
+        document.getElementById('capturedPreviewContainer').style.display = 'none';
+        document.getElementById('webcamControls').style.display = 'flex';
+        document.getElementById('afterCaptureControls').style.display = 'none';
+        document.getElementById('webcamError').style.display = 'none';
+
+        try {
+            const video = document.getElementById('webcamVideo');
+            webcamData.stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+            });
+            video.srcObject = webcamData.stream;
+            await video.play();
+        } catch (error) {
+            document.getElementById('webcamErrorText').textContent = 'Unable to access webcam.';
+            document.getElementById('webcamError').style.display = 'block';
+            document.getElementById('webcamControls').style.display = 'none';
+        }
+    }
+
+    function closeWebcamModal() {
+        document.getElementById('webcamOverlay').classList.remove('show');
+        if (webcamData.stream) {
+            webcamData.stream.getTracks().forEach(track => track.stop());
+            webcamData.stream = null;
+        }
+        document.getElementById('webcamVideo').srcObject = null;
+    }
+
+    function capturePhoto() {
+        const video = document.getElementById('webcamVideo');
+        const canvas = document.getElementById('webcamCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        webcamData.capturedImage = canvas.toDataURL('image/jpeg', 0.9);
+        
+        document.getElementById('capturedPreview').src = webcamData.capturedImage;
+        document.getElementById('webcamContainer').style.display = 'none';
+        document.getElementById('capturedPreviewContainer').style.display = 'block';
+        document.getElementById('webcamControls').style.display = 'none';
+        document.getElementById('afterCaptureControls').style.display = 'flex';
+        video.pause();
+    }
+
+    function retakePhoto() {
+        document.getElementById('webcamContainer').style.display = 'block';
+        document.getElementById('capturedPreviewContainer').style.display = 'none';
+        document.getElementById('webcamControls').style.display = 'flex';
+        document.getElementById('afterCaptureControls').style.display = 'none';
+        document.getElementById('webcamVideo').play();
+    }
+
+    function useWebcamPhoto() {
+        if (!webcamData.capturedImage) return;
+        addPhotoToGrid(webcamData.capturedImage);
+        closeWebcamModal();
+    }
+
+    // ========== MODALS ==========
     function openEditModal() {
         document.getElementById('editProfileOverlay').classList.add('show');
         document.body.style.overflow = 'hidden';
+        renderPhotoGrid();
+        updatePhotosInput();
+        // Reset to Profile Info tab
+        $('#editProfileTabs a[href="#profileInfoTab"]').tab('show');
+        // Clear password form
+        document.getElementById('changePasswordForm').reset();
+        hidePasswordMessages();
     }
 
     function closeEditModal() {
@@ -635,379 +771,299 @@
         document.body.style.overflow = 'auto';
     }
 
+    // ========== FORM SUBMISSION ==========
     function submitEditProfile(event) {
         event.preventDefault();
-    
+        
         const formData = new FormData(document.getElementById('editProfileForm'));
-    
-        fetch('/Customer/Home/UpdateProfile', {
+        
+        fetch('/Customer/Home/UpdateProfileMultiPhoto', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showSuccess('Profile updated successfully!');
-                document.getElementById('profileName').textContent = formData.get('name');
-                document.getElementById('profilePhone').textContent = formData.get('phone');
-                document.getElementById('profileEmail').textContent = formData.get('email');
-                setTimeout(() => closeEditModal(), 1500);
+                document.getElementById('successMessage').textContent = 'Profile updated!';
+                document.getElementById('successMessage').style.display = 'block';
+                setTimeout(() => { closeEditModal(); location.reload(); }, 1500);
             } else {
-                showError(data.message);
+                document.getElementById('errorMessage').textContent = data.message;
+                document.getElementById('errorMessage').style.display = 'block';
             }
         })
         .catch(error => {
-            showError('Error updating profile');
-            console.error('Error:', error);
+            document.getElementById('errorMessage').textContent = 'Error updating profile';
+            document.getElementById('errorMessage').style.display = 'block';
         });
+    }
+
+    // ========== CHANGE PASSWORD FUNCTIONS ==========
+    function togglePasswordVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    function checkPasswordStrength() {
+        const password = document.getElementById('newPassword').value;
+        const container = document.getElementById('passwordStrengthContainer');
+        const bar = document.getElementById('passwordStrengthBar');
+        const text = document.getElementById('passwordStrengthText');
+        
+        if (password.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.style.display = 'block';
+        
+        let strength = 0;
+        let feedback = '';
+        
+        // Length check
+        if (password.length >= 8) strength += 25;
+        if (password.length >= 12) strength += 10;
+        
+        // Uppercase check
+        if (/[A-Z]/.test(password)) strength += 20;
+        
+        // Lowercase check
+        if (/[a-z]/.test(password)) strength += 15;
+        
+        // Number check
+        if (/[0-9]/.test(password)) strength += 15;
+        
+        // Special character check
+        if (/[^A-Za-z0-9]/.test(password)) strength += 15;
+        
+        // Update UI
+        bar.style.width = strength + '%';
+        bar.classList.remove('bg-danger', 'bg-warning', 'bg-info', 'bg-success');
+        
+        if (strength < 30) {
+            bar.classList.add('bg-danger');
+            feedback = 'Weak';
+        } else if (strength < 50) {
+            bar.classList.add('bg-warning');
+            feedback = 'Fair';
+        } else if (strength < 75) {
+            bar.classList.add('bg-info');
+            feedback = 'Good';
+        } else {
+            bar.classList.add('bg-success');
+            feedback = 'Strong';
+        }
+        
+        text.textContent = feedback;
+    }
+
+    function checkPasswordMatch() {
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const matchText = document.getElementById('passwordMatchText');
+        
+        if (confirmPassword.length === 0) {
+            matchText.textContent = '';
+            matchText.classList.remove('text-success', 'text-danger');
+            return;
+        }
+        
+        if (newPassword === confirmPassword) {
+            matchText.textContent = '✓ Passwords match';
+            matchText.classList.remove('text-danger');
+            matchText.classList.add('text-success');
+        } else {
+            matchText.textContent = '✗ Passwords do not match';
+            matchText.classList.remove('text-success');
+            matchText.classList.add('text-danger');
+        }
+    }
+
+    function hidePasswordMessages() {
+        document.getElementById('passwordSuccessMessage').style.display = 'none';
+        document.getElementById('passwordErrorMessage').style.display = 'none';
+        document.getElementById('passwordStrengthContainer').style.display = 'none';
+        document.getElementById('passwordMatchText').textContent = '';
     }
 
     function submitChangePassword(event) {
         event.preventDefault();
-    
+        
+        const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
-    
-        if (newPassword !== confirmPassword) {
-            showPasswordError('Passwords do not match!');
+        
+        // Hide previous messages
+        hidePasswordMessages();
+        
+        // Validation
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            document.getElementById('passwordErrorMessage').textContent = 'All fields are required.';
+            document.getElementById('passwordErrorMessage').style.display = 'block';
             return;
         }
-    
-        const formData = new FormData(document.getElementById('changePasswordForm'));
-    
+        
+        if (newPassword.length < 8) {
+            document.getElementById('passwordErrorMessage').textContent = 'New password must be at least 8 characters.';
+            document.getElementById('passwordErrorMessage').style.display = 'block';
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            document.getElementById('passwordErrorMessage').textContent = 'New passwords do not match.';
+            document.getElementById('passwordErrorMessage').style.display = 'block';
+            return;
+        }
+        
+        if (currentPassword === newPassword) {
+            document.getElementById('passwordErrorMessage').textContent = 'New password must be different from current password.';
+            document.getElementById('passwordErrorMessage').style.display = 'block';
+            return;
+        }
+        
+        // Disable button during submission
+        const btn = document.getElementById('changePasswordBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing...';
+        
+        // Submit to server
+        const formData = new FormData();
+        formData.append('currentPassword', currentPassword);
+        formData.append('newPassword', newPassword);
+        
         fetch('/Customer/Home/ChangePassword', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+            
             if (data.success) {
-                showPasswordSuccess('Password changed successfully!');
+                document.getElementById('passwordSuccessMessage').textContent = data.message || 'Password changed successfully!';
+                document.getElementById('passwordSuccessMessage').style.display = 'block';
                 document.getElementById('changePasswordForm').reset();
-                setTimeout(() => closeEditModal(), 1500);
+                hidePasswordMessages();
+                document.getElementById('passwordSuccessMessage').style.display = 'block';
+                
+                // Close modal after success
+                setTimeout(() => {
+                    closeEditModal();
+                }, 2000);
             } else {
-                showPasswordError(data.message);
+                document.getElementById('passwordErrorMessage').textContent = data.message || 'Failed to change password.';
+                document.getElementById('passwordErrorMessage').style.display = 'block';
             }
         })
         .catch(error => {
-            showPasswordError('Error changing password');
-            console.error('Error:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+            document.getElementById('passwordErrorMessage').textContent = 'An error occurred. Please try again.';
+            document.getElementById('passwordErrorMessage').style.display = 'block';
         });
     }
 
+    // ========== PET FUNCTIONS ==========
     function openAddPetModal() {
         document.getElementById('petIdInput').value = '';
-        document.getElementById('petModalTitle').textContent = 'Add New Pet';
+        document.getElementById('petModalTitle').textContent = 'Add Pet';
         document.getElementById('editPetForm').reset();
         document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
         document.getElementById('addPetOverlay').classList.add('show');
-        document.body.style.overflow = 'hidden';
     }
 
     function openEditPetModal(petId) {
-        // Fetch pet data from server
-        fetch(`/Customer/Home/GetPetById?petId=${encodeURIComponent(petId)}`, {
-            method: 'GET'
-        })
-        .then(response => response.json())
+        fetch(`/Customer/Home/GetPetById?petId=${petId}`)
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
                 const pet = data.data;
-                
-                // Populate form fields with pet data
                 document.getElementById('petIdInput').value = pet.petId;
                 document.getElementById('petName').value = pet.name || '';
                 document.getElementById('petAge').value = pet.age || '';
                 document.getElementById('petType').value = pet.type || '';
                 document.getElementById('petBreed').value = pet.breed || '';
                 document.getElementById('petRemark').value = pet.remark || '';
-                
-                // Set photo preview
-                if (pet.photo) {
-                    document.getElementById('petPhotoPreview').src = pet.photo;
-                } else {
-                    document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
-                }
-                
-                // Update modal title
+                document.getElementById('petPhotoPreview').src = pet.photo || '/Customer/img/default-pet.png';
                 document.getElementById('petModalTitle').textContent = 'Edit Pet';
-                
-                // Show modal
                 document.getElementById('addPetOverlay').classList.add('show');
-                document.body.style.overflow = 'hidden';
-            } else {
-                showPetError(data.message || 'Failed to load pet data');
             }
-        })
-        .catch(error => {
-            showPetError('Error loading pet data');
-            console.error('Error:', error);
         });
     }
 
     function closeAddPetModal() {
         document.getElementById('addPetOverlay').classList.remove('show');
-        document.body.style.overflow = 'auto';
     }
 
     function submitPetForm(event) {
         event.preventDefault();
-    
         const petId = document.getElementById('petIdInput').value;
         const formData = new FormData(document.getElementById('editPetForm'));
         const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
-    
-        fetch(url, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
+
+        fetch(url, { method: 'POST', body: formData })
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
-                showPetSuccess(petId ? 'Pet updated successfully!' : 'Pet added successfully!');
-                setTimeout(() => {
-                    closeAddPetModal();
-                    location.reload();
-                }, 1500);
+                setTimeout(() => { closeAddPetModal(); location.reload(); }, 1000);
             } else {
-                showPetError(data.message);
+                document.getElementById('petErrorMessage').textContent = data.message;
+                document.getElementById('petErrorMessage').style.display = 'block';
             }
-        })
-        .catch(error => {
-            showPetError('Error saving pet');
-            console.error('Error:', error);
         });
     }
 
     function deletePet(petId, petName) {
-        if (!confirm(`Are you sure you want to delete ${petName}?`)) {
-            return;
-        }
-
-        // ✅ Use FormData instead of JSON
+        if (!confirm(`Delete ${petName}?`)) return;
         const formData = new FormData();
         formData.append('petId', petId);
-
-        fetch('/Customer/Home/DeletePet', {
-            method: 'POST',
-            body: formData  // ✅ Send as form data, not JSON
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Pet deleted successfully!');
-                location.reload();
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error deleting pet');
-            console.error('Error:', error);
-        });
-    }
-
-    function openImageEditor() {
-        const photoPreview = document.getElementById('photoPreview');
-        imageEditorData.originalSrc = photoPreview.src;
-        imageEditorData.targetElement = photoPreview;
-        imageEditorData.rotation = 0;
-        imageEditorData.scale = 1;
-    
-        document.getElementById('editorImage').src = imageEditorData.originalSrc;
-        document.getElementById('imageEditorOverlay').classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeImageEditor() {
-        document.getElementById('imageEditorOverlay').classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
-
-    function rotateImage(angle) {
-        imageEditorData.rotation += angle;
-        updateImageTransform();
-    }
-
-    function zoomImage(scale) {
-        imageEditorData.scale *= scale;
-        if (imageEditorData.scale < 0.5) imageEditorData.scale = 0.5;
-        if (imageEditorData.scale > 3) imageEditorData.scale = 3;
-        updateImageTransform();
-    }
-
-    function resetImage() {
-        imageEditorData.rotation = 0;
-        imageEditorData.scale = 1;
-        updateImageTransform();
-    }
-
-    function updateImageTransform() {
-        const editorImage = document.getElementById('editorImage');
-        editorImage.style.transform = `rotate(${imageEditorData.rotation}deg) scale(${imageEditorData.scale})`;
-        editorImage.style.transition = 'transform 0.3s ease';
-    }
-
-    function confirmImageEdit() {
-        const editorImage = document.getElementById('editorImage');
-        const canvas = document.createElement('canvas');
-    
-        canvas.width = 300;
-        canvas.height = 300;
-    
-        const ctx = canvas.getContext('2d');
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((imageEditorData.rotation * Math.PI) / 180);
-        ctx.scale(imageEditorData.scale, imageEditorData.scale);
-        ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    
-        const img = new Image();
-        img.onload = function() {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const editedImageSrc = canvas.toDataURL('image/jpeg', 0.9);
-        
-            if (imageEditorData.targetElement) {
-                imageEditorData.targetElement.src = editedImageSrc;
-            }
-        
-            closeImageEditor();
-            showSuccess('Photo edited successfully!');
-        };
-        img.src = imageEditorData.originalSrc;
-    }
-
-    function previewPhoto(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const photoPreview = document.getElementById('photoPreview');
-                photoPreview.src = e.target.result;
-                showSuccess('Photo selected!');
-            };
-            reader.readAsDataURL(file);
-        }
+        fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => { if (data.success) location.reload(); });
     }
 
     function previewPetPhoto(event) {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('petPhotoPreview').src = e.target.result;
-            };
+            reader.onload = e => document.getElementById('petPhotoPreview').src = e.target.result;
             reader.readAsDataURL(file);
         }
     }
 
-    function showSuccess(message) {
-        const successDiv = document.getElementById('successMessage');
-        successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-        successDiv.style.display = 'block';
-        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
-    }
-
-    function showError(message) {
-        const errorDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        errorText.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
-    }
-
-    function showPasswordSuccess(message) {
-        const successDiv = document.getElementById('passwordSuccessMessage');
-        successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-        successDiv.style.display = 'block';
-        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
-    }
-
-    function showPasswordError(message) {
-        const errorDiv = document.getElementById('passwordErrorMessage');
-        const errorText = document.getElementById('passwordErrorText');
-        errorText.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
-    }
-
-    function showPetSuccess(message) {
-        const successDiv = document.getElementById('petSuccessMessage');
-        const successText = document.getElementById('petSuccessText');
-        successText.textContent = message;
-        successDiv.style.display = 'block';
-        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
-    }
-
-    function showPetError(message) {
-        const errorDiv = document.getElementById('petErrorMessage');
-        const errorText = document.getElementById('petErrorText');
-        errorText.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
-    }
-
+    // ========== INIT ==========
     document.addEventListener('DOMContentLoaded', function() {
-        var profileOverlay = document.getElementById('editProfileOverlay');
-        if (profileOverlay) {
-            profileOverlay.addEventListener('click', function(event) {
-                if (event.target === profileOverlay) {
-                    closeEditModal();
+        initAvatarAnimation();
+        
+        // Close on overlay click
+        document.querySelectorAll('.custom-modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', e => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                    if (overlay.id === 'webcamOverlay') closeWebcamModal();
                 }
             });
-        }
-
-        var petOverlay = document.getElementById('addPetOverlay');
-        if (petOverlay) {
-            petOverlay.addEventListener('click', function(event) {
-                if (event.target === petOverlay) {
-                    closeAddPetModal();
-                }
-            });
-        }
-
-        var imageEditorOverlay = document.getElementById('imageEditorOverlay');
-        if (imageEditorOverlay) {
-            imageEditorOverlay.addEventListener('click', function(event) {
-                if (event.target === imageEditorOverlay) {
-                    closeImageEditor();
-                }
-            });
-        }
-    });
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeEditModal();
-            closeAddPetModal();
-            closeImageEditor();
-        }
-    });
-
-        function redirectAndScroll(event) {
-        event.preventDefault();
-
-        // Navigate to the Index page
-        window.location.href = '/Customer/Home/Index';
-
-        // After a short delay, scroll to the redeem gift section
-        setTimeout(() => {
-            const redeemSection = document.querySelector('section:has(> .container > .row > .col-lg-7:has(.section_title:has(h3:contains("🎁"))))');
-
-            if (redeemSection) {
-                redeemSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                // Fallback: scroll by searching for the text
-                const sections = document.querySelectorAll('section');
-                for (let section of sections) {
-                    if (section.textContent.includes('🎁 Redeem Gift')) {
-                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        break;
-                    }
-                }
+        });
+        
+        // ESC to close
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeEditModal();
+                closeAddPetModal();
+                closeWebcamModal();
             }
-        }, 500);
-    }
+        });
+    });
 </script>
-
-
-
