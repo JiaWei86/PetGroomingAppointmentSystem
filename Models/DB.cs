@@ -23,6 +23,8 @@ public class DB : DbContext
     public DbSet<ServiceCategory> ServiceCategories { get; set; }
     public DbSet<Service> Services { get; set; }
 
+    public DbSet<ServiceServiceCategory> ServiceServiceCategories { get; set; }
+
     public DbSet<Pet> Pets { get; set; }
     public DbSet<RedeemGift> RedeemGifts { get; set; }
 
@@ -152,7 +154,7 @@ public class ServiceCategory
     [ForeignKey(nameof(AdminId))]
     public Admin Admin { get; set; }
 
-    public List<Service> Services { get; set; } = new List<Service>();
+    public List<ServiceServiceCategory> ServiceServiceCategories { get; set; } = new List<ServiceServiceCategory>();
 }
 
 public class Service
@@ -166,12 +168,6 @@ public class Service
     public string Description { get; set; }
 
     [MaxLength(10)]
-    public string CategoryId { get; set; }
-
-    [ForeignKey(nameof(CategoryId))]
-    public ServiceCategory Category { get; set; }
-
-    [MaxLength(10)]
     public string AdminId { get; set; }   // creator admin
 
     [ForeignKey(nameof(AdminId))]
@@ -182,7 +178,12 @@ public class Service
 
     public int? DurationTime { get; set; } // minutes
 
+    [MaxLength(20)]
+    public string Status { get; set; } = "Active"; // Active or Inactive
+
     public List<Appointment> Appointments { get; set; } = new List<Appointment>();
+
+    public List<ServiceServiceCategory> ServiceServiceCategories { get; set; } = new List<ServiceServiceCategory>();
 }
 
 public class Pet
@@ -325,4 +326,25 @@ public class CustomerRedeemGift
     public DateTime? RedeemDate { get; set; }
 
     public int QuantityRedeemed { get; set; }
+}
+
+/* =========================
+   SERVICE SERVICE CATEGORY (Junction Table)
+   ========================= */
+public class ServiceServiceCategory
+{
+    [Key, MaxLength(6)]
+    public string SscId { get; set; } // e.g., SSC001
+
+    [MaxLength(10)]
+    public string ServiceId { get; set; }
+
+    [ForeignKey(nameof(ServiceId))]
+    public Service Service { get; set; }
+
+    [MaxLength(10)]
+    public string CategoryId { get; set; }
+
+    [ForeignKey(nameof(CategoryId))]
+    public ServiceCategory Category { get; set; }
 }

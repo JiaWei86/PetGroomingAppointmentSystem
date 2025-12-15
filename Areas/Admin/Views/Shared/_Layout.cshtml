@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - PetGrooming</title>
 
-    <!-- Force fresh CSS load -->
     <link rel="stylesheet" href="~/admin/css/site.css?v=@DateTime.Now.Ticks" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @RenderSection("Styles", required: false)
 </head>
 <body>
     <div id="app-container">
@@ -21,23 +21,68 @@
             </div>
             <nav class="sidebar-nav">
                 <ul>
-                    <li><a class="@(ViewData["ActivePage"] as string == "Dashboard" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Index"><i class="material-icons">dashboard</i> Dashboard</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "Groomer" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Groomer"><i class="material-icons">person</i> Groomers</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "Appointment" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Appointment"><i class="material-icons">event</i> Appointments</a></li>
-
-                    <li><a class="@(ViewData["ActivePage"] as string == "Customer" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Customer"><i class="material-icons">contacts</i> Customers</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "Pet" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Pet"><i class="material-icons">pets</i> Pets</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "LoyaltyPoint" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="LoyaltyPoint"><i class="material-icons">card_giftcard</i> Loyalty Points</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "RedeemGift" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="RedeemGift"><i class="material-icons">redeem</i> Redeem Gifts</a></li>
-                    
-                    <li><a class="@(ViewData["ActivePage"] as string == "Service" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="Service"><i class="material-icons">content_cut</i> Service</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "reports" ? "active" : "")" asp-area="Admin" asp-controller="Home" asp-action="reports"><i class="material-icons">report</i> Reports</a></li>
-                
-                    <!-- Add Logout Button Here -->
-                    <li style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
-                        <a href="@Url.Action("AdminLogout", "Auth", new { area = "Admin" })" style="color: #ffff;">
-                            <i class="material-icons">logout</i>Logout
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Dashboard" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Index">
+                            <i class="material-icons">dashboard</i> Dashboard
                         </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Groomer" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Groomer">
+                            <i class="material-icons">person</i> Groomers
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Appointment" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Appointment">
+                            <i class="material-icons">event</i> Appointments
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Customer" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Customer">
+                            <i class="material-icons">contacts</i> Customers
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Pet" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Pet">
+                            <i class="material-icons">pets</i> Pets
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "LoyaltyPoint" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="LoyaltyPoint">
+                            <i class="material-icons">card_giftcard</i> Loyalty Points
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "RedeemGift" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="RedeemGift">
+                            <i class="material-icons">redeem</i> Redeem Gifts
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "Service" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="Service">
+                            <i class="material-icons">content_cut</i> Service
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@(ViewData["ActivePage"] as string == "reports" ? "active" : "")"
+                           asp-area="Admin" asp-controller="Home" asp-action="reports">
+                            <i class="material-icons">report</i> Reports
+                        </a>
+                    </li>
+
+                    <li style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
+                        <a href="@Url.Action("AdminLogout", "Auth", new { area = "Admin" })" style="color: #fff;">
+                            <i class="material-icons">logout</i> Logout
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </aside>
@@ -45,23 +90,22 @@
         <div id="main-content-wrapper">
 
             <header id="topbar">
-
                 <div class="user-profile">
                     <span>@(Context.Session.GetString("AdminUsername") ?? "Admin User")</span>
                     <i class="material-icons">account_circle</i>
                 </div>
             </header>
 
-            <main role="main" class="pb-3">
-                @RenderBody()
+            <main id="main-content" role="main" class="pb-3">
+                <div class="main-inner">
+                    @RenderBody()
+                </div>
             </main>
 
         </div>
     </div>
 
     @RenderSection("Scripts", required: false)
-    
-    <!-- Add your script here -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
             integrity="sha512-YcsIPGdh0IbnCt0A6Ld0JSafpPvM5TIVLSiDS5C7lzuWIe9okT8unU0I4ZgHn6+hWcIYgS4PpXWkU1D92dM1KQ=="

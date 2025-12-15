@@ -1,0 +1,2584 @@
+/* ========================================
+   SCROLL EFFECT FOR TOPBAR & USER PROFILE
+   ======================================== */
+(function() {
+    let lastScrollTop = 0;
+    const topbar = document.getElementById('topbar');
+    const userProfile = document.querySelector('.user-profile');
+    
+    // Function to handle scroll
+    function handleScroll() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > lastScrollTop && scrollTop > 100) {
+            // Scrolling down
+            topbar?.classList.add('scrolled-down');
+            topbar?.classList.remove('scrolled-up');
+        } else if (scrollTop < lastScrollTop) {
+            // Scrolling up
+            topbar?.classList.remove('scrolled-down');
+            topbar?.classList.add('scrolled-up');
+        }
+        
+        // Keep user profile position fixed
+        if (scrollTop > 50) {
+            topbar?.classList.add('scrolled');
+            userProfile?.classList.add('scrolled');
+        } else {
+            topbar?.classList.remove('scrolled');
+            userProfile?.classList.remove('scrolled');
+        }
+        
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+    }
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Check on page load
+    handleScroll();
+})();
+
+/* ========================================
+   ADMIN MANAGEMENT - COMBINED MODULE
+   Customer, Pet, and Loyalty Points
+   ======================================== */
+
+// ========================================
+// CUSTOMER MANAGEMENT MODULE
+// ========================================
+const CustomerManager = (() => {
+    const customerData = {
+        1: { id: 1, firstName: "John", lastName: "Doe", email: "john@example.com", phone: "555-1234", address: "123 Main St", city: "New York", postalCode: "10001", createdAt: "Jan 15, 2024 10:30 AM", updatedAt: "Jan 20, 2024 02:15 PM", pets: [{ id: 1, name: "Buddy", type: "Dog", breed: "Golden Retriever", age: 3 }, { id: 3, name: "Max", type: "Dog", breed: "German Shepherd", age: 5 }], loyaltyPoints: 250 },
+        2: { id: 2, firstName: "Sarah", lastName: "Johnson", email: "sarah@example.com", phone: "555-5678", address: "456 Oak Ave", city: "Los Angeles", postalCode: "90001", createdAt: "Feb 10, 2024 03:45 PM", updatedAt: "Feb 18, 2024 11:20 AM", pets: [{ id: 2, name: "Whiskers", type: "Cat", breed: "Siamese", age: 2 }], loyaltyPoints: 150 },
+        3: { id: 3, firstName: "Michael", lastName: "Smith", email: "michael@example.com", phone: "555-9012", address: "789 Pine Rd", city: "Chicago", postalCode: "60601", createdAt: "Mar 05, 2024 09:00 AM", updatedAt: "Mar 22, 2024 04:30 PM", pets: [], loyaltyPoints: 500 }
+    };
+
+    const showCustomerDetails = (customerId) => {
+        const customer = customerData[customerId];
+        if (!customer) return;
+
+        document.getElementById('viewTitle').textContent = customer.firstName + ' ' + customer.lastName;
+        document.getElementById('viewName').textContent = customer.firstName + ' ' + customer.lastName;
+        document.getElementById('viewEmail').textContent = customer.email;
+        document.getElementById('viewPhone').textContent = customer.phone || 'N/A';
+        document.getElementById('viewAddress').textContent = customer.address || 'N/A';
+        document.getElementById('viewCity').textContent = customer.city || 'N/A';
+        document.getElementById('viewPostalCode').textContent = customer.postalCode || 'N/A';
+        document.getElementById('viewCreatedAt').textContent = customer.createdAt;
+        document.getElementById('viewUpdatedAt').textContent = customer.updatedAt;
+
+        displayPets(customer.pets);
+
+        document.getElementById('loyaltyPointsValue').textContent = customer.loyaltyPoints + ' pts';
+        document.getElementById('loyaltyLastUpdated').textContent = customer.updatedAt;
+
+        switchTab('pets-tab');
+        document.getElementById('customerViewModal').classList.add('active');
+    };
+
+    const displayPets = (pets) => {
+        const petsList = document.getElementById('petsList');
+        if (!pets || pets.length === 0) {
+            petsList.innerHTML = '<p class="empty-message">No pets assigned</p>';
+            return;
+        }
+
+        petsList.innerHTML = pets.map(pet => `
+            <div class="pet-item">
+                <div class="pet-info">
+                    <div class="pet-name">${pet.name}</div>
+                    <div class="pet-details">${pet.type} · ${pet.breed} · ${pet.age} years old</div>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    const switchTab = (tabName) => {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        const selectedTab = document.getElementById(tabName);
+        if (selectedTab) selectedTab.classList.add('active');
+
+        const tabBtnMap = { 'pets-tab': 0, 'loyalty-tab': 1 };
+        const buttons = document.querySelectorAll('.tab-btn');
+        if (buttons[tabBtnMap[tabName]]) {
+            buttons[tabBtnMap[tabName]].classList.add('active');
+        }
+    };
+
+    const closeViewModal = () => {
+        document.getElementById('customerViewModal').classList.remove('active');
+    };
+
+    const init = () => {
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('customerViewModal');
+            if (e.target === modal) closeViewModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeViewModal();
+        });
+    };
+
+    return { init, showCustomerDetails, switchTab, closeViewModal };
+})();
+
+// ========================================
+// PET MANAGEMENT MODULE
+// ========================================
+const PetManager = (() => {
+    const petData = {
+        1: { id: 1, name: "Buddy", petType: "Dog", breed: "Golden Retriever", age: 3, color: "Golden", weight: 30, owner: "John Doe", createdAt: "Jan 15, 2024 10:30 AM", updatedAt: "Jan 20, 2024 02:15 PM" },
+        2: { id: 2, name: "Whiskers", petType: "Cat", breed: "Siamese", age: 2, color: "Cream", weight: 4, owner: "Sarah Johnson", createdAt: "Feb 10, 2024 03:45 PM", updatedAt: "Feb 18, 2024 11:20 AM" },
+        3: { id: 3, name: "Max", petType: "Dog", breed: "German Shepherd", age: 5, color: "Brown", weight: 35, owner: "John Doe", createdAt: "Mar 05, 2024 09:00 AM", updatedAt: "Mar 22, 2024 04:30 PM" }
+    };
+
+    const showPetDetails = (petId) => {
+        const pet = petData[petId];
+        if (!pet) return;
+
+        document.getElementById('petViewTitle').textContent = pet.name;
+        document.getElementById('petViewName').textContent = pet.name;
+        document.getElementById('petViewType').textContent = pet.petType;
+        document.getElementById('petViewBreed').textContent = pet.breed;
+        document.getElementById('petViewAge').textContent = pet.age + ' years';
+        document.getElementById('petViewColor').textContent = pet.color;
+        document.getElementById('petViewWeight').textContent = pet.weight + ' kg';
+        document.getElementById('petViewOwner').textContent = pet.owner;
+        document.getElementById('petViewCreatedAt').textContent = pet.createdAt;
+        document.getElementById('petViewUpdatedAt').textContent = pet.updatedAt;
+
+        document.getElementById('petViewModal').classList.add('active');
+    };
+
+    const closePetViewModal = () => {
+        document.getElementById('petViewModal').classList.remove('active');
+    };
+
+    const init = () => {
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('petViewModal');
+            if (e.target === modal) closePetViewModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePetViewModal();
+        });
+    };
+
+    return { init, showPetDetails, closePetViewModal };
+})();
+
+// ========================================
+// LOYALTY POINTS MODULE
+// ========================================
+const LoyaltyManager = (() => {
+    const loyaltyData = {
+        1: { id: 1, customerName: "John Doe", currentPoints: 250, totalEarned: 500, totalRedeemed: 250, lastTransaction: "Jan 20, 2024 02:15 PM", status: "Active" },
+        2: { id: 2, customerName: "Sarah Johnson", currentPoints: 150, totalEarned: 200, totalRedeemed: 50, lastTransaction: "Feb 18, 2024 11:20 AM", status: "Active" },
+        3: { id: 3, customerName: "Michael Smith", currentPoints: 500, totalEarned: 600, totalRedeemed: 100, lastTransaction: "Mar 22, 2024 04:30 PM", status: "Active" }
+    };
+
+    const showLoyaltyDetails = (loyaltyId) => {
+        const loyalty = loyaltyData[loyaltyId];
+        if (!loyalty) return;
+
+        document.getElementById('loyaltyDetailTitle').textContent = loyalty.customerName;
+        document.getElementById('loyaltyDetailCustomer').textContent = loyalty.customerName;
+        document.getElementById('loyaltyDetailCurrent').textContent = loyalty.currentPoints + ' pts';
+        document.getElementById('loyaltyDetailEarned').textContent = loyalty.totalEarned + ' pts';
+        document.getElementById('loyaltyDetailRedeemed').textContent = loyalty.totalRedeemed + ' pts';
+        document.getElementById('loyaltyDetailLastTransaction').textContent = loyalty.lastTransaction;
+        document.getElementById('loyaltyDetailStatus').textContent = loyalty.status;
+
+        document.getElementById('loyaltyDetailModal').classList.add('active');
+    };
+
+    const closeLoyaltyDetailModal = () => {
+        document.getElementById('loyaltyDetailModal').classList.remove('active');
+    };
+
+    const init = () => {
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('loyaltyDetailModal');
+            if (e.target === modal) closeLoyaltyDetailModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLoyaltyDetailModal();
+        });
+    };
+
+    return { init, showLoyaltyDetails, closeLoyaltyDetailModal };
+})();
+
+// ========================================
+// DASHBOARD CHART MODULE
+// ========================================
+const DashboardChart = (() => {
+    let chart = null;
+    let currentView = 'week';
+
+    const init = (chartData) => {
+        const ctx = document.getElementById('appointmentChart');
+        if (!ctx) return;
+
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData[currentView].labels,
+                datasets: [{
+                    label: 'Appointments',
+                    data: chartData[currentView].data,
+                    borderColor: '#d97706',
+                    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#d97706',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#d97706',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateChart = (view) => {
+        if (!chart || !window.dashboardChartData) return;
+        
+        currentView = view;
+        const data = window.dashboardChartData[view];
+        
+        chart.data.labels = data.labels;
+        chart.data.datasets[0].data = data.data;
+        chart.update();
+
+        // Update button states
+        document.querySelectorAll('.btn-chart-option').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    };
+
+    return { init, updateChart };
+})();
+
+// Make updateChart global for button onclick
+window.updateChart = (view) => DashboardChart.updateChart(view);
+
+// ========================================
+// DASHBOARD CALENDAR MODULE
+// ========================================
+const DashboardCalendar = (() => {
+    let currentDate = new Date();
+    let selectedDate = new Date();
+    let appointments = [];
+
+    const init = (appointmentData) => {
+        appointments = appointmentData;
+        renderCalendar();
+        renderAppointments(selectedDate.toISOString().split('T')[0]);
+        
+        // Event listeners
+        document.getElementById('prevMonth')?.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth')?.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+    };
+
+    const renderCalendar = () => {
+        const calendar = document.getElementById('calendar');
+        const monthYear = document.getElementById('monthYear');
+        if (!calendar || !monthYear) return;
+
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        monthYear.textContent = new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        let calendarHTML = '';
+        
+
+        // Empty cells before first day
+        for (let i = 0; i < firstDay; i++) {
+            calendarHTML += '<div class="calendar-day empty"></div>';
+        }
+
+        // Days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateStr = date.toISOString().split('T')[0];
+            const hasAppointments = appointments.some(apt => apt.date === dateStr);
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const isSelected = dateStr === selectedDate.toISOString().split('T')[0];
+
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+            if (isSelected) classes += ' selected';
+            if (hasAppointments) classes += ' has-appointments';
+
+            calendarHTML += `
+                <div class="${classes}" onclick="selectDate('${dateStr}')">
+                    <span class="day-number">${day}</span>
+                    ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                </div>
+            `;
+        }
+
+        calendar.innerHTML = calendarHTML;
+    };
+
+    const renderAppointments = (dateStr) => {
+        const appointmentsList = document.getElementById('appointmentsList');
+        const selectedDateBadge = document.getElementById('selectedDate');
+        if (!appointmentsList) return;
+
+        const dateAppointments = appointments.filter(apt => apt.date === dateStr);
+        
+        if (selectedDateBadge) {
+            const date = new Date(dateStr);
+            selectedDateBadge.textContent = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        if (dateAppointments.length === 0) {
+            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+            return;
+        }
+
+        appointmentsList.innerHTML = dateAppointments.map(apt => `
+            <div class="appointment-item ${apt.status}">
+                <div class="appointment-time">${apt.time}</div>
+                <div class="appointment-details">
+                    <div class="appointment-pet">${apt.petName}</div>
+                    <div class="appointment-service">${apt.serviceType}</div>
+                    <div class="appointment-groomer">with ${apt.groomerName}</div>
+                </div>
+                <span class="appointment-status ${apt.status}">${apt.status}</span>
+            </div>
+        `).join('');
+    };
+
+    const selectDate = (dateStr) => {
+        selectedDate = new Date(dateStr);
+        renderCalendar();
+        renderAppointments(dateStr);
+    };
+
+    return { init, selectDate };
+})();
+
+// Make selectDate global for calendar onclick
+window.selectDate = (dateStr) => DashboardCalendar.selectDate(dateStr);
+
+// ========================================
+// REPORTS MODULE
+// ========================================
+function initReportFilters() {
+    const reportTypeSelect = document.getElementById('reportType');
+    if (reportTypeSelect) {
+        reportTypeSelect.addEventListener('change', function() {
+            generateReport();
+        });
+    }
+
+    const dateFromInput = document.getElementById('dateFrom');
+    const dateToInput = document.getElementById('dateTo');
+    if (dateFromInput && dateToInput) {
+        dateFromInput.addEventListener('change', generateReport);
+        dateToInput.addEventListener('change', generateReport);
+    }
+}
+
+function generateReport() {
+    const reportType = document.getElementById('reportType')?.value;
+    const dateFrom = document.getElementById('dateFrom')?.value;
+    const dateTo = document.getElementById('dateTo')?.value;
+
+    console.log(`Generating ${reportType} report from ${dateFrom} to ${dateTo}`);
+}
+
+function exportReport(format) {
+    const reportType = document.getElementById('reportType')?.value;
+    console.log(`Exporting ${reportType} report as ${format}`);
+    alert(`Exporting report as ${format.toUpperCase()}...`);
+}
+
+// ========================================
+// ALERT AUTO-HIDE FUNCTION
+// ========================================
+function initAlertAutoHide() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+}
+
+/* ========================================
+   GROOMER MANAGEMENT MODULE
+   ======================================== */
+const GroomerManager = (() => {
+    let currentForm = null;
+
+    // 初始化函数
+    const init = () => {
+        // 自动隐藏成功消息（5秒后）
+        const alertMessage = document.getElementById('alertMessage');
+        if (alertMessage) {
+            setTimeout(() => {
+                alertMessage.style.transition = 'opacity 0.5s';
+                alertMessage.style.opacity = '0';
+                setTimeout(() => {
+                    alertMessage.remove();
+                }, 500);
+            }, 5000);
+        }
+
+        // 点击模态框外部关闭
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('confirmModal');
+            if (event.target === modal) {
+                closeConfirmModal();
+            }
+        });
+    };
+
+    // 显示创建表单 - 通用版本
+    const showCreateForm = () => {
+        // 尝试查找 Groomer 或 Gift 表单
+        const groomerForm = document.getElementById('createGroomerForm');
+        const giftForm = document.getElementById('createGiftForm');
+        
+        if (groomerForm) {
+            groomerForm.style.display = 'block';
+        } else if (giftForm) {
+            giftForm.style.display = 'block';
+        }
+    };
+
+    // 隐藏创建表单 - 通用版本
+    const hideCreateForm = () => {
+        // 尝试隐藏 Groomer 或 Gift 表单
+        const groomerForm = document.getElementById('createGroomerForm');
+        const giftForm = document.getElementById('createGiftForm');
+        
+        if (groomerForm) {
+            groomerForm.style.display = 'none';
+        } else if (giftForm) {
+            giftForm.style.display = 'none';
+        }
+    };
+
+    // 显示确认模态框
+    const showConfirmModal = (title, message, icon, iconColor, confirmCallback) => {
+        const modal = document.getElementById('confirmModal');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const confirmIcon = document.getElementById('confirmIcon');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+
+        if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+            console.error('Modal elements not found');
+            return;
+        }
+
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmIcon.textContent = icon;
+        confirmIcon.style.color = iconColor;
+
+        modal.classList.add('show');
+
+        // 移除之前的事件监听器
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        // 添加新的事件监听器
+        newConfirmBtn.addEventListener('click', () => {
+            confirmCallback();
+            closeConfirmModal();
+        });
+    };
+
+    // 关闭确认模态框
+    const closeConfirmModal = () => {
+        const modal = document.getElementById('confirmModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+        currentForm = null;
+    };
+
+    // 确认添加 - 通用版本
+    const confirmAdd = (event) => {
+        event.preventDefault();
+        currentForm = event.target;
+
+        // 尝试获取 Groomer 或 Gift 的信息
+        const groomerName = document.getElementById('groomerName')?.value;
+        const groomerEmail = document.getElementById('groomerEmail')?.value;
+        const giftName = document.getElementById('giftName')?.value;
+        const quantity = document.getElementById('quantity')?.value;
+        const points = document.getElementById('points')?.value;
+
+        if (groomerName && groomerEmail) {
+            // Groomer 页面
+            showConfirmModal(
+                'Add New Groomer?',
+                `Are you sure you want to add "${groomerName}"? Login credentials will be sent to ${groomerEmail}.`,
+                'person_add',
+                '#10b981',
+                () => currentForm.submit()
+            );
+        } else if (giftName && quantity && points) {
+            // RedeemGift 页面
+            showConfirmModal(
+                'Add New Gift?',
+                `Are you sure you want to add "${giftName}" (Qty: ${quantity}, Points: ${points})?`,
+                'add_circle',
+                '#10b981',
+                () => currentForm.submit()
+            );
+        } else {
+            alert('Please fill in all required fields');
+            return false;
+        }
+
+        return false;
+    };
+
+    // 确认编辑
+    const confirmEdit = (event, name) => {
+        event.preventDefault();
+        currentForm = event.target;
+
+        // 检测是在哪个页面
+        const isGroomerPage = document.getElementById('createGroomerForm');
+        const title = isGroomerPage ? 'Save Changes?' : 'Save Changes?';
+        
+        showConfirmModal(
+            title,
+            `Are you sure you want to save changes to "${name}"?`,
+            'edit',
+            '#f59e0b',
+            () => currentForm.submit()
+        );
+
+        return false;
+    };
+
+    // 确认删除
+    const confirmDelete = (event, name) => {
+        event.preventDefault();
+        currentForm = event.target;
+
+        // 检测是在哪个页面
+        const isGroomerPage = document.getElementById('createGroomerForm');
+        const itemType = isGroomerPage ? 'Groomer' : 'Gift';
+        
+        showConfirmModal(
+            `Delete ${itemType}?`,
+            `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+            'warning',
+            '#ef4444',
+            () => currentForm.submit()
+        );
+
+        return false;
+    };
+
+    // 公开的 API
+    return {
+        init,
+        showCreateForm,
+        hideCreateForm,
+        confirmAdd,
+        confirmEdit,
+        confirmDelete,
+        closeConfirmModal
+    };
+})();
+
+// 页面加载完成后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', GroomerManager.init);
+} else {
+    GroomerManager.init();
+}
+
+// 将函数暴露到全局作用域供 HTML 调用
+window.showCreateForm = GroomerManager.showCreateForm;
+window.hideCreateForm = GroomerManager.hideCreateForm;
+window.confirmAdd = GroomerManager.confirmAdd;
+window.confirmEdit = GroomerManager.confirmEdit;
+window.confirmDelete = GroomerManager.confirmDelete;
+window.closeConfirmModal = GroomerManager.closeConfirmModal;
+
+/* ========================================
+   PHOTO UPLOAD INDICATOR
+   ======================================== */
+function handlePhotoUpload(input, userId) {
+    const statusSpan = document.getElementById(`uploadStatus_${userId}`);
+
+    if (input.files && input.files.length > 0) {
+        const fileName = input.files[0].name;
+        const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+
+        statusSpan.style.display = 'block';
+        statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+        statusSpan.style.color = '#10b981';
+
+        if (input.files[0].size > 5 * 1024 * 1024) {
+            statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+            statusSpan.style.color = '#ef4444';
+            input.value = '';
+        }
+    } else {
+        statusSpan.style.display = 'none';
+    }
+}
+
+// ========================================
+// INITIALIZATION
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize modules
+    CustomerManager.init();
+    PetManager.init();
+    LoyaltyManager.init();
+
+    // Initialize Dashboard Chart with sample data
+    if (document.getElementById('appointmentChart')) {
+        window.dashboardChartData = {
+            week: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                data: [12, 15, 8, 14, 18, 10, 6]
+            },
+            month: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                data: [45, 52, 38, 48]
+            },
+            day: {
+                labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
+                data: [2, 3, 4, 2, 3, 5, 4, 2, 1]
+            }
+        };
+        DashboardChart.init(window.dashboardChartData);
+    }
+
+    // Initialize Dashboard Calendar with sample data
+    if (document.getElementById('calendar')) {
+        const today = new Date();
+        const sampleAppointments = [
+            { date: today.toISOString().split('T')[0], time: '9:00 AM', petName: 'Buddy', serviceType: 'Full Grooming', groomerName: 'John Smith', status: 'confirmed' },
+            { date: today.toISOString().split('T')[0], time: '11:00 AM', petName: 'Max', serviceType: 'Bath & Brush', groomerName: 'Sarah Lee', status: 'pending' },
+            { date: new Date(today.getTime() + 86400000).toISOString().split('T')[0], time: '10:00 AM', petName: 'Whiskers', serviceType: 'Nail Trim', groomerName: 'Mike Johnson', status: 'confirmed' },
+            { date: new Date(today.getTime() + 5*86400000).toISOString().split('T')[0], time: '2:00 PM', petName: 'Luna', serviceType: 'Full Grooming', groomerName: 'John Smith', status: 'completed' }
+        ];
+        DashboardCalendar.init(sampleAppointments);
+    }
+
+    // Initialize alert auto-hide
+    initAlertAutoHide();
+
+    // Initialize report filters if on reports page
+    if (document.getElementById('reportFilters')) {
+        initReportFilters();
+        generateReport();
+    }
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('confirmModal');
+    if (modal && e.target === modal) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal with ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
+});
+
+function handlePhotoUpload(input, userId) {
+    const statusSpan = document.getElementById(`uploadStatus_${userId}`);
+
+    if (input.files && input.files.length > 0) {
+        const fileName = input.files[0].name;
+        const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+
+        statusSpan.style.display = 'block';
+        statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+        statusSpan.style.color = '#10b981';
+
+        if (input.files[0].size > 5 * 1024 * 1024) {
+            statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+            statusSpan.style.color = '#ef4444';
+            input.value = '';
+        }
+    } else {
+        statusSpan.style.display = 'none';
+    }
+}
+
+// ========================================
+// GROOMER AJAX FORM SUBMISSION
+// ========================================
+
+// Initialize Groomer Form AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const groomerForm = document.getElementById('addGroomerForm');
+    
+    if (groomerForm) {
+        groomerForm.addEventListener('submit', handleGroomerFormSubmit);
+    }
+});
+
+// Handle Groomer Form Submit with AJAX
+function handleGroomerFormSubmit(event) {
+    event.preventDefault();
+    
+    // Clear previous errors
+    clearGroomerErrors();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitGroomerBtn');
+    
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Creating...';
+    
+    // Get anti-forgery token
+    const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+    
+    fetch('/Admin/Home/CreateGroomerAjax', {
+        method: 'POST',
+        headers: {
+            'RequestVerificationToken': token
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            showSuccessMessage(data.message || 'Groomer created successfully!');
+            
+            // Reset form
+            form.reset();
+            
+            // Hide create form
+            hideCreateForm();
+            
+            // Reload page to show new groomer
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            // Show validation errors
+            displayGroomerErrors(data.errors);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showErrorMessage('Failed to create groomer. Please try again.');
+    })
+    .finally(() => {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="material-icons">add</i> Save Groomer';
+    });
+}
+
+// Display validation errors
+function displayGroomerErrors(errors) {
+    const errorContainer = document.getElementById('ajaxErrorContainer');
+    const errorList = document.getElementById('ajaxErrorList');
+    
+    if (!errors || Object.keys(errors).length === 0) {
+        return;
+    }
+    
+    // Clear previous errors
+    errorList.innerHTML = '';
+    
+    // Display each error
+    Object.keys(errors).forEach(field => {
+        const errorMessage = errors[field];
+        
+        // Add to error list
+        const li = document.createElement('li');
+        li.textContent = errorMessage;
+        errorList.appendChild(li);
+        
+        // Show error under specific field
+        const errorSpan = document.getElementById(`error-${field}`);
+        if (errorSpan) {
+            errorSpan.textContent = errorMessage;
+            errorSpan.style.display = 'block';
+            errorSpan.style.color = '#dc3545';
+            errorSpan.style.fontSize = '12px';
+            errorSpan.style.marginTop = '5px';
+        }
+        
+        // Add red border to input
+        const input = document.getElementById(`groomer${field}`) || 
+                      document.getElementById(field.toLowerCase());
+        if (input) {
+            input.style.borderColor = '#dc3545';
+        }
+    });
+    
+    // Show error container
+    errorContainer.style.display = 'block';
+    
+    // Scroll to error container
+    errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Clear all validation errors
+function clearGroomerErrors() {
+    // Hide error container
+    const errorContainer = document.getElementById('ajaxErrorContainer');
+    const errorList = document.getElementById('ajaxErrorList');
+    
+    if (errorContainer) {
+        errorContainer.style.display = 'none';
+    }
+    
+    if (errorList) {
+        errorList.innerHTML = '';
+    }
+    
+    // Clear individual field errors
+    document.querySelectorAll('.error-message').forEach(span => {
+        span.textContent = '';
+        span.style.display = 'none';
+    });
+    
+    // Remove red borders from inputs
+    document.querySelectorAll('#addGroomerForm input, #addGroomerForm textarea').forEach(input => {
+        input.style.borderColor = '';
+    });
+}
+
+// Show success message
+function showSuccessMessage(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success';
+    alertDiv.id = 'tempSuccessAlert';
+    alertDiv.innerHTML = `<strong> Success:</strong> ${message}`;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.style.animation = 'slideInRight 0.5s ease-out';
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.5s ease-in';
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 500);
+    }, 3000);
+}
+
+// Show error message
+function showErrorMessage(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger';
+    alertDiv.id = 'tempErrorAlert';
+    alertDiv.innerHTML = `<strong>❌ Error:</strong> ${message}`;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.style.animation = 'slideInRight 0.5s ease-out';
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.5s ease-in';
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 500);
+    }, 5000);
+}
+
+// Update hideCreateForm to clear errors
+const originalHideCreateForm = window.hideCreateForm;
+window.hideCreateForm = function() {
+    clearGroomerErrors();
+    if (originalHideCreateForm) {
+        originalHideCreateForm();
+    } else {
+        document.getElementById('createGroomerForm').style.display = 'none';
+    }
+};
+
+// ========================================
+// REAL-TIME FIELD VALIDATION FOR GROOMER FORM
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize real-time validation
+    initializeGroomerFieldValidation();
+});
+
+function initializeGroomerFieldValidation() {
+    const nameInput = document.getElementById('groomerName');
+    const icInput = document.getElementById('groomerIC');
+    const emailInput = document.getElementById('groomerEmail');
+    const phoneInput = document.getElementById('groomerPhone');
+    const experienceInput = document.getElementById('experienceYear');
+    const positionInput = document.getElementById('position');
+    const descriptionInput = document.getElementById('description');
+    const photoInput = document.getElementById('photoUpload');
+
+    if (!nameInput) return; // Exit if form not present
+
+    // Name validation
+    nameInput.addEventListener('blur', function() {
+        validateName(this.value);
+    });
+
+ nameInput.addEventListener('input', function() {
+    // Clear error on input
+    if (this.value.length > 0) {
+         clearFieldError('groomerName', 'error-Name');
+        }
+    });
+
+    // IC validation with auto-formatting
+    icInput.addEventListener('input', function() {
+     autoFormatIC(this);
+    });
+
+    icInput.addEventListener('blur', async function() {
+        await validateIC(this.value);
+    });
+
+    // Email validation
+    emailInput.addEventListener('blur', async function() {
+   await validateEmail(this.value);
+    });
+
+    emailInput.addEventListener('input', function() {
+        if (this.value.length > 0) {
+clearFieldError('groomerEmail', 'error-Email');
+        }
+    });
+
+    // Phone validation with auto-formatting
+    phoneInput.addEventListener('input', function() {
+     autoFormatPhone(this);
+    });
+
+    phoneInput.addEventListener('blur', async function() {
+  await validatePhone(this.value);
+    });
+
+    // Experience Year validation
+    if (experienceInput) {
+        experienceInput.addEventListener('blur', function() {
+    validateExperience(this.value);
+        });
+
+        experienceInput.addEventListener('input', function() {
+            if (this.value.length > 0) {
+          clearFieldError('experienceYear', 'error-ExperienceYear');
+   }
+        });
+    }
+
+    // Position validation
+    if (positionInput) {
+        positionInput.addEventListener('blur', function() {
+            validatePosition(this.value);
+        });
+        
+        positionInput.addEventListener('change', function() {
+        validatePosition(this.value);
+   });
+    }
+
+    // Description validation
+    if (descriptionInput) {
+        descriptionInput.addEventListener('blur', function() {
+        validateDescription(this.value);
+        });
+}
+
+    // Photo preview for Add Groomer form
+    if (photoInput) {
+        photoInput.addEventListener('change', function() {
+            handlePhotoPreview(this, 'create');
+    });
+    }
+}
+
+// Auto-format IC as user types (with cursor position preservation)
+function autoFormatIC(input) {
+    // Get current cursor position
+    const cursorPos = input.selectionStart;
+    const oldValue = input.value;
+    
+    // Remove all non-digits
+    let value = input.value.replace(/\D/g, '');
+  
+ // Limit to 12 digits max
+    if (value.length > 12) {
+      value = value.substring(0, 12);
+ }
+    
+    // Format as xxxxxx-xx-xxxx
+    let formattedValue = value;
+    if (value.length > 6) {
+        if (value.length > 8) {
+  formattedValue = value.substring(0, 6) + '-' + value.substring(6, 8) + '-' + value.substring(8, 12);
+        } else {
+      formattedValue = value.substring(0, 6) + '-' + value.substring(6);
+      }
+    }
+    
+    // Only update if value changed
+    if (formattedValue !== oldValue) {
+        input.value = formattedValue;
+        
+        // Calculate new cursor position
+        let newCursorPos = cursorPos;
+        
+        // Count how many dashes are before the cursor in old and new values
+        const dashesBeforeOld = (oldValue.substring(0, cursorPos).match(/-/g) || []).length;
+        const digitsBeforeCursor = oldValue.substring(0, cursorPos).replace(/\D/g, '').length;
+        
+        // Calculate new position based on digits
+        let dashesBeforeNew = 0;
+        if (digitsBeforeCursor > 6) dashesBeforeNew++;
+        if (digitsBeforeCursor > 8) dashesBeforeNew++;
+        
+        newCursorPos = digitsBeforeCursor + dashesBeforeNew;
+      
+        // Set cursor position
+      input.setSelectionRange(newCursorPos, newCursorPos);
+  }
+}
+
+// Auto-format Phone as user types (with cursor position preservation)
+function autoFormatPhone(input) {
+ // Get current cursor position
+    const cursorPos = input.selectionStart;
+    const oldValue = input.value;
+    
+    // Remove all non-digits
+    let value = input.value.replace(/\D/g, '');
+    
+ // Limit to 11 digits max (Malaysian phone format)
+    if (value.length > 11) {
+        value = value.substring(0, 11);
+    }
+    
+    // Format as 01X-XXXXXXX or 01X-XXXXXXXX
+  let formattedValue = value;
+    if (value.length > 3) {
+        formattedValue = value.substring(0, 3) + '-' + value.substring(3, 11);
+    }
+    
+    // Only update if value changed
+    if (formattedValue !== oldValue) {
+  input.value = formattedValue;
+        
+  // Calculate new cursor position
+        let newCursorPos = cursorPos;
+  
+        // Count digits before cursor
+        const digitsBeforeCursor = oldValue.substring(0, cursorPos).replace(/\D/g, '').length;
+      
+        // Calculate new position based on digits
+        let dashesBeforeNew = 0;
+        if (digitsBeforeCursor > 3) dashesBeforeNew++;
+    
+ newCursorPos = digitsBeforeCursor + dashesBeforeNew;
+        
+   // Set cursor position
+     input.setSelectionRange(newCursorPos, newCursorPos);
+    }
+}
+
+// 验证表单字段
+document.getElementById('addGroomerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // 清除所有字段状态
+    clearAllFieldStates();
+    
+    // 获取表单数据
+    const formData = new FormData(this);
+    const submitBtn = document.getElementById('submitGroomerBtn');
+    
+    // 禁用提交按钮
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Creating...';
+  
+    // 表单字段校验
+    const nameValid = validateName(formData.get('groomerName'));
+    const icValid = validateIC(formData.get('groomerIC'));
+    const emailValid = validateEmail(formData.get('groomerEmail'));
+    const phoneValid = validatePhone(formData.get('groomerPhone'));
+    const experienceValid = validateExperience(formData.get('experienceYear'));
+    const positionValid = validatePosition(formData.get('position'));
+    const descriptionValid = validateDescription(formData.get('description'));
+    
+    if (!nameValid || !icValid || !emailValid || !phoneValid || !experienceValid || !positionValid || !descriptionValid) {
+        showErrorMessage('请修复所有验证错误后再提交。');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="material-icons">add</i> Save Groomer';
+        return;
+    }
+    
+    // 提交表单
+    this.submit();
+});
+
+// 清除所有字段状态
+function clearAllFieldStates() {
+    const fields = ['groomerName', 'groomerIC', 'groomerEmail', 'groomerPhone', 'experienceYear', 'position', 'description'];
+    fields.forEach(field => {
+        clearFieldError(field, `error-${field.charAt(0).toUpperCase() + field.slice(1)}`);
+    });
+}
+
+// Validate IC with date validation and age 18-60 requirement
+async function validateIC(ic) {
+    const input = document.getElementById('groomerIC');
+    const errorSpan = document.getElementById('error-IC');
+
+    if (!ic || ic.trim().length === 0) {
+        showFieldError(input, errorSpan, 'IC number cannot be empty.');
+     return false;
+    }
+
+    const icRegex = /^\d{6}-\d{2}-\d{4}$/;
+    if (!icRegex.test(ic)) {
+        showFieldError(input, errorSpan, 'IC must be in format xxxxxx-xx-xxxx (e.g., 900815-08-1234).');
+        return false;
+    }
+
+    // Validate date part (first 6 digits: YYMMDD)
+    const datePart = ic.substring(0, 6);
+    const year = parseInt(datePart.substring(0, 2));
+    const month = parseInt(datePart.substring(2, 4));
+const day = parseInt(datePart.substring(4, 6));
+
+    // Validate month (01-12)
+    if (month < 1 || month > 12) {
+      showFieldError(input, errorSpan, 'Invalid IC: Month must be between 01-12.');
+        return false;
+    }
+
+    // Days in each month (including leap year February)
+    const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    
+    // Validate day
+    if (day < 1 || day > daysInMonth[month - 1]) {
+        showFieldError(input, errorSpan, `Invalid IC: Day ${day} is not valid for month ${month}.`);
+        return false;
+    }
+
+    // Check for February 29 in non-leap years
+    if (month === 2 && day === 29) {
+        const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+        const isLeapYear = (fullYear % 4 === 0 && fullYear % 100 !== 0) || (fullYear % 400 === 0);
+        
+        if (!isLeapYear) {
+            showFieldError(input, errorSpan, `Invalid IC: ${fullYear} is not a leap year, Feb 29 is invalid.`);
+  return false;
+        }
+    }
+
+    // Validate date is not in the future
+    const currentYear = new Date().getFullYear() % 100;
+    const currentMonth = new Date().getMonth() + 1;
+    const currentDay = new Date().getDate();
+    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+ const currentFullYear = new Date().getFullYear();
+    
+    if (fullYear > currentFullYear) {
+        showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+  if (fullYear === currentFullYear && month > currentMonth) {
+  showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+    if (fullYear === currentFullYear && month === currentMonth && day > currentDay) {
+      showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+
+    // ========== Validate age (must be 18-60 years old) ==========
+    const birthDate = new Date(fullYear, month - 1, day);
+    const today = new Date();
+    
+    // Calculate age
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // Adjust if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+  
+    // Must be between 18 and 60 (inclusive)
+    if (age < 18) {
+   showFieldError(input, errorSpan, `Invalid IC: Must be 18 years old or above. Current age: ${age} years.`);
+        return false;
+    }
+    
+    if (age > 60) {
+        showFieldError(input, errorSpan, `Invalid IC: Must be 60 years old or below. Current age: ${age} years.`);
+        return false;
+    }
+
+    // Check if IC already exists
+    const isDuplicate = await checkDuplicateField('IC', ic);
+    if (isDuplicate) {
+    showFieldError(input, errorSpan, 'This IC number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Email
+async function validateEmail(email) {
+    const input = document.getElementById('groomerEmail');
+    const errorSpan = document.getElementById('error-Email');
+
+    if (!email || email.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Email cannot be empty.');
+        return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showFieldError(input, errorSpan, 'Please enter a valid email address.');
+        return false;
+    }
+
+    if (email.length > 150) {
+      showFieldError(input, errorSpan, 'Email must not exceed 150 characters.');
+        return false;
+    }
+
+    // Check if email already exists
+    const isDuplicate = await checkDuplicateField('Email', email);
+    if (isDuplicate) {
+ showFieldError(input, errorSpan, 'This email address is already registered.');
+ return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Phone
+async function validatePhone(phone) {
+    const input = document.getElementById('groomerPhone');
+    const errorSpan = document.getElementById('error-Phone');
+
+  if (!phone || phone.trim().length === 0) {
+ showFieldError(input, errorSpan, 'Phone number cannot be empty.');
+        return false;
+    }
+
+    // Remove formatting for validation
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Check length (10 or 11 digits)
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+     showFieldError(input, errorSpan, 'Phone number must be 10-11 digits (e.g., 012-1234567).');
+        return false;
+    }
+
+    // Check if starts with 01
+    if (!cleanPhone.startsWith('01')) {
+        showFieldError(input, errorSpan, 'Phone number must start with 01X.');
+     return false;
+    }
+
+    const phoneRegex = /^01[0-9]-?[0-9]{7,8}$/;
+    if (!phoneRegex.test(phone)) {
+        showFieldError(input, errorSpan, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX.');
+ return false;
+  }
+
+    // Check if phone already exists
+    const isDuplicate = await checkDuplicateField('Phone', phone);
+    if (isDuplicate) {
+        showFieldError(input, errorSpan, 'This phone number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Experience Year
+function validateExperience(experience) {
+    if (!experience || experience.trim().length === 0) {
+        return true; // Optional field
+    }
+
+    const input = document.getElementById('experienceYear');
+    const errorSpan = document.getElementById('error-ExperienceYear');
+
+    const expNum = parseInt(experience);
+    
+    if (isNaN(expNum)) {
+        showFieldError(input, errorSpan, 'Experience must be a valid number.');
+        return false;
+    }
+
+    if (expNum < 0 || expNum > 50) {
+        showFieldError(input, errorSpan, 'Experience must be between 0-50 years.');
+        return false;
+    }
+
+  showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Position
+function validatePosition(position) {
+    const input = document.getElementById('position');
+    const errorSpan = document.getElementById('error-Position');
+
+    // Position is now required
+    if (!position || position.trim().length === 0 || position === "") {
+        showFieldError(input, errorSpan, 'Please select a position.');
+      return false;
+    }
+
+  // Valid positions list
+    const validPositions = [
+        'Senior Groomer',
+        'Junior Groomer',
+        'Groomer Assistant',
+        'Shop Assistant',
+        'Cat Groomer'
+    ];
+
+    if (!validPositions.includes(position)) {
+        showFieldError(input, errorSpan, 'Please select a valid position.');
+     return false;
+    }
+
+ showFieldSuccess(input, errorSpan);
+return true;
+}
+
+// Validate Description (optional)
+function validateDescription(description) {
+    if (!description || description.trim().length === 0) {
+   return true; // Optional field
+    }
+
+    const input = document.getElementById('description');
+    const errorSpan = document.getElementById('error-Description');
+
+    if (description.length > 500) {
+        showFieldError(input, errorSpan, 'Description must not exceed 500 characters.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Name
+function validateName(name) {
+    const input = document.getElementById('groomerName');
+    const errorSpan = document.getElementById('error-Name');
+
+    if (!name || name.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Full name cannot be empty.');
+    return false;
+    }
+
+    if (name.length < 3) {
+      showFieldError(input, errorSpan, 'Name must be at least 3 characters.');
+    return false;
+    }
+
+    if (name.length > 200) {
+        showFieldError(input, errorSpan, 'Name must not exceed 200 characters.');
+        return false;
+    }
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(name)) {
+        showFieldError(input, errorSpan, 'Name must contain only letters and spaces.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// ========================================
+// PHOTO PREVIEW FUNCTIONALITY (只显示文件信息，不显示图片)
+// ========================================
+
+function handlePhotoPreview(input, context) {
+    const statusSpan = document.getElementById(`uploadStatus_${context}`);
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            if (statusSpan) {
+     statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+                statusSpan.style.color = '#ef4444';
+          statusSpan.style.display = 'block';
+   }
+    input.value = '';
+            return;
+    }
+
+      // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+  if (statusSpan) {
+   statusSpan.innerHTML = '⚠️ Invalid file type. Please select an image (JPG, PNG, GIF).';
+                statusSpan.style.color = '#ef4444';
+     statusSpan.style.display = 'block';
+      }
+            input.value = '';
+         return;
+     }
+
+        // Show success message with file info ONLY (no image preview)
+        if (statusSpan) {
+         statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+     statusSpan.style.color = '#10b981';
+            statusSpan.style.display = 'block';
+        }
+    } else {
+        if (statusSpan) {
+    statusSpan.style.display = 'none';
+   statusSpan.innerHTML = '';
+    }
+    }
+}
+
+// ========================================
+// DUPLICATE CHECK (AJAX)
+// ========================================
+
+async function checkDuplicateField(fieldName, value) {
+    try {
+        const response = await fetch(`/Admin/Home/CheckDuplicateField?field=${fieldName}&value=${encodeURIComponent(value)}`, {
+     method: 'GET',
+            headers: {
+    'Content-Type': 'application/json'
+    }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+    return data.isDuplicate;
+        }
+        
+        return false;
+    } catch (error) {
+   console.error('Error checking duplicate:', error);
+    return false;
+    }
+}
+
+// ========================================
+// UI HELPER FUNCTIONS
+// ========================================
+
+// Show error state
+function showFieldError(input, errorSpan, message) {
+    input.style.borderColor = '#dc3545';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-success');
+    input.classList.add('field-error');
+    
+    if (errorSpan) {
+    errorSpan.textContent = message;
+        errorSpan.style.display = 'block';
+        errorSpan.style.color = '#dc3545';
+        errorSpan.style.fontSize = '12px';
+        errorSpan.style.marginTop = '5px';
+    }
+}
+
+// Show success state
+function showFieldSuccess(input, errorSpan) {
+  input.style.borderColor = '#28a745';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-error');
+    input.classList.add('field-success');
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+        errorSpan.style.display = 'none';
+ }
+}
+
+// Clear field error/success
+function clearFieldError(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    const errorSpan = document.getElementById(errorId);
+    
+    if (input) {
+   input.style.borderColor = '';
+        input.style.borderWidth = '';
+        input.classList.remove('field-error', 'field-success');
+    }
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+      errorSpan.style.display = 'none';
+    }
+}
+
+// ========================================
+// UPDATE FORM SUBMIT TO VALIDATE ALL FIELDS
+// ========================================
+
+// Update the existing handleGroomerFormSubmit function
+const originalHandleGroomerFormSubmit = window.handleGroomerFormSubmit;
+window.handleGroomerFormSubmit = async function(event) {
+    event.preventDefault();
+    
+    // Validate all fields before submission
+    const nameValid = validateName(document.getElementById('groomerName').value);
+    const icValid = await validateIC(document.getElementById('groomerIC').value);
+  const emailValid = await validateEmail(document.getElementById('groomerEmail').value);
+    const phoneValid = await validatePhone(document.getElementById('groomerPhone').value);
+    const experienceValid = validateExperience(document.getElementById('experienceYear').value);
+    const positionValid = validatePosition(document.getElementById('position').value);
+    const descriptionValid = validateDescription(document.getElementById('description').value);
+    
+    if (!nameValid || !icValid || !emailValid || !phoneValid || !experienceValid || !positionValid || !descriptionValid) {
+        showErrorMessage('Please fix all validation errors before submitting.');
+        return;
+    }
+    
+    // Call original submit handler
+    if (originalHandleGroomerFormSubmit) {
+        originalHandleGroomerFormSubmit(event);
+    } else {
+     // If original doesn't exist, call the AJAX submit directly
+     submitGroomerFormAjax(event);
+    }
+};
+
+// AJAX Form Submission
+async function submitGroomerFormAjax(event) {
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitGroomerBtn');
+    
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Creating...';
+    
+    try {
+        const response = await fetch('/Admin/Home/CreateGroomerAjax', {
+ method: 'POST',
+    body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+ showSuccessMessage(data.message || 'Groomer created successfully!');
+    form.reset();
+clearAllFieldStates();
+  hideCreateForm();
+       
+     setTimeout(() => {
+           window.location.reload();
+        }, 1500);
+        } else {
+        displayGroomerErrors(data.errors);
+   }
+    } catch (error) {
+        console.error('Error:', error);
+     showErrorMessage('Failed to create groomer. Please try again.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="material-icons">add</i> Save Groomer';
+    }
+}
+
+// Clear all field states
+function clearAllFieldStates() {
+    const fieldIds = ['groomerName', 'groomerIC', 'groomerEmail', 'groomerPhone', 'experienceYear', 'position', 'description'];
+    const errorIds = ['error-Name', 'error-IC', 'error-Email', 'error-Phone', 'error-ExperienceYear', 'error-Position', 'error-Description'];
+    
+    fieldIds.forEach((fieldId, index) => {
+        clearFieldError(fieldId, errorIds[index]);
+    });
+}
+
+// Validate IC with date validation and age 18-60 requirement
+async function validateIC(ic) {
+    const input = document.getElementById('groomerIC');
+    const errorSpan = document.getElementById('error-IC');
+
+    if (!ic || ic.trim().length === 0) {
+        showFieldError(input, errorSpan, 'IC number cannot be empty.');
+     return false;
+    }
+
+    const icRegex = /^\d{6}-\d{2}-\d{4}$/;
+    if (!icRegex.test(ic)) {
+        showFieldError(input, errorSpan, 'IC must be in format xxxxxx-xx-xxxx (e.g., 900815-08-1234).');
+        return false;
+    }
+
+    // Validate date part (first 6 digits: YYMMDD)
+    const datePart = ic.substring(0, 6);
+    const year = parseInt(datePart.substring(0, 2));
+    const month = parseInt(datePart.substring(2, 4));
+const day = parseInt(datePart.substring(4, 6));
+
+    // Validate month (01-12)
+    if (month < 1 || month > 12) {
+      showFieldError(input, errorSpan, 'Invalid IC: Month must be between 01-12.');
+        return false;
+    }
+
+    // Days in each month (including leap year February)
+    const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    
+    // Validate day
+    if (day < 1 || day > daysInMonth[month - 1]) {
+        showFieldError(input, errorSpan, `Invalid IC: Day ${day} is not valid for month ${month}.`);
+        return false;
+    }
+
+    // Check for February 29 in non-leap years
+    if (month === 2 && day === 29) {
+        const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+        const isLeapYear = (fullYear % 4 === 0 && fullYear % 100 !== 0) || (fullYear % 400 === 0);
+        
+        if (!isLeapYear) {
+            showFieldError(input, errorSpan, `Invalid IC: ${fullYear} is not a leap year, Feb 29 is invalid.`);
+  return false;
+        }
+    }
+
+    // Validate date is not in the future
+    const currentYear = new Date().getFullYear() % 100;
+    const currentMonth = new Date().getMonth() + 1;
+    const currentDay = new Date().getDate();
+    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+ const currentFullYear = new Date().getFullYear();
+    
+    if (fullYear > currentFullYear) {
+        showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+  if (fullYear === currentFullYear && month > currentMonth) {
+  showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+    if (fullYear === currentFullYear && month === currentMonth && day > currentDay) {
+      showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+
+    // ========== Validate age (must be 18-60 years old) ==========
+    const birthDate = new Date(fullYear, month - 1, day);
+    const today = new Date();
+    
+    // Calculate age
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // Adjust if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+  
+    // Must be between 18 and 60 (inclusive)
+    if (age < 18) {
+   showFieldError(input, errorSpan, `Invalid IC: Must be 18 years old or above. Current age: ${age} years.`);
+        return false;
+    }
+    
+    if (age > 60) {
+        showFieldError(input, errorSpan, `Invalid IC: Must be 60 years old or below. Current age: ${age} years.`);
+        return false;
+    }
+
+    // Check if IC already exists
+    const isDuplicate = await checkDuplicateField('IC', ic);
+    if (isDuplicate) {
+    showFieldError(input, errorSpan, 'This IC number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Email
+async function validateEmail(email) {
+    const input = document.getElementById('groomerEmail');
+    const errorSpan = document.getElementById('error-Email');
+
+    if (!email || email.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Email cannot be empty.');
+        return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showFieldError(input, errorSpan, 'Please enter a valid email address.');
+        return false;
+    }
+
+    if (email.length > 150) {
+      showFieldError(input, errorSpan, 'Email must not exceed 150 characters.');
+        return false;
+    }
+
+    // Check if email already exists
+    const isDuplicate = await checkDuplicateField('Email', email);
+    if (isDuplicate) {
+ showFieldError(input, errorSpan, 'This email address is already registered.');
+ return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Phone
+async function validatePhone(phone) {
+    const input = document.getElementById('groomerPhone');
+    const errorSpan = document.getElementById('error-Phone');
+
+  if (!phone || phone.trim().length === 0) {
+ showFieldError(input, errorSpan, 'Phone number cannot be empty.');
+        return false;
+    }
+
+    // Remove formatting for validation
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Check length (10 or 11 digits)
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+     showFieldError(input, errorSpan, 'Phone number must be 10-11 digits (e.g., 012-1234567).');
+        return false;
+    }
+
+    // Check if starts with 01
+    if (!cleanPhone.startsWith('01')) {
+        showFieldError(input, errorSpan, 'Phone number must start with 01X.');
+     return false;
+    }
+
+    const phoneRegex = /^01[0-9]-?[0-9]{7,8}$/;
+    if (!phoneRegex.test(phone)) {
+        showFieldError(input, errorSpan, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX.');
+ return false;
+  }
+
+    // Check if phone already exists
+    const isDuplicate = await checkDuplicateField('Phone', phone);
+    if (isDuplicate) {
+        showFieldError(input, errorSpan, 'This phone number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Experience Year
+function validateExperience(experience) {
+    if (!experience || experience.trim().length === 0) {
+        return true; // Optional field
+    }
+
+    const input = document.getElementById('experienceYear');
+    const errorSpan = document.getElementById('error-ExperienceYear');
+
+    const expNum = parseInt(experience);
+    
+    if (isNaN(expNum)) {
+        showFieldError(input, errorSpan, 'Experience must be a valid number.');
+        return false;
+    }
+
+    if (expNum < 0 || expNum > 50) {
+        showFieldError(input, errorSpan, 'Experience must be between 0-50 years.');
+        return false;
+    }
+
+  showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Position
+function validatePosition(position) {
+    const input = document.getElementById('position');
+    const errorSpan = document.getElementById('error-Position');
+
+    // Position is now required
+    if (!position || position.trim().length === 0 || position === "") {
+        showFieldError(input, errorSpan, 'Please select a position.');
+      return false;
+    }
+
+  // Valid positions list
+    const validPositions = [
+        'Senior Groomer',
+        'Junior Groomer',
+        'Groomer Assistant',
+        'Shop Assistant',
+        'Cat Groomer'
+    ];
+
+    if (!validPositions.includes(position)) {
+        showFieldError(input, errorSpan, 'Please select a valid position.');
+     return false;
+    }
+
+ showFieldSuccess(input, errorSpan);
+return true;
+}
+
+// Validate Description (optional)
+function validateDescription(description) {
+    if (!description || description.trim().length === 0) {
+   return true; // Optional field
+    }
+
+    const input = document.getElementById('description');
+    const errorSpan = document.getElementById('error-Description');
+
+    if (description.length > 500) {
+        showFieldError(input, errorSpan, 'Description must not exceed 500 characters.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Name
+function validateName(name) {
+    const input = document.getElementById('groomerName');
+    const errorSpan = document.getElementById('error-Name');
+
+    if (!name || name.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Full name cannot be empty.');
+    return false;
+    }
+
+    if (name.length < 3) {
+      showFieldError(input, errorSpan, 'Name must be at least 3 characters.');
+    return false;
+    }
+
+    if (name.length > 200) {
+        showFieldError(input, errorSpan, 'Name must not exceed 200 characters.');
+        return false;
+    }
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(name)) {
+        showFieldError(input, errorSpan, 'Name must contain only letters and spaces.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// ========================================
+// PHOTO PREVIEW FUNCTIONALITY (只显示文件信息，不显示图片)
+// ========================================
+
+function handlePhotoPreview(input, context) {
+    const statusSpan = document.getElementById(`uploadStatus_${context}`);
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            if (statusSpan) {
+     statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+                statusSpan.style.color = '#ef4444';
+          statusSpan.style.display = 'block';
+   }
+    input.value = '';
+            return;
+    }
+
+      // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+  if (statusSpan) {
+   statusSpan.innerHTML = '⚠️ Invalid file type. Please select an image (JPG, PNG, GIF).';
+                statusSpan.style.color = '#ef4444';
+     statusSpan.style.display = 'block';
+      }
+            input.value = '';
+         return;
+     }
+
+        // Show success message with file info ONLY (no image preview)
+        if (statusSpan) {
+         statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+     statusSpan.style.color = '#10b981';
+            statusSpan.style.display = 'block';
+        }
+    } else {
+        if (statusSpan) {
+    statusSpan.style.display = 'none';
+   statusSpan.innerHTML = '';
+    }
+    }
+}
+
+// ========================================
+// DUPLICATE CHECK (AJAX)
+// ========================================
+
+async function checkDuplicateField(fieldName, value) {
+    try {
+        const response = await fetch(`/Admin/Home/CheckDuplicateField?field=${fieldName}&value=${encodeURIComponent(value)}`, {
+     method: 'GET',
+            headers: {
+    'Content-Type': 'application/json'
+    }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+    return data.isDuplicate;
+        }
+        
+        return false;
+    } catch (error) {
+   console.error('Error checking duplicate:', error);
+    return false;
+    }
+}
+
+// ========================================
+// UI HELPER FUNCTIONS
+// ========================================
+
+// Show error state
+function showFieldError(input, errorSpan, message) {
+    input.style.borderColor = '#dc3545';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-success');
+    input.classList.add('field-error');
+    
+    if (errorSpan) {
+    errorSpan.textContent = message;
+        errorSpan.style.display = 'block';
+        errorSpan.style.color = '#dc3545';
+        errorSpan.style.fontSize = '12px';
+        errorSpan.style.marginTop = '5px';
+    }
+}
+
+// Show success state
+function showFieldSuccess(input, errorSpan) {
+  input.style.borderColor = '#28a745';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-error');
+    input.classList.add('field-success');
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+        errorSpan.style.display = 'none';
+ }
+}
+
+// Clear field error/success
+function clearFieldError(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    const errorSpan = document.getElementById(errorId);
+    
+    if (input) {
+   input.style.borderColor = '';
+        input.style.borderWidth = '';
+        input.classList.remove('field-error', 'field-success');
+    }
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+      errorSpan.style.display = 'none';
+    }
+}
+
+// ========================================
+// UPDATE FORM SUBMIT TO VALIDATE ALL FIELDS
+// ========================================
+
+// Update the existing handleGroomerFormSubmit function
+const originalHandleGroomerFormSubmit = window.handleGroomerFormSubmit;
+window.handleGroomerFormSubmit = async function(event) {
+    event.preventDefault();
+    
+    // Validate all fields before submission
+    const nameValid = validateName(document.getElementById('groomerName').value);
+    const icValid = await validateIC(document.getElementById('groomerIC').value);
+  const emailValid = await validateEmail(document.getElementById('groomerEmail').value);
+    const phoneValid = await validatePhone(document.getElementById('groomerPhone').value);
+    const experienceValid = validateExperience(document.getElementById('experienceYear').value);
+    const positionValid = validatePosition(document.getElementById('position').value);
+    const descriptionValid = validateDescription(document.getElementById('description').value);
+    
+    if (!nameValid || !icValid || !emailValid || !phoneValid || !experienceValid || !positionValid || !descriptionValid) {
+        showErrorMessage('Please fix all validation errors before submitting.');
+        return;
+    }
+    
+    // Call original submit handler
+    if (originalHandleGroomerFormSubmit) {
+        originalHandleGroomerFormSubmit(event);
+    } else {
+     // If original doesn't exist, call the AJAX submit directly
+     submitGroomerFormAjax(event);
+    }
+};
+
+// AJAX Form Submission
+async function submitGroomerFormAjax(event) {
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitGroomerBtn');
+    
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Creating...';
+    
+    try {
+        const response = await fetch('/Admin/Home/CreateGroomerAjax', {
+ method: 'POST',
+    body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+ showSuccessMessage(data.message || 'Groomer created successfully!');
+    form.reset();
+clearAllFieldStates();
+  hideCreateForm();
+       
+     setTimeout(() => {
+           window.location.reload();
+        }, 1500);
+        } else {
+        displayGroomerErrors(data.errors);
+   }
+    } catch (error) {
+        console.error('Error:', error);
+     showErrorMessage('Failed to create groomer. Please try again.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="material-icons">add</i> Save Groomer';
+    }
+}
+
+// Clear all field states
+function clearAllFieldStates() {
+    const fieldIds = ['groomerName', 'groomerIC', 'groomerEmail', 'groomerPhone', 'experienceYear', 'position', 'description'];
+    const errorIds = ['error-Name', 'error-IC', 'error-Email', 'error-Phone', 'error-ExperienceYear', 'error-Position', 'error-Description'];
+    
+    fieldIds.forEach((fieldId, index) => {
+        clearFieldError(fieldId, errorIds[index]);
+    });
+}
+
+// Validate IC with date validation and age 18-60 requirement
+async function validateIC(ic) {
+    const input = document.getElementById('groomerIC');
+    const errorSpan = document.getElementById('error-IC');
+
+    if (!ic || ic.trim().length === 0) {
+        showFieldError(input, errorSpan, 'IC number cannot be empty.');
+     return false;
+    }
+
+    const icRegex = /^\d{6}-\d{2}-\d{4}$/;
+    if (!icRegex.test(ic)) {
+        showFieldError(input, errorSpan, 'IC must be in format xxxxxx-xx-xxxx (e.g., 900815-08-1234).');
+        return false;
+    }
+
+    // Validate date part (first 6 digits: YYMMDD)
+    const datePart = ic.substring(0, 6);
+    const year = parseInt(datePart.substring(0, 2));
+    const month = parseInt(datePart.substring(2, 4));
+const day = parseInt(datePart.substring(4, 6));
+
+    // Validate month (01-12)
+    if (month < 1 || month > 12) {
+      showFieldError(input, errorSpan, 'Invalid IC: Month must be between 01-12.');
+        return false;
+    }
+
+    // Days in each month (including leap year February)
+    const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    
+    // Validate day
+    if (day < 1 || day > daysInMonth[month - 1]) {
+        showFieldError(input, errorSpan, `Invalid IC: Day ${day} is not valid for month ${month}.`);
+        return false;
+    }
+
+    // Check for February 29 in non-leap years
+    if (month === 2 && day === 29) {
+        const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+        const isLeapYear = (fullYear % 4 === 0 && fullYear % 100 !== 0) || (fullYear % 400 === 0);
+        
+        if (!isLeapYear) {
+            showFieldError(input, errorSpan, `Invalid IC: ${fullYear} is not a leap year, Feb 29 is invalid.`);
+  return false;
+        }
+    }
+
+    // Validate date is not in the future
+    const currentYear = new Date().getFullYear() % 100;
+    const currentMonth = new Date().getMonth() + 1;
+    const currentDay = new Date().getDate();
+    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
+ const currentFullYear = new Date().getFullYear();
+    
+    if (fullYear > currentFullYear) {
+        showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+  if (fullYear === currentFullYear && month > currentMonth) {
+  showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+    
+    if (fullYear === currentFullYear && month === currentMonth && day > currentDay) {
+      showFieldError(input, errorSpan, 'Invalid IC: Birth date cannot be in the future.');
+        return false;
+    }
+
+    // ========== Validate age (must be 18-60 years old) ==========
+    const birthDate = new Date(fullYear, month - 1, day);
+    const today = new Date();
+    
+    // Calculate age
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // Adjust if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+  
+    // Must be between 18 and 60 (inclusive)
+    if (age < 18) {
+   showFieldError(input, errorSpan, `Invalid IC: Must be 18 years old or above. Current age: ${age} years.`);
+        return false;
+    }
+    
+    if (age > 60) {
+        showFieldError(input, errorSpan, `Invalid IC: Must be 60 years old or below. Current age: ${age} years.`);
+        return false;
+    }
+
+    // Check if IC already exists
+    const isDuplicate = await checkDuplicateField('IC', ic);
+    if (isDuplicate) {
+    showFieldError(input, errorSpan, 'This IC number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Email
+async function validateEmail(email) {
+    const input = document.getElementById('groomerEmail');
+    const errorSpan = document.getElementById('error-Email');
+
+    if (!email || email.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Email cannot be empty.');
+        return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showFieldError(input, errorSpan, 'Please enter a valid email address.');
+        return false;
+    }
+
+    if (email.length > 150) {
+      showFieldError(input, errorSpan, 'Email must not exceed 150 characters.');
+        return false;
+    }
+
+    // Check if email already exists
+    const isDuplicate = await checkDuplicateField('Email', email);
+    if (isDuplicate) {
+ showFieldError(input, errorSpan, 'This email address is already registered.');
+ return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Phone
+async function validatePhone(phone) {
+    const input = document.getElementById('groomerPhone');
+    const errorSpan = document.getElementById('error-Phone');
+
+  if (!phone || phone.trim().length === 0) {
+ showFieldError(input, errorSpan, 'Phone number cannot be empty.');
+        return false;
+    }
+
+    // Remove formatting for validation
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Check length (10 or 11 digits)
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+     showFieldError(input, errorSpan, 'Phone number must be 10-11 digits (e.g., 012-1234567).');
+        return false;
+    }
+
+    // Check if starts with 01
+    if (!cleanPhone.startsWith('01')) {
+        showFieldError(input, errorSpan, 'Phone number must start with 01X.');
+     return false;
+    }
+
+    const phoneRegex = /^01[0-9]-?[0-9]{7,8}$/;
+    if (!phoneRegex.test(phone)) {
+        showFieldError(input, errorSpan, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX.');
+ return false;
+  }
+
+    // Check if phone already exists
+    const isDuplicate = await checkDuplicateField('Phone', phone);
+    if (isDuplicate) {
+        showFieldError(input, errorSpan, 'This phone number is already registered.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Experience Year
+function validateExperience(experience) {
+    if (!experience || experience.trim().length === 0) {
+        return true; // Optional field
+    }
+
+    const input = document.getElementById('experienceYear');
+    const errorSpan = document.getElementById('error-ExperienceYear');
+
+    const expNum = parseInt(experience);
+    
+    if (isNaN(expNum)) {
+        showFieldError(input, errorSpan, 'Experience must be a valid number.');
+        return false;
+    }
+
+    if (expNum < 0 || expNum > 50) {
+        showFieldError(input, errorSpan, 'Experience must be between 0-50 years.');
+        return false;
+    }
+
+  showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Position
+function validatePosition(position) {
+    const input = document.getElementById('position');
+    const errorSpan = document.getElementById('error-Position');
+
+    // Position is now required
+    if (!position || position.trim().length === 0 || position === "") {
+        showFieldError(input, errorSpan, 'Please select a position.');
+      return false;
+    }
+
+  // Valid positions list
+    const validPositions = [
+        'Senior Groomer',
+        'Junior Groomer',
+        'Groomer Assistant',
+        'Shop Assistant',
+        'Cat Groomer'
+    ];
+
+    if (!validPositions.includes(position)) {
+        showFieldError(input, errorSpan, 'Please select a valid position.');
+     return false;
+    }
+
+ showFieldSuccess(input, errorSpan);
+return true;
+}
+
+// Validate Description (optional)
+function validateDescription(description) {
+    if (!description || description.trim().length === 0) {
+   return true; // Optional field
+    }
+
+    const input = document.getElementById('description');
+    const errorSpan = document.getElementById('error-Description');
+
+    if (description.length > 500) {
+        showFieldError(input, errorSpan, 'Description must not exceed 500 characters.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// Validate Name
+function validateName(name) {
+    const input = document.getElementById('groomerName');
+    const errorSpan = document.getElementById('error-Name');
+
+    if (!name || name.trim().length === 0) {
+        showFieldError(input, errorSpan, 'Full name cannot be empty.');
+    return false;
+    }
+
+    if (name.length < 3) {
+      showFieldError(input, errorSpan, 'Name must be at least 3 characters.');
+    return false;
+    }
+
+    if (name.length > 200) {
+        showFieldError(input, errorSpan, 'Name must not exceed 200 characters.');
+        return false;
+    }
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(name)) {
+        showFieldError(input, errorSpan, 'Name must contain only letters and spaces.');
+        return false;
+    }
+
+    showFieldSuccess(input, errorSpan);
+    return true;
+}
+
+// ========================================
+// PHOTO PREVIEW FUNCTIONALITY (只显示文件信息，不显示图片)
+// ========================================
+
+function handlePhotoPreview(input, context) {
+    const statusSpan = document.getElementById(`uploadStatus_${context}`);
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            if (statusSpan) {
+     statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
+                statusSpan.style.color = '#ef4444';
+          statusSpan.style.display = 'block';
+   }
+    input.value = '';
+            return;
+    }
+
+      // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+  if (statusSpan) {
+   statusSpan.innerHTML = '⚠️ Invalid file type. Please select an image (JPG, PNG, GIF).';
+                statusSpan.style.color = '#ef4444';
+     statusSpan.style.display = 'block';
+      }
+            input.value = '';
+         return;
+     }
+
+        // Show success message with file info ONLY (no image preview)
+        if (statusSpan) {
+         statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
+     statusSpan.style.color = '#10b981';
+            statusSpan.style.display = 'block';
+        }
+    } else {
+        if (statusSpan) {
+    statusSpan.style.display = 'none';
+   statusSpan.innerHTML = '';
+    }
+    }
+}
+
+// ========================================
+// DUPLICATE CHECK (AJAX)
+// ========================================
+
+async function checkDuplicateField(fieldName, value) {
+    try {
+        const response = await fetch(`/Admin/Home/CheckDuplicateField?field=${fieldName}&value=${encodeURIComponent(value)}`, {
+     method: 'GET',
+            headers: {
+    'Content-Type': 'application/json'
+    }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+    return data.isDuplicate;
+        }
+        
+        return false;
+    } catch (error) {
+   console.error('Error checking duplicate:', error);
+    return false;
+    }
+}
+
+// ========================================
+// UI HELPER FUNCTIONS
+// ========================================
+
+// Show error state
+function showFieldError(input, errorSpan, message) {
+    input.style.borderColor = '#dc3545';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-success');
+    input.classList.add('field-error');
+    
+    if (errorSpan) {
+    errorSpan.textContent = message;
+        errorSpan.style.display = 'block';
+        errorSpan.style.color = '#dc3545';
+        errorSpan.style.fontSize = '12px';
+        errorSpan.style.marginTop = '5px';
+    }
+}
+
+// Show success state
+function showFieldSuccess(input, errorSpan) {
+  input.style.borderColor = '#28a745';
+    input.style.borderWidth = '2px';
+    input.classList.remove('field-error');
+    input.classList.add('field-success');
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+        errorSpan.style.display = 'none';
+ }
+}
+
+// Clear field error/success
+function clearFieldError(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    const errorSpan = document.getElementById(errorId);
+    
+    if (input) {
+   input.style.borderColor = '';
+        input.style.borderWidth = '';
+        input.classList.remove('field-error', 'field-success');
+    }
+    
+    if (errorSpan) {
+        errorSpan.textContent = '';
+      errorSpan.style.display = 'none';
+    }
+}

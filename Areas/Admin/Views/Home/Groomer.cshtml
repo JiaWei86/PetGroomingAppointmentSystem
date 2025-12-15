@@ -1,301 +1,664 @@
 ﻿@model IEnumerable<PetGroomingAppointmentSystem.Models.Staff>
+
 @{
-    @if (ViewData["Error"] != null)
-    {
-        <div class="alert alert-danger">
-            @ViewData["Error"]
-        </div>
+  ViewData["Title"] = "Groomer Management";
+  ViewData["ActivePage"] = "Groomer";
+
+  string editingId = Context.Request.Query["editId"];
+  var editingStaff = Model.FirstOrDefault(s => s.UserId == editingId);
+}
+@section Styles {
+  <style>
+    /* ========== ✅ CSS Animations for Alert Messages ========== */
+    @@keyframes slideDown {
+      from {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
-    ViewData["Title"] = "Groomer Management";
-    ViewData["ActivePage"] = "Groomer";
-    string editingId = Context.Request.Query["editId"];
-    var editingStaff = Model.FirstOrDefault(s => s.UserId == editingId);
+    @@keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+      }
+    }
+
+    /* ✅ 修复：让警告消息显示在顶栏之上，并且更大更明显 */
+    #alertMessage {
+      position: fixed;
+      top: 85px;
+      left: calc(var(--sidebar-width) + 35px);
+      right: 35px;
+      z-index: 9999;
+      animation: slideDown 0.5s ease;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      padding: 24px 32px !important;
+      font-size: 18px !important;
+      font-weight: 600 !important;
+      border-radius: 12px !important;
+      border-width: 3px !important;
+    }
+
+    #alertMessage.alert-success {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+      color: #065f46 !important;
+      border-left: 6px solid #10b981 !important;
+    }
+
+    #alertMessage.alert-danger {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+      color: #991b1b !important;
+      border-left: 6px solid #ef4444 !important;
+    }
+
+    #alertMessage.alert-warning {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+      color: #92400e !important;
+      border-left: 6px solid #f59e0b !important;
+    }
+
+    #alertMessage strong {
+      font-size: 20px !important;
+      margin-right: 8px;
+    }
+
+    #alertMessage.fade-out {
+      animation: fadeOut 0.5s ease forwards;
+    }
+
+    /* Inline edit column width matching header */
+    .data-table tbody tr.inline-edit-row td {
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(1) {
+      width: 8%;
+      text-align: left;
+      padding-left: 20px;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(2) {
+      width: 15%;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(3) {
+      width: 15%;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(4) {
+      width: 12%;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(5) {
+      width: 15%;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(6) {
+      width: 20%;
+    }
+
+    .data-table tbody tr.inline-edit-row td:nth-child(7) {
+      width: 15%;
+    }
+
+    /* 编辑模式下的输入框样式 */
+    .data-table tbody tr td[colspan="8"] .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 6px;
+      background-color: #ffffff;
+    }
+
+    .data-table tbody tr td[colspan="8"] .form-control:focus {
+      border-color: var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+    }
+
+    /* Experience 输入框特殊宽度 */
+    .data-table tbody tr td[colspan="8"] input[name="ExperienceYear"] {
+      width: 80px !important;
+      text-align: center;
+    }
+
+    /* Contact 列的邮箱和电话样式 */
+    .data-table tbody tr td[colspan="8"] input[name="Email"],
+    .data-table tbody tr td[colspan="8"] input[name="Phone"] {
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+
+    .data-table tbody tr td[colspan="8"] input[name="Phone"] {
+      margin-bottom: 0;
+    }
+
+    /* 照片上传区域样式 */
+    .data-table tbody tr td[colspan="8"] input[type="file"] {
+      font-size: 11px;
+      padding: 6px;
+    }
+
+    /* 按钮对齐 */
+    .data-table tbody tr td[colspan="8"] .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+      margin-right: 5px;
+    }
+
+    /* 编辑模式背景高亮 */
+    .data-table tbody tr:has(td[colspan="8"]) {
+      background-color: #fffbeb !important;
+      /* 浅黄色背景 */
+    }
+
+    /* 上传状态显示样式 */
+    span[id^="uploadStatus_"] {
+      display: block;
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px !important;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    span[id^="uploadStatus_"][style*="color: #10b981"] {
+      background-color: #d1fae5;
+    }
+
+    span[id^="uploadStatus_"][style*="color: #ef4444"] {
+      background-color: #fee2e2;
+    }
+
+    /* ========== ✅ 错误消息样式 - 红色文字 ========== */
+    .error-message {
+      color: #ef4444 !important;
+      /* 红色文字 */
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      margin-top: 4px !important;
+      display: block !important;
+    }
+
+    /* 为编辑表单中的错误消息添加特殊样式 */
+    small[id^="error-edit-"] {
+      color: #ef4444 !important;
+      /* 红色文字 */
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      margin-top: 2px !important;
+      display: block !important;
+    }
+
+    /* ========== ✅ Dynamically Created Alert Styling ========== */
+    .alert {
+      position: fixed;
+      top: 85px;
+      left: calc(var(--sidebar-width) + 35px);
+      right: 35px;
+      z-index: 9999;
+      padding: 24px 32px !important;
+      font-size: 18px !important;
+      font-weight: 600 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25) !important;
+      animation: slideDown 0.5s ease !important;
+    }
+
+    .alert.alert-success {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+      color: #065f46 !important;
+      border-left: 6px solid #10b981 !important;
+    }
+
+    .alert.alert-danger {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+      color: #991b1b !important;
+      border-left: 6px solid #ef4444 !important;
+    }
+
+    .alert.alert-warning {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+      color: #92400e !important;
+      border-left: 6px solid #f59e0b !important;
+    }
+
+    .alert strong {
+      font-size: 20px !important;
+      margin-right: 8px !important;
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+      position: relative;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .close-btn:hover {
+      color: #000;
+    }
+  </style>
+}
+
+@* ========== 消息显示 ========== *@
+@if (ViewData["Error"] != null)
+{
+  <div class="alert alert-danger" id="alertMessage">
+    <strong>❌ Error:</strong> @ViewData["Error"]
+  </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+  <div class="alert alert-danger" id="alertMessage">
+    <strong>❌ Error:</strong> @TempData["ErrorMessage"]
+  </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+  <div class="alert alert-success" id="alertMessage">
+    @TempData["SuccessMessage"]
+  </div>
+}
+
+@if (TempData["WarningMessage"] != null)
+{
+  <div class="alert alert-warning" id="alertMessage">
+    @TempData["WarningMessage"]
+  </div>
 }
 
 <div class="content-header">
-    <h1 class="page-title">Groomer Management</h1>
+  <h1 class="page-title">Groomer Management</h1>
 </div>
 
 <div class="panel">
-    <div class="panel-header-wrapper">
-        <h3 class="panel-title">Groomers (@Model.Count())</h3>
+  <div class="panel-header-wrapper">
+    <h3 class="panel-title">Groomers (@Model.Count())</h3>
+    <button class="btn btn-primary" onclick="window.showCreateForm()">
+      <i class="material-icons">add</i>
+      <span>Add New Groomer</span>
+    </button>
+  </div>
+
+  <!-- Create New Groomer Form (Hidden by default) -->
+  <div class="panel create-form" id="createGroomerForm" style="display: none;">
+    <h3 class="panel-title">Create New Groomer</h3>
+
+    <!-- AJAX Error Display -->
+    <div id="ajaxErrorContainer" class="alert alert-danger" style="display: none; margin-bottom: 20px;">
+      <strong>❌ Error:</strong>
+      <ul id="ajaxErrorList" style="margin: 10px 0 0 20px; padding: 0;"></ul>
     </div>
 
-    <div class="actions">
-        <button class="btn btn-primary" onclick="showCreateForm()">
-            <i class="material-icons">add</i>
-            Add New Groomer
+    <form id="addGroomerForm" asp-action="Groomer" asp-controller="Home" method="post" enctype="multipart/form-data"
+      class="form-grid">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="actionType" value="add" />
+
+      <!-- Groomer Name -->
+      <div class="form-group">
+        <label for="groomerName">Full Name <span style="color: red;">*</span></label>
+        <input type="text" id="groomerName" name="Name" placeholder="e.g., John Smith" required />
+        <small class="error-message" id="error-Name"></small>
+      </div>
+
+      <!-- IC (Identity Card) -->
+      <div class="form-group">
+        <label for="groomerIC">IC Number <span style="color: red;">*</span></label>
+        <input type="text" id="groomerIC" name="IC" placeholder="123456-78-9012" maxlength="14" required />
+        <small style="color: #999; font-size: 12px;">Format: xxxxxx-xx-xxxx</small>
+        <small class="error-message" id="error-IC"></small>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="groomerEmail">Email Address <span style="color: red;">*</span></label>
+        <input type="email" id="groomerEmail" name="Email" placeholder="john@example.com" required />
+        <small style="color: #999; font-size: 12px;">Login credentials will be sent to this email</small>
+        <small class="error-message" id="error-Email"></small>
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label for="groomerPhone">Phone Number <span style="color: red;">*</span></label>
+        <input type="tel" id="groomerPhone" name="Phone" placeholder="012-1234567 or 0121234567" maxlength="20"
+          required />
+        <small style="color: #999; font-size: 12px;">Format: 01X-XXXXXXX or 01X-XXXXXXXX</small>
+        <small class="error-message" id="error-Phone"></small>
+      </div>
+
+      <!-- Experience Years -->
+      <div class="form-group">
+        <label for="experienceYear">Experience (Years)</label>
+        <input type="number" id="experienceYear" name="ExperienceYear" min="0" max="50" placeholder="5" />
+        <small class="error-message" id="error-ExperienceYear"></small>
+      </div>
+
+      <!-- Position -->
+      <div class="form-group full-width">
+        <label for="position">Position <span style="color: red;">*</span></label>
+        <select id="position" name="Position" required>
+          <option value="" disabled selected>-- Select Position --</option>
+          <option value="Senior Groomer">Senior Groomer</option>
+          <option value="Junior Groomer">Junior Groomer</option>
+          <option value="Groomer Assistant">Groomer Assistant</option>
+          <option value="Shop Assistant">Shop Assistant</option>
+          <option value="Cat Groomer">Cat Groomer (Specialist)</option>
+        </select>
+        <small class="error-message" id="error-Position"></small>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group full-width">
+        <label for="description">Description</label>
+        <textarea id="description" name="Description" rows="3" placeholder="Specialty..." maxlength="500"></textarea>
+      </div>
+
+      <!-- Photo Upload in Add Form -->
+      <div class="form-group full-width">
+        <label for="photoUpload">Profile Photo</label>
+        <input type="file" id="photoUpload" name="PhotoUpload" accept="image/*" class="form-control"
+          onchange="handlePhotoUpload(this, 'create')" />
+        <span id="uploadStatus_create" style="display: none; font-size: 12px; margin-top: 5px; display: block;"></span>
+      </div>
+
+      <!-- Save Button -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-success" id="submitGroomerBtn" onclick="openConfirmAdd()">
+          <i class="material-icons">add</i>
+          Save Groomer
         </button>
-    </div>
+        <button type="button" class="btn btn-action" onclick="hideCreateForm()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
 
-    <!-- Create New Groomer Form (Hidden by default) -->
-    <div class="panel create-form" id="createGroomerForm" style="display: none;">
-        <h3 class="panel-title">Create New Groomer</h3>
+  @if (Model.Any())
+  {
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Photo</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>IC</th>
+            <th>Position</th>
+            <th>Experience</th>
+            <th>Contact</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var staff in Model)
+          {
+            if (editingStaff != null && editingStaff.UserId == staff.UserId)
+            {
+              <!-- INLINE EDIT ROW -->
+              <form id="editGroomerForm_@staff.UserId" asp-action="Groomer" asp-controller="Home" method="post" enctype="multipart/form-data" onsubmit="return confirmEdit(event, '@staff.Name')">
+                <tr class="inline-edit-row" style="background-color: #fffbeb;">
+                  @Html.AntiForgeryToken()
+                  <input type="hidden" name="actionType" value="edit" />
+                  <input type="hidden" name="editStaffId" value="@staff.UserId" />
 
-        <form id="addGroomerForm" asp-action="Groomer" asp-controller="Home" method="post" 
-              enctype="multipart/form-data" class="form-grid" onsubmit="return confirmAdd(event)">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="actionType" value="add" />
-
-            <!-- Groomer Name -->
-            <div class="form-group">
-                <label for="groomerName">Full Name</label>
-                <input type="text" id="groomerName" name="Name" placeholder="e.g., John Smith" required />
-            </div>
-
-            <!-- IC (Identity Card) -->
-            <div class="form-group">
-                <label for="groomerIC">IC Number</label>
-                <input type="text" id="groomerIC" name="IC" placeholder="990101011234" maxlength="20" required />
-            </div>
-
-            <!-- Email -->
-            <div class="form-group">
-                <label for="groomerEmail">Email Address</label>
-                <input type="email" id="groomerEmail" name="Email" placeholder="john@example.com" required />
-            </div>
-
-            <!-- Phone -->
-            <div class="form-group">
-                <label for="groomerPhone">Phone Number</label>
-                <input type="tel" id="groomerPhone" name="Phone" placeholder="0123456789" maxlength="20" required />
-            </div>
-
-            <!-- Password -->
-            <div class="form-group">
-                <label for="groomerPassword">Password</label>
-                <input type="password" id="groomerPassword" name="Password" placeholder="Default password" required />
-            </div>
-
-            <!-- Experience Years -->
-            <div class="form-group">
-                <label for="experienceYear">Experience (Years)</label>
-                <input type="number" id="experienceYear" name="ExperienceYear" min="0" max="50" placeholder="5" />
-            </div>
-
-            <!-- Position -->
-            <div class="form-group full-width">
-                <label for="position">Position</label>
-                <input type="text" id="position" name="Position" placeholder="e.g., Senior Groomer, Junior Groomer" maxlength="100" />
-            </div>
-
-            <!-- Description -->
-            <div class="form-group full-width">
-                <label for="description">Description / Specialty</label>
-                <textarea id="description" name="Description" rows="3" placeholder="e.g., Dog Styling, Cat Grooming, Senior Care" maxlength="500"></textarea>
-            </div>
-
-            <!-- Photo Upload -->
-            <div class="form-group full-width">
-                <label for="photoUpload">Profile Photo</label>
-                <input type="file" id="photoUpload" name="PhotoUpload" accept="image/*" class="form-control" />
-                <small style="color: var(--text-light); font-size: 12px;">Optional. Accepts JPG, PNG, GIF. Max 5MB.</small>
-            </div>
-
-            <!-- Save Button -->
-            <div class="form-actions">
-                <button type="submit" class="btn btn-success">
-                    <i class="material-icons">add</i>
-                    Save Groomer
-                </button>
-                <button type="button" class="btn btn-action" onclick="hideCreateForm()">
-                    Cancel
-                </button>
-            </div>
-        </form>
-    </div>
-
-    @if (Model.Any())
-    {
-        <div class="table-responsive">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Groomer ID</th>
-                        <th>Name</th>
-                        <th>IC</th>
-                        <th>Position</th>
-                        <th>Experience</th>
-                        <th>Contact</th>
-                        <th>Description</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var staff in Model)
+                  <!-- Photo Upload -->
+                  <td style="text-align: center;">
+                    <input type="file" name="PhotoUpload" accept="image/*" class="form-control" style="font-size: 11px;"
+                      onchange="handlePhotoUpload(this, '@staff.UserId')" />
+                    <span id="uploadStatus_@staff.UserId"
+                      style="display: none; font-size: 11px; margin-top: 5px; display: block;"></span>
+                    @if (!string.IsNullOrEmpty(staff.Photo) && staff.Photo != "/uploads/placeholder.png")
                     {
-                        if (editingStaff != null && editingStaff.UserId == staff.UserId)
-                        {
-                            // ========== INLINE EDIT ROW ==========
-                            <tr>
-                                <form id="editGroomerForm_@staff.UserId" asp-action="Groomer" asp-controller="Home" method="post" 
-                                      enctype="multipart/form-data" onsubmit="return confirmEdit(event, '@staff.Name')">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="actionType" value="edit" />
-                                    <input type="hidden" name="editStaffId" value="@staff.UserId" />
-
-
-                                    <!-- Photo Upload -->
-                                <td style="text-align: center;">
-                                    <input type="file" name="PhotoUpload" accept="image/*" class="form-control" style="font-size: 11px;"
-                                           id="photoInput_@staff.UserId" onchange="handlePhotoUpload(this, '@staff.UserId')" />
-                                    <span id="uploadStatus_@staff.UserId" style="display: none; color: #10b981; font-size: 11px; font-weight: 600; margin-top: 3px;">
-                                         Uploaded
-                                    </span>
-                                    @if (!string.IsNullOrEmpty(staff.Photo) && staff.Photo != "/uploads/placeholder.png")
-                                    {
-                                        <small class="text-muted d-block mt-1" style="font-size: 12px;">
-                                            Current: <img src="@staff.Photo" alt="Current" style="width: 60px; height: 60px; object-fit: cover; margin-top: 5px;" />
-                                        </small>
-                                    }
-                                    else
-                                    {
-                                        <small class="text-muted d-block mt-1" style="font-size: 12px;">
-                                            Current:
-                                            <span style="display: inline-block; width: 60px; height: 60px; background-color: var(--primary-color); color: white; font-weight: bold; font-size: 24px; line-height: 60px; text-align: center; vertical-align: middle; margin-top: 5px;">
-                                                @staff.Name?.Substring(0, 1).ToUpper()
-                                            </span>
-                                        </small>
-                                    }
-                                </td>
-
-                                    <!-- Groomer ID -->
-                                    <td>@staff.UserId</td>
-
-                                    <!-- Name -->
-                                    <td><input type="text" name="Name" value="@staff.Name" required class="form-control" /></td>
-
-                                    <!-- IC -->
-                                    <td><input type="text" name="IC" value="@staff.IC" required class="form-control" maxlength="20" /></td>
-
-                                    <!-- Position -->
-                                    <td><input type="text" name="Position" value="@staff.Position" class="form-control" maxlength="100" /></td>
-
-                                    <!-- Experience -->
-                                    <td><input type="number" name="ExperienceYear" value="@staff.ExperienceYear" class="form-control" min="0" /></td>
-
-                                    <!-- Contact -->
-                                    <td>
-                                        <input type="email" name="Email" value="@staff.Email" required class="form-control" placeholder="Email" style="margin-bottom: 5px;" />
-                                        <input type="tel" name="Phone" value="@staff.Phone" class="form-control" placeholder="Phone" maxlength="20" />
-                                    </td>
-
-                                    <!-- Description -->
-                                    <td>
-                                        <textarea name="Description" class="form-control" placeholder="Description" rows="3" maxlength="500" style="min-width: 200px;">@staff.Description</textarea>
-                                    </td>
-
-                                    <!-- Actions -->
-                                    <td>
-                                        <button type="submit" class="btn btn-success btn-sm">Save</button>
-                                        <a asp-action="Groomer" asp-controller="Home" class="btn btn-secondary btn-sm">Cancel</a>
-                                    </td>
-                                </form>
-                            </tr>
-                        }
-                        else
-                        {
-                            <tr>
-                                <!-- Photo -->
-                                <td style="text-align: center;">
-                                    @if (!string.IsNullOrEmpty(staff.Photo) && staff.Photo != "/uploads/placeholder.png")
-                                    {
-                                        <img src="@staff.Photo" alt="@staff.Name" style="width: 70px; height: 70px;  object-fit: cover;" />
-                                    }
-                                    else
-                                    {
-                                        <div style="width: 70px; height: 70px;  background-color: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 28px; margin: 0 auto;">
-                                            @staff.Name?.Substring(0, 1).ToUpper()
-                                        </div>
-                                    }
-                                </td>
-
-                                <!-- Groomer ID -->
-                                <td>@staff.UserId</td>
-
-                                <!-- Name -->
-                                <td>@staff.Name</td>
-
-                                <!-- IC -->
-                                <td>@staff.IC</td>
-
-                                <!-- Position -->
-                                <td>@(staff.Position ?? "N/A")</td>
-
-                                <!-- Experience -->
-                                <td>@(staff.ExperienceYear?.ToString() ?? "N/A") yrs</td>
-
-                                <!-- Contact -->
-                                <td>
-                                    @if (!string.IsNullOrEmpty(staff.Email))
-                                    {
-                                        <div style="font-size: 12px;">📧@staff.Email</div>
-                                    }
-                                    @if (!string.IsNullOrEmpty(staff.Phone))
-                                    {
-                                        <div style="font-size: 12px; margin-top: 3px;">📱@staff.Phone</div>
-                                    }
-                                </td>
-
-                                <!-- Description -->
-                                <td>
-                                    @if (!string.IsNullOrEmpty(staff.Description))
-                                    {
-                                        <div title="@staff.Description" style="font-size: 12px; color: var(--text-color); max-width: 250px; line-height: 1.4; cursor: help;">
-                                            @staff.Description
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span style="color: var(--text-light); font-style: italic;">No description</span>
-                                    }
-                                </td>
-
-                                <!-- Actions -->
-                                <td>
-                                    <a asp-action="Groomer" asp-controller="Home" asp-route-editId="@staff.UserId" class="btn btn-sm btn-action edit-btn">Edit</a>
-                                    <form id="deleteGroomerForm_@staff.UserId" asp-action="Groomer" asp-controller="Home" method="post" style="display:inline" onsubmit="return confirmDelete(event, '@staff.Name')">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="actionType" value="delete" />
-                                        <input type="hidden" name="deleteStaffId" value="@staff.UserId" />
-                                        <button type="submit" class="btn btn-sm btn-action delete-btn">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
+                      <small class="text-muted d-block mt-1" style="font-size: 12px;">
+                        Current:
+                        <img src="@staff.Photo" alt="Current"
+                          style="width: 60px; height: 60px; object-fit: cover; margin-top: 5px;" />
+                      </small>
                     }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="empty-state"><p>No groomers found.</p></div>
-    }
+                    else
+                    {
+                      <small class="text-muted d-block mt-1" style="font-size: 12px;">
+                        Current:
+                        <span
+                          style="display: inline-block; width: 60px; height: 60px; background-color: var(--primary-color); color: white; font-weight: bold; font-size: 24px; line-height: 60px; text-align: center; margin-top: 5px;">
+                          @staff.Name?.Substring(0, 1).ToUpper()
+                        </span>
+                      </small>
+                    }
+                  </td>
+
+                  <!-- Groomer ID (read-only) -->
+                  <td>@staff.UserId</td>
+
+                  <!-- Name -->
+                  <td>
+                    <input type="text" name="Name" value="@staff.Name" required class="form-control"
+                      onblur="validateField(this, '@staff.UserId')" />
+                    <small class="error-message" id="error-edit-Name-@staff.UserId"></small>
+                  </td>
+
+                  <!-- IC -->
+                  <td>
+                    <input type="text" name="IC" value="@staff.IC" required class="form-control" maxlength="20"
+                      onblur="validateField(this, '@staff.UserId')" />
+                    <small class="error-message" id="error-edit-IC-@staff.UserId"></small>
+                  </td>
+
+                  <!-- Position -->
+                  <td>
+                    <select name="Position" required class="form-control">
+                      <option value="" disabled>-- Select Position --</option>
+                      @{
+                        var positions = new[]
+                        {
+                                        ("Senior Groomer", "Senior Groomer"),
+                                        ("Junior Groomer", "Junior Groomer"),
+                                        ("Groomer Assistant", "Groomer Assistant"),
+                                        ("Shop Assistant", "Shop Assistant"),
+                                        ("Cat Groomer", "Cat Groomer (Specialist)"),
+                                        };
+                      }
+                      @foreach (var (value, text) in positions)
+                      {
+                        <option value="@value" selected="@(editingStaff?.Position == value)">@text</option>
+                      }
+                    </select>
+                  </td>
+
+                  <!-- Experience -->
+                  <td>
+                    <input type="number" name="ExperienceYear" value="@staff.ExperienceYear" class="form-control" min="0"
+                      style="width: 80px;" />
+                  </td>
+
+                  <!-- Contact -->
+                  <td>
+                    <input type="email" name="Email" value="@staff.Email" required class="form-control"
+                      placeholder="Email" style="margin-bottom: 5px; font-size: 12px;"
+                      onblur="validateField(this, '@staff.UserId')" />
+                    <small class="error-message" id="error-edit-Email-@staff.UserId"></small>
+                    <input type="tel" name="Phone" value="@staff.Phone" class="form-control" placeholder="Phone" maxlength="20"
+                      style="font-size: 12px;" onblur="validateField(this, '@staff.UserId')" />
+                    <small class="error-message" id="error-edit-Phone-@staff.UserId"></small>
+                  </td>
+
+                  <!-- Actions -->
+                  <td>
+                    <button type="submit" class="btn btn-success btn-sm">Save
+                    </button>
+                    <a asp-action="Groomer" asp-controller="Home" class="btn btn-secondary btn-sm">Cancel</a>
+                  </td>
+                </tr>
+              </form>
+            }
+            else
+            {
+              <!-- NORMAL VIEW ROW -->
+              <tr>
+                <td style="text-align: center;">
+                  @if (!string.IsNullOrEmpty(staff.Photo) && staff.Photo != "/uploads/placeholder.png")
+                  {
+                    <img src="@staff.Photo" alt="@staff.Name"
+                      style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+                  }
+                  else
+                  {
+                    <div
+                      style="width: 60px; height: 60px; border-radius: 50%; background-color: #ff9500; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px;">
+                      @staff.Name?.Substring(0, 1).ToUpper()
+                    </div>
+                  }
+                </td>
+                <td>@staff.UserId</td>
+                <td>@staff.Name</td>
+                <td>@staff.IC</td>
+                <td>@(staff.Position ?? "N/A")</td>
+                <td>@(staff.ExperienceYear?.ToString() ?? "0") yrs</td>
+                <td>
+                  <div style="font-size: 12px;">📧 @staff.Email</div>
+                  <div style="font-size: 12px;">📱 @staff.Phone</div>
+                </td>
+                <td>
+                  <a asp-action="Groomer" asp-controller="Home" asp-route-editId="@staff.UserId"
+                    class="btn btn-sm btn-action edit-btn">Edit</a>
+                  <form id="deleteGroomerForm_@staff.UserId" asp-action="Groomer" method="post" style="display:inline" onsubmit="return confirmDelete(event, '@staff.Name')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="actionType" value="delete" />
+                    <input type="hidden" name="deleteStaffId" value="@staff.UserId" />
+                    <button type="submit" class="btn btn-sm btn-action delete-btn">
+                      Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  else
+  {
+    <p class="no-data">No groomers found. Add one using the button above.</p>
+  }
 </div>
 
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="modal-backdrop">
-    <div class="modal-content" style="max-width: 450px;">
-        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
-        <div style="text-align: center; padding: 20px 0;">
-            <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
-                <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
-            </div>
-            <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
-            <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">
-                    Cancel
-                </button>
-                <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">
-                    Confirm
-                </button>
-            </div>
-        </div>
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+    <div style="text-align: center; padding: 20px 0;">
+      <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
+        <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
+      </div>
+      <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
+      <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">
+          Cancel
+        </button>
+        <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">
+          Confirm
+        </button>
+      </div>
     </div>
+  </div>
 </div>
+
+
+@section Scripts {
+  <script src="~/admin/js/groomer.js?v=@DateTime.Now.Ticks"></script>
+}
+
+<!-- Real-time AJAX validation script for the inline edit form -->
+<script>
+  async function validateField(inputElement, staffId) {
+    const fieldName = inputElement.name;
+    const fieldValue = inputElement.value;
+    const errorElement = document.getElementById(`error-edit-${fieldName}-${staffId}`);
+
+    if (!errorElement) {
+      console.warn(`Error element for field ${fieldName} not found.`);
+      return;
+    }
+
+    // Clear previous error message
+    errorElement.textContent = '';
+
+    // Don't validate if the field is empty (the 'required' attribute will handle this on submit)
+    if (!fieldValue.trim()) {
+      return;
+    }
+
+    try {
+      // const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+      // const token = tokenInput ? tokenInput.value : '';
+
+      const response = await fetch('@Url.Action("ValidateGroomerField", "Home")', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'RequestVerificationToken': token // Removed for simplicity with this specific AJAX call
+        },
+        body: JSON.stringify({
+          StaffId: staffId,
+          FieldName: fieldName,
+          FieldValue: fieldValue
+        })
+      });
+
+      const result = await response.json();
+      if (!result.isValid) {
+        errorElement.textContent = result.errorMessage;
+      }
+    } catch (error) {
+      console.error('AJAX validation error:', error);
+      errorElement.textContent = 'Could not validate this field.';
+    }
+  }
+</script>

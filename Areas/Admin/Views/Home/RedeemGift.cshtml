@@ -1,16 +1,77 @@
 ﻿@model IEnumerable<PetGroomingAppointmentSystem.Models.RedeemGift>
 @{
-    @if (ViewData["Error"] != null)
-    {
-        <div class="alert alert-danger">
-            @ViewData["Error"]
-        </div>
-    }
-
     ViewData["Title"] = "Redeem Gift Management";
     ViewData["ActivePage"] = "RedeemGift";
     string editingId = Context.Request.Query["editId"];
     var editingGift = Model.FirstOrDefault(g => g.GiftId == editingId);
+}
+@section Styles {
+    <style>
+       
+
+        /* Position the server-rendered alert like Groomer (aligned with topbar/sidebar) */
+        #alertMessage {
+            position: fixed;
+            top: 85px;
+            left: calc(var(--sidebar-width) + 35px);
+            right: 35px;
+            z-index: 9999;
+            padding: 24px 32px !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            animation: slideDown 0.5s ease;
+        }
+
+            #alertMessage.alert-success {
+                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+                color: #065f46 !important;
+                border-left: 6px solid #10b981 !important;
+            }
+
+            #alertMessage.alert-danger {
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+                color: #991b1b !important;
+                border-left: 6px solid #ef4444 !important;
+            }
+
+            #alertMessage.alert-warning {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+                color: #92400e !important;
+                border-left: 6px solid #f59e0b !important;
+            }
+
+            #alertMessage strong {
+                font-size: 20px !important;
+                margin-right: 8px;
+            }
+
+            #alertMessage.fade-out {
+                animation: fadeOut 0.5s ease forwards;
+            }
+    </style>
+}
+@* ========== 消息显示 ========== *@
+@if (ViewData["Error"] != null)
+{
+    <div class="alert alert-danger" id="alertMessage">
+        <strong>❌ Error:</strong> @ViewData["Error"]
+    </div>
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" id="alertMessage">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning" id="alertMessage">
+        @TempData["WarningMessage"]
+    </div>
 }
 
 <div class="content-header">
@@ -57,7 +118,15 @@
             <!-- Photo Upload -->
             <div class="form-group">
                 <label for="photo">Gift Photo</label>
-                <input type="file" id="photo" name="PhotoUpload" accept="image/*" required />
+                <input type="file" 
+                       id="photo" 
+                       name="PhotoUpload" 
+                       accept="image/*" 
+                       required 
+                       onchange="handlePhotoUpload(this, 'create')" />
+                <span id="uploadStatus_create" 
+                      style="display: none; font-size: 12px; margin-top: 5px; display: block; color: #10b981; font-weight: 600;">
+                </span>
             </div>
 
             <!-- Save Button -->
@@ -179,136 +248,21 @@
     </div>
 </div>
 
-
 <script>
-    let currentForm = null;
+    // Replace the simple auto-hide with the Groomer-style behavior:
+    (function () {
+        const alertMessage = document.getElementById('alertMessage');
+        if (!alertMessage) return;
 
-    // Function to show the create form
-    function showCreateForm() {
-        document.getElementById('createGiftForm').style.display = 'block';
-    }
-
-    // Function to hide the create form
-    function hideCreateForm() {
-        document.getElementById('createGiftForm').style.display = 'none';
-    }
-
-
-    function handlePhotoUpload(input, userId) {
-        const statusSpan = document.getElementById(`uploadStatus_${userId}`);
-
-        if (input.files && input.files.length > 0) {
-            const fileName = input.files[0].name;
-            const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
-
-            statusSpan.style.display = 'block';
-            statusSpan.innerHTML = `✓ Uploaded: ${fileName} (${fileSize}MB)`;
-            statusSpan.style.color = '#10b981';
-
-            if (input.files[0].size > 5 * 1024 * 1024) {
-                statusSpan.innerHTML = `⚠️ File too large: ${fileSize}MB (Max 5MB)`;
-                statusSpan.style.color = '#ef4444';
-                input.value = '';
-            }
-        } else {
-            statusSpan.style.display = 'none';
-        }
-    }
-
-    // Show confirmation modal
-    function showConfirmModal(title, message, icon, iconColor, confirmCallback) {
-        const modal = document.getElementById('confirmModal');
-        const confirmBtn = document.getElementById('confirmBtn');
-        const confirmIcon = document.getElementById('confirmIcon');
-        
-        document.getElementById('confirmTitle').textContent = title;
-        document.getElementById('confirmMessage').textContent = message;
-        confirmIcon.textContent = icon;
-        confirmIcon.style.color = iconColor;
-        
-        modal.classList.add('show');
-        
-        // Remove previous event listeners
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        
-        // Add new event listener
-        newConfirmBtn.addEventListener('click', () => {
-            confirmCallback();
-            closeConfirmModal();
-        });
-    }
-
-    // Close confirmation modal
-    function closeConfirmModal() {
-        document.getElementById('confirmModal').classList.remove('show');
-        currentForm = null;
-    }
-
-    // Confirm Add
-    function confirmAdd(event) {
-        event.preventDefault();
-        currentForm = event.target;
-        
-        const giftName = document.getElementById('giftName').value;
-        const quantity = document.getElementById('quantity').value;
-        const points = document.getElementById('points').value;
-        
-        showConfirmModal(
-            'Add New Gift?',
-            `Are you sure you want to add "${giftName}" (Qty: ${quantity}, Points: ${points})?`,
-            'add_circle',
-            '#10b981',
-            () => currentForm.submit()
-        );
-        
-        return false;
-    }
-
-    // Confirm Edit
-    function confirmEdit(event, giftName) {
-        event.preventDefault();
-        currentForm = event.target;
-        
-        showConfirmModal(
-            'Save Changes?',
-            `Are you sure you want to save changes to "${giftName}"?`,
-            'edit',
-            '#f59e0b',
-            () => currentForm.submit()
-        );
-        
-        return false;
-    }
-
-    // Confirm Delete
-    function confirmDelete(event, giftName) {
-        event.preventDefault();
-        currentForm = event.target;
-        
-        showConfirmModal(
-            'Delete Gift?',
-            `Are you sure you want to delete "${giftName}"? This action cannot be undone.`,
-            'warning',
-            '#ef4444',
-            () => currentForm.submit()
-        );
-        
-        return false;
-    }
-
-    // Close modal when clicking outside
-    document.addEventListener('click', (e) => {
-        const modal = document.getElementById('confirmModal');
-        if (e.target === modal) {
-            closeConfirmModal();
-        }
-    });
-
-    // Close modal with ESC key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeConfirmModal();
-        }
-    });
+        // Auto-hide after 5 seconds with fade animation
+        setTimeout(function () {
+            alertMessage.classList.add('fade-out');
+            // remove from DOM after fade completes
+            setTimeout(function () {
+                if (alertMessage && alertMessage.parentNode) {
+                    alertMessage.parentNode.removeChild(alertMessage);
+                }
+            }, 500);
+        }, 5000);
+    })();
 </script>

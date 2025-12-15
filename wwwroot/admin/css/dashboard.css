@@ -1,0 +1,596 @@
+﻿/* Calendar + Appointments + Chart styles used only on Admin Home/Index */
+
+.calendar-section {
+    display: grid;
+    grid-template-columns: minmax(720px, 1fr) 360px;
+    gap: 28px;
+    padding: 0 35px 35px; /* 添加左右边距 35px，与上面的图表区域一致 */
+    align-items: start;
+}
+
+.calendar-header,
+.sidebar-header {
+    min-height: 56px;
+}
+
+.calendar-container {
+    background-color: var(--card-background);
+    padding: 24px 32px; /* 增加内边距从 20px 到 24px */
+    min-height: 520px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px; /* 增加底部间距 */
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
+}
+
+/* 月份导航 */
+.calendar-nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.month-year {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-color);
+    min-width: 180px;
+    text-align: center;
+}
+
+/* 月份导航箭头按钮 */
+.btn-nav {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+}
+
+    .btn-nav:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
+    }
+
+    .btn-nav:active {
+        transform: translateY(0);
+    }
+
+/* 星期标题行 - 必须是 grid */
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+.calendar-day-header {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800; /* 更粗一点，接近标题效果 */
+    font-size: 0.8rem; /* 字稍微放大一点 */
+    text-transform: uppercase;
+    color: var(--primary-color); /* 深橙色 */
+    letter-spacing: 0.08em;
+}
+
+
+/* #calendar 使用 grid 布局 */
+#calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+}
+/* 每一天的格子 */
+.calendar-day {
+    aspect-ratio: 1;
+    min-height: 80px;
+    max-height: 90px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+    position: relative;
+    /* 🔑 关键：统一成「中心点盒模型」 */
+    display: grid;
+    place-items: center;
+}
+
+    .calendar-day:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 16px rgba(217, 119, 6, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .calendar-day.empty {
+        background-color: #f9fafb;
+        border-color: transparent;
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .calendar-day.today {
+        border-color: #8b5cf6 !important;
+        background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%) !important;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15) !important;
+    }
+
+        .calendar-day.today .day-number {
+            color: #8b5cf6 !important;
+            font-weight: 800 !important;
+            font-size: 16px !important; /* 增大字体 */
+        }
+
+    .calendar-day.has-appointments {
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
+    }
+
+        .calendar-day.has-appointments .day-number {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+.day-number {
+    font-weight: 600;
+    font-size: 15px; /* 增大日期数字 */
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.appointment-dot {
+    position: absolute;
+    bottom: 8px; /* 增加距离底部的位置 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px; /* 稍微增大小点 */
+    height: 6px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.calendar-day.today .appointment-dot {
+    background-color: #8b5cf6;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: translateX(-50%) scale(1.2);
+    }
+}
+
+.calendar-day.selected {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 6px 20px rgba(217, 119, 6, 0.35) !important;
+    transform: scale(1.03);
+}
+
+    .calendar-day.selected .day-number {
+        color: #ffffff !important;
+        font-weight: 700;
+    }
+
+    .calendar-day.selected .appointment-dot {
+        background-color: #fbbf24 !important;
+    }
+
+    .calendar-day.selected:hover {
+        transform: scale(1.03);
+    }
+
+.calendar-day.today.selected {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    color: #ffffff !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4) !important;
+    transform: scale(1.05);
+}
+
+    .calendar-day.today.selected .day-number {
+        color: #ffffff !important;
+        font-weight: 800;
+    }
+
+    .calendar-day.today.selected .appointment-dot {
+        background-color: #fbbf24 !important;
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+    }
+
+    .calendar-day.today.selected:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 24px rgba(139, 92, 246, 0.5) !important;
+    }
+
+/* Appointments sidebar */
+.appointments-sidebar {
+    background-color: var(--card-background);
+    padding: 24px; /* 调整内边距与 calendar-container 一致 */
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    min-height: 520px; /* 添加最小高度 */
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px; /* 与 calendar-header 一致 */
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
+}
+
+.sidebar-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+    .sidebar-title i {
+        color: var(--primary-color);
+        font-size: 22px;
+    }
+
+.selected-date-badge {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
+    color: #ffffff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+}
+
+#appointmentsList {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 8px;
+    max-height: 400px; /* 添加最大高度以启用滚动 */
+}
+
+    #appointmentsList::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #appointmentsList::-webkit-scrollbar-track {
+        background: #f3f4f6;
+        border-radius: 3px;
+    }
+
+    #appointmentsList::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        border-radius: 3px;
+    }
+
+.appointment-item {
+    background: #fffbf0;
+    padding: 18px;
+    border-radius: 12px;
+    border-left: 4px solid;
+    margin-bottom: 14px;
+    transition: all 0.3s ease;
+}
+
+    .appointment-item.confirmed {
+        border-left-color: #10b981;
+    }
+
+    .appointment-item.pending {
+        border-left-color: #f59e0b;
+    }
+
+    .appointment-item.completed {
+        border-left-color: #6366f1;
+    }
+
+    .appointment-item.cancelled {
+        border-left-color: #ef4444;
+        opacity: 0.7;
+    }
+
+    .appointment-item:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        transform: translateX(4px);
+    }
+
+.appointment-time {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.appointment-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.appointment-pet {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.appointment-service {
+    font-size: 13px;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.appointment-groomer {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.appointment-status {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    margin-top: 8px;
+}
+
+    .appointment-status.pending {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .appointment-status.confirmed {
+        background-color: #d1fae5;
+        color: #059669;
+    }
+
+.no-appointments {
+    text-align: center;
+    color: var(--text-light);
+    padding: 60px 20px;
+    font-style: italic;
+    font-size: 14px;
+}
+
+/* Chart & loyalty area on dashboard */
+.chart-and-info-grid {
+    display: flex;
+    gap: 24px;
+    padding: 0 35px 35px;
+}
+
+.chart-panel,
+.info-panel {
+    background-color: var(--card-background);
+    padding: 28px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+    .chart-panel:hover,
+    .info-panel:hover {
+        box-shadow: var(--shadow-lg);
+    }
+
+.chart-panel {
+    flex: 3;
+    min-height: 420px;
+}
+
+.info-panel {
+    flex: 1;
+    min-height: 420px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.chart-options {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-chart-option {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-background);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 6px;
+}
+
+    .btn-chart-option:hover {
+        background-color: #f3f4f6;
+        border-color: var(--primary-color);
+    }
+
+    .btn-chart-option.active {
+        background-color: var(--primary-color);
+        color: #ffffff;
+        border-color: var(--primary-color);
+    }
+
+/* Loyalty block */
+.loyalty-header {
+    margin-bottom: 20px;
+}
+
+.loyalty-icon {
+    font-size: 48px;
+    color: var(--primary-color);
+}
+
+.stat-value-large {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 15px 0;
+}
+
+.panel-subtitle {
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 25px;
+}
+
+.loyalty-stats {
+    width: 100%;
+    margin-top: 30px;
+}
+
+.loyalty-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+    .loyalty-stat-item:last-child {
+        border-bottom: none;
+    }
+
+.loyalty-stat-label {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.loyalty-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* Dashboard stats extras */
+.stat-icon {
+    font-size: 32px;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.stat-title {
+    font-size: 14px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-color);
+}
+
+.stat-extra {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.change {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+    .change.up {
+        background-color: #d1fae5;
+        color: #059669;
+    }
+
+    .change.down {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .change i {
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+/* Chart canvas */
+#appointmentChart {
+    max-height: 350px;
+    width: 100% !important;
+}
+
+/* Responsive for chart+calendar area only on dashboard */
+@media (max-width: 1024px) {
+    .chart-and-info-grid {
+        flex-direction: column;
+    }
+
+    .chart-panel,
+    .info-panel {
+        min-height: auto;
+    }
+
+    .calendar-section {
+        grid-template-columns: 1fr;
+    }
+}

@@ -35,13 +35,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var vm = new HomeViewModel
             {
                 DogServices = _db.Services
-                    .Include(s => s.Category)
-                    .Where(s => s.Category.Name == "Dog")   // ⚠ category name must match DB
+                    .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Dog"))
                     .ToList(),
 
                 CatServices = _db.Services
-                    .Include(s => s.Category)
-                    .Where(s => s.Category.Name == "Cat")
+                    .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Cat"))
                     .ToList(),
 
                 RedeemGifts = _db.RedeemGifts.ToList(),

@@ -3,167 +3,464 @@
     ViewData["ActivePage"] = "Service";
 }
 
+@model List<PetGroomingAppointmentSystem.Models.Service>
+
+@using PetGroomingAppointmentSystem.Models
+
+@{
+    string editingId = Context.Request.Query["editId"];
+    var editingService = Model.FirstOrDefault(s => s.ServiceId == editingId);
+}
+
+@section Styles {
+    <style>
+        /* Position the server-rendered alert like RedeemGift (aligned with topbar/sidebar) */
+        #alertMessage, .dynamic-alert {
+            position: fixed;
+            top:85px;
+            left: calc(var(--sidebar-width) +35px);
+            right:35px;
+            z-index:9999;
+            padding:24px32px !important;
+            font-size:18px !important;
+            font-weight:600 !important;
+            border-radius:12px !important;
+            box-shadow:08px20px rgba(0,0,0,0.25);
+        }
+
+        /* Lift panel slightly so table aligns like RedeemGift page */
+        .panel {
+            margin-top:0; /* align with RedeemGift */
+        }
+
+        /* Checkbox tile visuals (kept lightweight) */
+        .checkbox-tiles { display: flex; flex-wrap: wrap; gap:12px; }
+        .checkbox-item { position: relative; display: inline-block; }
+        .checkbox-item input[type="checkbox"] {
+            position: absolute; left:12px; top:50%; transform: translateY(-50%);
+            width:18px; height:18px; opacity:0; z-index:3; cursor: pointer; margin:0;
+        }
+        .checkbox-tile {
+            position: relative; padding:10px18px10px44px; border-radius:10px;
+            background: #f5f7fb; border:1px solid rgba(0,0,0,0.06); color: #111827; min-width:90px;
+        }
+        .checkbox-tile::before {
+            content: ""; position: absolute; left:14px; top:50%; transform: translateY(-50%);
+            width:18px; height:18px; border:2px solid #d1d5db; border-radius:4px; background: #fff; z-index:0;
+        }
+        .checkbox-item input[type="checkbox"]:checked + .checkbox-tile { background: #fffaf6; border-color: #f2d2b2; }
+        .checkbox-item input[type="checkbox"]:checked + .checkbox-tile::before { background-color: #0ea5a9; border-color: #0ea5a9; }
+        .checkbox-tile > span { position: relative; z-index:5; color: #111827 !important; }
+
+        /* Inline edit specific styles (kept from original) */
+        .data-table tbody tr td[colspan="8"] { background-color: #fffbeb; padding:0 !important; }
+        .data-table tbody tr td[colspan="8"] table td { padding:16px12px; vertical-align: middle; border-bottom:1px solid #e5e7eb; }
+        .data-table tbody tr td[colspan="8"] .form-control { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
+        .data-table tbody tr td[colspan="8"] .form-control:focus { border-color: var(--primary-color); outline: none; box-shadow:0003px rgba(217,119,6,0.1); }
+        .data-table tbody tr td[colspan="8"] .checkbox-tiles { gap:6px; }
+        .data-table tbody tr td[colspan="8"] textarea { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
+        .data-table tbody tr td[colspan="8"] .btn-sm { padding:6px12px; font-size:13px; margin-right:5px; }
+
+        .data-table tbody tr.inline-edit-row td:nth-child(1) { width:8%; text-align: left; padding-left:20px; }
+        .data-table tbody tr.inline-edit-row td:nth-child(2) { width:20%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(3) { width:18%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(4) { width:10%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(5) { width:10%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(6) { width:10%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(7) { width:14%; }
+        .data-table tbody tr.inline-edit-row td:nth-child(8) { width:10%; text-align: center; }
+
+        .data-table tbody tr td[colspan="8"] table td { vertical-align: middle; }
+        .data-table tbody tr td[colspan="8"] table td .form-control { margin:0; }
+        .data-table tbody tr td[colspan="8"] table td textarea.form-control { resize: vertical; }
+    </style>
+}
+
 <div class="content-header">
-    <h1 class="page-title">Service Management</h1>
+    <h1 class="page-title">Services Management</h1>
 </div>
 
-<div class="panel" style="padding: 25px; border-radius: 12px; margin-bottom: 25px;">
-    <h3 class="panel-title" style="margin-bottom: 20px;">Filter Services</h3>
-
-    <form method="get" class="form-grid">
-
-        <div class="form-group" style="grid-column: span 1;">
-            <label>Service Name</label>
-            <input type="text" name="ServiceName" placeholder="Enter service name" />
-        </div>
-
-        <div class="form-group" style="grid-column: span 1;">
-            <label>Category</label>
-            <input type="text" name="Category" placeholder="Dog, Cat, etc." />
-        </div>
-
-        <div class="form-group" style="grid-column: span 1;">
-            <label>Status</label>
-            <select name="Status">
-                <option value="">-- Any --</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>&nbsp;</label>
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <button type="reset" class="btn btn-reset">Reset</button>
-        </div>
-    </form>
-</div>
-
+@* ========== 消息显示 ========== *@
+@if (ViewData["Error"] != null)
+{
+    <div class="alert alert-danger dynamic-alert" id="alertMessage">
+        <strong>❌ Error:</strong> @ViewData["Error"]
+    </div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success dynamic-alert" id="alertMessage">
+        @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning dynamic-alert" id="alertMessage">
+        @TempData["WarningMessage"]
+    </div>
+}
 
 <div class="panel">
-    <h3 class="panel-title">Existing Services</h3>
-
-    <div class="actions">
-        <button class="btn btn-primary" onclick="showCreateForm()">Add New Service</button>
+    <div class="panel-header-wrapper">
+        <h3 class="panel-title">Existing Services (@Model?.Count())</h3>
+        <button class="btn btn-primary" id="btnAddService" type="button" onclick="window.showCreateForm()">
+            <i class="material-icons">add</i>
+            <span>Add New Service</span>
+        </button>
     </div>
 
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Service ID</th>
-                <th>Service Name</th>
-                <th>Category</th>
-                <th>Price (RM)</th>
-                <th>Duration</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+    <!-- Create Service form (hidden by default) -->
+    <div class="panel create-form" id="createServiceForm" style="display:none; margin-top:18px;">
+        <h3 class="panel-title">Create New Service</h3>
+        <form id="addServiceForm" method="post" class="form-grid">
+            <input type="hidden" name="actionType" value="create" />
+            <div class="form-group">
+                <label for="serviceName">Service Name</label>
+                <input type="text" id="serviceName" name="Name" required />
+            </div>
 
-        <tbody>
+            <div class="form-group">
+                <label>Categories (Select multiple)</label>
+                <div id="category" class="checkbox-tiles">
+                    @if (ViewBag.ServiceCategories != null)
+                    {
+                        foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
+                        {
+                            var cbId = "cat_" + c.CategoryId;
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId" />
+                                <span class="checkbox-tile" data-value="@c.CategoryId">
+                                    <span>@c.Name</span>
+                                </span>
+                            </label>
+                        }
+                    }
+                </div>
+            </div>
 
-            @* Dummy Data Example *@
-            <tr>
-                <td>SRV001</td>
-                <td>Basic Dog Grooming</td>
-                <td>Dog</td>
-                <td>80.00</td>
-                <td>60 mins</td>
-                <td>Active</td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn">edit</button>
-                    <button class="btn btn-sm btn-action delete-btn">delete</button>
-                </td>
-            </tr>
+            <div class="form-group">
+                <label for="price">Price (RM)</label>
+                <input type="number" step="0.01" id="price" name="Price" required />
+            </div>
 
-            <tr>
-                <td>SRV002</td>
-                <td>Cat Nail Trimming</td>
-                <td>Cat</td>
-                <td>25.00</td>
-                <td>15 mins</td>
-                <td>Active</td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn">edit</button>
-                    <button class="btn btn-sm btn-action delete-btn">delete</button>
-                </td>
-            </tr>
+            <div class="form-group">
+                <label for="duration">Duration (mins)</label>
+                <input type="number" id="duration" name="DurationTime" placeholder="e.g.,60" required />
+            </div>
 
-            <tr>
-                <td>SRV003</td>
-                <td>Full Spa Treatment</td>
-                <td>Dog</td>
-                <td>150.00</td>
-                <td>90 mins</td>
-                <td>Inactive</td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn">edit</button>
-                    <button class="btn btn-sm btn-action delete-btn">delete</button>
-                </td>
-            </tr>
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="Status" required>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
 
-        </tbody>
-    </table>
+            <div class="form-group full-width">
+                <label for="description">Description</label>
+                <textarea id="description" name="Description" rows="3"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" onclick="submitAddForm()" class="btn btn-success">Save Service</button>
+            </div>
+        </form>
+    </div>
+
+    <div style="margin-top:0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Service ID</th>
+                    <th>Service Name</th>
+                    <th>Category</th>
+                    <th>Price (RM)</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var service in Model)
+                {
+                    if (editingService != null && editingService.ServiceId == service.ServiceId)
+                    {
+                        <!-- INLINE EDIT ROW -->
+                        <tr class="inline-edit-row" style="background-color: #fffbeb;">
+                            <form id="editServiceForm_@service.ServiceId" asp-action="Service" asp-controller="Home"
+                                method="post" style="display: contents;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="actionType" value="edit" />
+                                <input type="hidden" name="editServiceId" value="@service.ServiceId" />
+
+                                <!-- Service ID (read-only) -->
+                                <td>@service.ServiceId</td>
+
+                                <!-- Service Name -->
+                                <td>
+                                    <input type="text" name="Name" value="@service.Name" required class="form-control" />
+                                </td>
+
+                                <!-- Categories -->
+                                <td>
+                                    <div class="checkbox-tiles" style="margin:0;">
+                                        @if (ViewBag.ServiceCategories != null)
+                                        {
+                                            foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
+                                            {
+                                                var cbId = "edit_cat_" + c.CategoryId + "_" + service.ServiceId;
+                                                var isSelected = service.ServiceServiceCategories.Any(ssc => ssc.CategoryId ==
+                                                c.CategoryId);
+                                                <label class="checkbox-item" style="margin-bottom:5px;">
+                                                    <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId"
+                                                        @(isSelected ? "checked" : "") />
+                                                    <span class="checkbox-tile" data-value="@c.CategoryId">
+                                                        <span>@c.Name</span>
+                                                    </span>
+                                                </label>
+                                            }
+                                        }
+                                    </div>
+                                </td>
+
+                                <!-- Price -->
+                                <td>
+                                    <input type="number" step="0.01" name="Price" value="@service.Price" required
+                                        class="form-control" />
+                                </td>
+
+                                <!-- Duration -->
+                                <td>
+                                    <input type="number" name="DurationTime" value="@service.DurationTime" required
+                                        class="form-control" placeholder="e.g.,60" />
+                                </td>
+
+                                <!-- Status -->
+                                <td>
+                                    <select name="Status" class="form-control" required>
+                                        <option value="Active" selected="@(service.Status == "Active")">Active</option>
+                                        <option value="Inactive" selected="@(service.Status == "Inactive")">Inactive</option>
+                                    </select>
+                                </td>
+
+                                <!-- Description (inline small textarea) -->
+                                <td>
+                                    <textarea name="Description" rows="2" class="form-control">@service.Description</textarea>
+                                </td>
+
+                                <!-- Actions -->
+                                <td>
+                                    <button type="button" onclick="submitEditForm('@service.ServiceId', '@service.Name')"
+                                        class="btn btn-success btn-sm">
+                                        Save
+                                    </button>
+                                    <a asp-action="Service" asp-controller="Home" class="btn btn-secondary btn-sm">
+                                        Cancel
+                                    </a>
+                                </td>
+                            </form>
+                        </tr>
+                    }
+                    else
+                    {
+                        <!-- NORMAL VIEW ROW -->
+                        <tr data-service-id="@service.ServiceId" data-name="@service.Name"
+                            data-categories="@string.Join(",", service.ServiceServiceCategories.Select(ssc => ssc.CategoryId))"
+                            data-price="@service.Price" data-duration="@service.DurationTime" data-status="@service.Status"
+                            data-description="@service.Description">
+                            <td>@service.ServiceId</td>
+                            <td>@service.Name</td>
+                            <td>@string.Join(", ", service.ServiceServiceCategories.Select(ssc => ssc.Category.Name))</td>
+                            <td>@service.Price?.ToString("F2")</td>
+                            <td>@(service.DurationTime.HasValue ? $"{service.DurationTime} mins" : "")</td>
+                            <td>@service.Status</td>
+                            <td>@service.Description</td>
+                            <td>
+                                <a asp-action="Service" asp-controller="Home" asp-route-editId="@service.ServiceId"
+                                    class="btn btn-sm btn-action edit-btn">
+                                    <i class="material-icons">edit</i> Edit
+                                </a>
+                                <button type="button" class="btn btn-sm btn-action delete-btn"
+                                    onclick="deleteService('@service.ServiceId')">
+                                    <i class="material-icons">delete</i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<div class="panel create-form" id="createServiceForm">
-    <h3 class="panel-title">Create New Service</h3>
-
-    <form method="post" class="form-grid">
-        <div class="form-group">
-            <label for="serviceName">Service Name</label>
-            <input type="text" id="serviceName" name="ServiceName" required />
-        </div>
-
-        <div class="form-group">
-            <label for="category">Category</label>
-            <select id="category" name="Category" required>
-                <option value="Dog">Dog</option>
-                <option value="Cat">Cat</option>
-                <option value="Other">Other</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="price">Price (RM)</label>
-            <input type="number" step="0.01" id="price" name="Price" required />
-        </div>
-
-        <div class="form-group">
-            <label for="duration">Duration</label>
-            <input type="text" id="duration" name="Duration" placeholder="e.g., 60 mins" required />
-        </div>
-
-        <div class="form-group">
-            <label for="status">Status</label>
-            <select id="status" name="Status">
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-            </select>
-        </div>
-
-        <div class="form-group full-width">
-            <label for="description">Description</label>
-            <textarea id="description" name="Description" rows="3"></textarea>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-success">Save Service</button>
-        </div>
-    </form>
-</div>
+<!-- hidden antiforgery token for AJAX posts -->
+<div style="display:none">@Html.AntiForgeryToken()</div>
 
 @section Scripts {
     <script>
-        function showCreateForm() {
-            var form = document.getElementById('createServiceForm');
-            form.style.display = 'block';
-        }
+        // bind tile behavior: keep label visual in sync with checkbox state (for server-set checked values)
+        function showDynamicAlert(message, type = 'success') {
+            // Remove any existing alert
+            const existingAlert = document.getElementById('dynamic-alert-container');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            var form = document.getElementById('createServiceForm');
-            if (form) form.style.display = 'none';
-        });
-    </script>
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'dynamic-alert-container';
+            alertDiv.className = `alert dynamic-alert alert-${type}`;
+            alertDiv.innerHTML = message;
+
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.classList.add('fade-out');
+                setTimeout(() => {
+                    alertDiv.remove();
+                },500);
+            },5000); // Auto-hide after5 seconds
+ }
+
+
+ function bindCategoryTiles(rootId) {
+ const root = document.getElementById(rootId);
+ if (!root) return;
+ root.querySelectorAll('input[type="checkbox"][name="SelectedCategories"]').forEach(cb => {
+ // the visual tile is the sibling span with class .checkbox-tile
+ const tile = cb.parentElement ? cb.parentElement.querySelector('.checkbox-tile') : null;
+ if (!tile) return;
+ if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
+ cb.addEventListener('change', () => {
+ if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
+ });
+ });
+ }
+
+ window.showCreateForm = function () {
+ var form = document.getElementById('createServiceForm');
+ if (form) {
+ form.style.display = 'block';
+ form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+ }
+ };
+
+ function closeConfirmModal() {
+ const m = document.getElementById('confirmModal');
+ if (m) m.style.display = 'none';
+ const btn = document.getElementById('confirmBtn');
+ if (btn) btn.onclick = null;
+ }
+
+ function showConfirmModal(title, message, onConfirm) {
+ const m = document.getElementById('confirmModal');
+ if (!m) return;
+ document.getElementById('confirmTitle').innerText = title || 'Confirm Action';
+ document.getElementById('confirmMessage').innerText = message || '';
+ m.style.display = 'flex'; // 使用 flex 来启用居中
+ const btn = document.getElementById('confirmBtn');
+ btn.onclick = function () {
+ closeConfirmModal();
+ if (typeof onConfirm === 'function') onConfirm();
+ };
+ }
+
+ function submitAddForm() {
+ const form = document.getElementById('addServiceForm');
+ if (!form) return;
+
+ if (!form.checkValidity()) {
+ form.reportValidity();
+ return;
+ }
+
+ showConfirmModal('Create Service', 'Are you sure you want to create this new service?', function () {
+ //直接提交，移除第二次确认
+ form.submit();
+ });
+ }
+
+ function submitEditForm(serviceId, name) {
+ const formId = 'editServiceForm_' + serviceId;
+ const form = document.getElementById(formId);
+ if (!form) {
+ console.error('Edit form not found:', formId);
+ return;
+ }
+
+ if (!form.checkValidity()) {
+ form.reportValidity();
+ return;
+ }
+
+ showConfirmModal('Update Service', `Are you sure you want to save changes to "${name}"?`, function () {
+ //直接提交，移除第二次确认
+ form.submit();
+ });
+ }
+
+ async function deleteService(serviceId) {
+ showConfirmModal('Delete Service', `Delete service ${serviceId}?`, async function () {
+ const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+ const token = tokenInput ? tokenInput.value : '';
+ try {
+ const resp = await fetch('@Url.Action("DeleteServiceAjax", "Home", new { area = "Admin" })', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+ body: new URLSearchParams({ serviceId: serviceId, __RequestVerificationToken: token })
+ });
+ const data = await resp.json();
+ if (data && data.success) {
+ const row = document.querySelector('tr[data-service-id="' + serviceId + '"]');
+ if (row) row.remove();
+ showDynamicAlert(data.message || 'Service deleted successfully!', 'success');
+ } else {
+ alert(data?.message || 'Failed to delete service');
+ }
+ } catch (err) {
+ console.error(err);
+ alert('Failed to delete service');
+ }
+ });
+ }
+
+ document.addEventListener('DOMContentLoaded', function () {
+ // Auto-hide server-rendered alerts
+ const alertMessage = document.getElementById('alertMessage');
+ if (alertMessage) {
+ setTimeout(function () {
+ alertMessage.classList.add('fade-out');
+ setTimeout(function () {
+ if (alertMessage && alertMessage.parentNode) {
+ alertMessage.parentNode.removeChild(alertMessage);
+ }
+ },500);
+ },5000);
+ }
+
+ var createForm = document.getElementById('createServiceForm');
+ if (createForm) createForm.style.display = 'none';
+ bindCategoryTiles('category');
+ var btnAddService = document.getElementById('btnAddService');
+ if btnAddService) btnAddService.addEventListener('click', window.showCreateForm);
+ });
+ </script>
 }
 
+<!-- Confirmation Modal (shared for add/edit/delete) -->
+<div id="confirmModal" class="modal-backdrop" style="display:none; align-items:center; justify-content:center;">
+ <div class="modal-content" style="max-width:450px;">
+ <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+ <div style="text-align:center; padding:20px0;">
+ <div style="font-size:48px; color:var(--primary-color); margin-bottom:20px;">
+ <i class="material-icons" id="confirmIcon" style="font-size:64px;">help_outline</i>
+ </div>
+ <h3 id="confirmTitle" style="margin-bottom:15px; color:var(--text-color);">Confirm Action</h3>
+ <p id="confirmMessage" style="color:var(--text-light); margin-bottom:30px; font-size:15px;"></p>
+ <div style="display:flex; gap:12px; justify-content:center;">
+ <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width:100px;">Cancel</button>
+ <button id="confirmBtn" class="btn btn-primary" style="min-width:100px;">Confirm</button>
+ </div>
+ </div>
+ </div>
+</div>

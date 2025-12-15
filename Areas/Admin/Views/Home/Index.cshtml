@@ -2,7 +2,9 @@
     ViewData["Title"] = "Administrator Dashboard";
     ViewData["ActivePage"] = "Dashboard";
 }
-
+@section Styles {
+    <link rel="stylesheet" href="~/admin/css/dashboard.css" />
+}
 <div class="content-header">
     <div>
         <h1 class="page-title">Dashboard</h1>
@@ -29,7 +31,7 @@
 
     <div class="stat-card green">
         <div class="stat-icon">
-            <i class="material-icons">person_check</i>
+            <i class="material-icons">person</i>
         </div>
         <div class="stat-content">
             <p class="stat-title">Active Groomers</p>
@@ -123,14 +125,16 @@
             </div>
         </div>
 
-        <div class="calendar-grid">
-            <div class="calendar-day-header">Sun</div>
-            <div class="calendar-day-header">Mon</div>
-            <div class="calendar-day-header">Tue</div>
-            <div class="calendar-day-header">Wed</div>
-            <div class="calendar-day-header">Thu</div>
-            <div class="calendar-day-header">Fri</div>
-            <div class="calendar-day-header">Sat</div>
+        <div class="calendar-grid-wrapper">
+            <div class="calendar-weekdays">
+                <div class="calendar-day-header">SUN</div>
+                <div class="calendar-day-header">MON</div>
+                <div class="calendar-day-header">TUE</div>
+                <div class="calendar-day-header">WED</div>
+                <div class="calendar-day-header">THU</div>
+                <div class="calendar-day-header">FRI</div>
+                <div class="calendar-day-header">SAT</div>
+            </div>
 
             <div id="calendar"></div>
         </div>
@@ -154,7 +158,7 @@
 
 
 <script>
-    // ========================================
+        // ========================================
     // DASHBOARD DATA (Page-Specific)
     // ========================================
 
@@ -215,13 +219,223 @@
     ];
 
     // ========================================
+    // DASHBOARD CHART MODULE
+    // ========================================
+    const DashboardChart = (() => {
+        let chart = null;
+        let currentView = 'week';
+
+        const init = (chartData) => {
+            const ctx = document.getElementById('appointmentChart');
+            if (!ctx) return;
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData[currentView].labels,
+                    datasets: [{
+                        label: 'Appointments',
+                        data: chartData[currentView].data,
+                        borderColor: '#d97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#d97706',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#d97706',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        const updateChart = (view) => {
+            if (!chart || !window.dashboardChartData) return;
+
+            currentView = view;
+            const data = window.dashboardChartData[view];
+
+            chart.data.labels = data.labels;
+            chart.data.datasets[0].data = data.data;
+            chart.update();
+
+            document.querySelectorAll('.btn-chart-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        };
+
+        return { init, updateChart };
+    })();
+
+    window.updateChart = (view) => DashboardChart.updateChart(view);
+
+    // ========================================
+    // DASHBOARD CALENDAR MODULE
+    // ========================================
+    const DashboardCalendar = (() => {
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        let appointments = [];
+
+        const getLocalDateString = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const init = (appointmentData) => {
+            appointments = appointmentData;
+            renderCalendar();
+            renderAppointments(getLocalDateString(selectedDate));
+
+            document.getElementById('prevMonth')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            document.getElementById('nextMonth')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+        };
+
+        const renderCalendar = () => {
+            const calendar = document.getElementById('calendar');
+            const monthYear = document.getElementById('monthYear');
+            if (!calendar || !monthYear) return;
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            monthYear.textContent = new Date(year, month).toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const todayStr = getLocalDateString(new Date());
+            const selectedStr = getLocalDateString(selectedDate);
+
+            let calendarHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                calendarHTML += '<div class="calendar-day empty"></div>';
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = getLocalDateString(date);
+                const hasAppointments = appointments.some(apt => apt.date === dateStr);
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedStr;
+
+                let classes = 'calendar-day';
+                if (isToday) classes += ' today';
+                if (isSelected) classes += ' selected';
+                if (hasAppointments) classes += ' has-appointments';
+
+                calendarHTML += `
+                    <div class="${classes}" onclick="selectDate('${dateStr}')">
+                        <span class="day-number">${day}</span>
+                        ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                    </div>
+                `;
+            }
+
+            calendar.innerHTML = calendarHTML;
+        };
+
+        const renderAppointments = (dateStr) => {
+            const appointmentsList = document.getElementById('appointmentsList');
+            const selectedDateBadge = document.getElementById('selectedDate');
+            if (!appointmentsList) return;
+
+            const dateAppointments = appointments.filter(apt => apt.date === dateStr);
+
+            if (selectedDateBadge) {
+                const date = new Date(dateStr + 'T00:00:00');
+                const todayStr = getLocalDateString(new Date());
+
+                if (dateStr === todayStr) {
+                    selectedDateBadge.textContent = 'Today';
+                } else {
+                    selectedDateBadge.textContent = date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+            }
+
+            if (dateAppointments.length === 0) {
+                appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+                return;
+            }
+
+            appointmentsList.innerHTML = dateAppointments.map(apt => `
+                <div class="appointment-item ${apt.status}">
+                    <div class="appointment-time">${apt.time}</div>
+                    <div class="appointment-details">
+                        <div class="appointment-pet">${apt.petName}</div>
+                        <div class="appointment-service">${apt.serviceType}</div>
+                        <div class="appointment-groomer">with ${apt.groomerName}</div>
+                    </div>
+                    <span class="appointment-status ${apt.status}">${apt.status}</span>
+                </div>
+            `).join('');
+        };
+
+        const selectDate = (dateStr) => {
+            selectedDate = new Date(dateStr + 'T00:00:00');
+            renderCalendar();
+            renderAppointments(dateStr);
+        };
+
+        return { init, selectDate };
+    })();
+
+    window.selectDate = (dateStr) => DashboardCalendar.selectDate(dateStr);
+
+    // ========================================
     // INITIALIZE DASHBOARD
     // ========================================
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize chart
         DashboardChart.init(window.dashboardChartData);
-
-        // Initialize calendar
         DashboardCalendar.init(appointmentData);
     });
 </script>

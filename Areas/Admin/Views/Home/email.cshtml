@@ -1,0 +1,68 @@
+﻿@{
+    Layout = null;
+    var staffName = ViewBag.StaffName;
+    var staffId = ViewBag.StaffId;
+    var email = ViewBag.Email;
+    var phone = ViewBag.Phone;
+    var temporaryPassword = ViewBag.TemporaryPassword;
+    var loginUrl = ViewBag.LoginUrl;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Welcome to Hajimi House Pet Grooming System</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #ff9500; margin: 0;">🐾 Hajimi House Pet Grooming System</h1>
+        </div>
+
+        <h2 style="color: #333;">Welcome, @staffName!</h2>
+        <p style="color: #666; line-height: 1.6;">
+            Your staff account has been successfully created. Below are your login credentials:
+        </p>
+
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Staff ID:</td>
+                    <td style="padding: 8px 0; color: #333;">@staffId</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Email:</td>
+                    <td style="padding: 8px 0; color: #333;">@email</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Phone:</td>
+                    <td style="padding: 8px 0; color: #333;">@phone</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Temporary Password:</td>
+                    <td style="padding: 8px 0; color: #ff9500; font-weight: bold; font-size: 16px;">@temporaryPassword</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+                <strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.
+            </p>
+        </div>
+
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="@loginUrl" style="background-color: #ff9500; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Login Now
+            </a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #999; font-size: 12px; text-align: center;">
+            This is an automated email from Hajimi House Pet Grooming Appointment System.<br>
+            If you did not expect this email, please contact your administrator.
+        </p>
+    </div>
+</body>
+</html>

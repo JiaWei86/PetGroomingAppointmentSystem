@@ -220,6 +220,29 @@ namespace PetGroomingAppointmentSystem.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ServiceServiceCategories",
+                columns: table => new
+                {
+                    SscId = table.Column<string>(type: "nvarchar(6)", maxLength:6, nullable: false),
+                    ServiceId = table.Column<string>(type: "nvarchar(10)", maxLength:10, nullable: true),
+                    CategoryId = table.Column<string>(type: "nvarchar(10)", maxLength:10, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ServiceServiceCategories", x => x.SscId);
+                    table.ForeignKey(
+                        name: "FK_ServiceServiceCategories_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId");
+                    table.ForeignKey(
+                        name: "FK_ServiceServiceCategories_ServiceCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "ServiceCategories",
+                        principalColumn: "CategoryId");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Appointments",
                 columns: table => new
                 {

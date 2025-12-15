@@ -41,7 +41,7 @@ body {
     min-height: 100vh;
 }
 
-/* --- 2. Sidebar --- */
+/* --- 2. Sidebar (layout shared) --- */
 #sidebar {
     width: var(--sidebar-width);
     background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
@@ -55,12 +55,12 @@ body {
     z-index: 100;
 }
 
-#sidebar .logo img {
-    width: 200px;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-}
+    #sidebar .logo img {
+        width: 200px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
 
 .logo {
     font-size: 22px;
@@ -92,24 +92,24 @@ body {
     font-size: 15px;
 }
 
-.sidebar-nav a i {
-    margin-right: 14px;
-    font-size: 22px;
-}
+    .sidebar-nav a i {
+        margin-right: 14px;
+        font-size: 22px;
+    }
 
-.sidebar-nav a:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    padding-left: 30px;
-}
+    .sidebar-nav a:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        padding-left: 30px;
+    }
 
-.sidebar-nav a.active {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-    font-weight: 600;
-    border-left: 4px solid #fbbf24;
-    padding-left: 21px;
-}
+    .sidebar-nav a.active {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+        font-weight: 600;
+        border-left: 4px solid #fbbf24;
+        padding-left: 21px;
+    }
 
 #sidebar::-webkit-scrollbar {
     width: 6px;
@@ -151,16 +151,14 @@ body {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Hide topbar when scrolling down */
-#topbar.scrolled-down {
-    transform: translateY(-100%);
-}
+    #topbar.scrolled-down {
+        transform: translateY(-100%);
+    }
 
-/* Show topbar when scrolling up */
-#topbar.scrolled-up {
-    transform: translateY(0);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+    #topbar.scrolled-up {
+        transform: translateY(0);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
 
 .search-bar {
     display: flex;
@@ -172,13 +170,13 @@ body {
     border: 1px solid #e5e7eb;
 }
 
-.search-bar input {
-    border: none;
-    outline: none;
-    background: none;
-    width: 100%;
-    font-size: 14px;
-}
+    .search-bar input {
+        border: none;
+        outline: none;
+        background: none;
+        width: 100%;
+        font-size: 14px;
+    }
 
 .user-profile {
     display: flex;
@@ -186,17 +184,15 @@ body {
     gap: 14px;
     font-weight: 500;
     position: fixed;
-    transition: all 0.3s ease;
     right: 35px;
     padding: 8px 16px;
+    transition: all 0.3s ease;
 }
 
     .user-profile.scrolled {
-        position: fixed;
         right: 35px;
         top: 16px;
         z-index: 60;
-        
     }
 
     .user-profile i {
@@ -223,7 +219,7 @@ body {
     font-size: 14px;
 }
 
-/* --- 6. Stats Grid --- */
+/* --- 6. Stats Grid (generic cards) --- */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -241,15 +237,26 @@ body {
     transition: all 0.3s ease;
 }
 
-.stat-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
-}
+    .stat-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-4px);
+    }
 
-.stat-card.blue { border-color: var(--blue-card); }
-.stat-card.green { border-color: var(--green-card); }
-.stat-card.yellow { border-color: var(--yellow-card); }
-.stat-card.red { border-color: var(--red-card); }
+    .stat-card.blue {
+        border-color: var(--blue-card);
+    }
+
+    .stat-card.green {
+        border-color: var(--green-card);
+    }
+
+    .stat-card.yellow {
+        border-color: var(--yellow-card);
+    }
+
+    .stat-card.red {
+        border-color: var(--red-card);
+    }
 
 /* --- 7. Buttons --- */
 .btn {
@@ -263,6 +270,7 @@ body {
     align-items: center;
     gap: 8px;
     font-size: 14px;
+    text-decoration: none;
 }
 
 .btn-primary {
@@ -270,16 +278,17 @@ body {
     color: #ffffff;
 }
 
-.btn-primary:hover {
-    background-color: #b45309;
-}
+    .btn-primary:hover {
+        background-color: #b45309;
+    }
 
 .btn-sm {
     padding: 7px 14px;
     font-size: 13px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
     background-color: transparent;
     border: 1.5px solid;
     text-decoration: none;
@@ -290,20 +299,54 @@ body {
     border-color: var(--primary-color);
 }
 
-.edit-btn:hover {
-    background-color: var(--primary-color);
-    color: #ffffff;
-}
+    .edit-btn:hover {
+        background-color: var(--primary-color);
+        color: #ffffff;
+    }
 
 .delete-btn {
     color: var(--red-card);
     border-color: var(--red-card);
 }
 
-.delete-btn:hover {
-    background-color: var(--red-card);
+    .delete-btn:hover {
+        background-color: var(--red-card);
+        color: #ffffff;
+    }
+
+.btn-secondary {
+    background-color: #686968;
     color: #ffffff;
+    border: none;
 }
+
+    .btn-secondary:hover {
+        background-color: #4b5563;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+    }
+
+.btn-success {
+    background-color: #3bf78d;
+    color: #ffffff;
+    border: none;
+}
+
+    .btn-success:hover {
+        background-color: #02de61;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+
+.btn-cancel {
+    background-color: #6b7280;
+    color: #ffffff;
+    border: none;
+}
+
+    .btn-cancel:hover {
+        background-color: #4b5563;
+    }
 
 /* --- 8. Data Table --- */
 .data-table {
@@ -315,24 +358,24 @@ body {
     overflow: hidden;
 }
 
-.data-table th,
-.data-table td {
-    padding: 16px 12px;
-    text-align: left;
-    border-bottom: 1px solid #e5e7eb;
-}
+    .data-table th,
+    .data-table td {
+        padding: 16px 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-.data-table th {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    font-weight: 700;
-    color: var(--text-color);
-    font-size: 13px;
-    text-transform: uppercase;
-}
+    .data-table th {
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        font-weight: 700;
+        color: var(--text-color);
+        font-size: 13px;
+        text-transform: uppercase;
+    }
 
-.data-table tbody tr:hover {
-    background-color: #fffbf0;
-}
+    .data-table tbody tr:hover {
+        background-color: #fffbf0;
+    }
 
 /* --- 9. Panel --- */
 .panel {
@@ -340,288 +383,7 @@ body {
     padding: 28px;
     border-radius: 12px;
     box-shadow: var(--shadow-md);
-    margin: 0 35px 35px;
-}
-
-/* --- 10. Modal --- */
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-backdrop.show {
-    display: flex;
-}
-
-.modal-content {
-    background-color: var(--card-background);
-    padding: 35px;
-    border-radius: 12px;
-    max-width: 550px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-}
-
-/* --- 11. Calendar --- */
-.calendar-section {
-    display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 28px;
-    padding: 0 35px 35px;
-}
-
-.calendar-container {
-    background-color: var(--card-background);
-    padding: 32px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 28px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
-}
-
-.calendar-day-header {
-    text-align: center;
-    font-weight: 700;
-    color: var(--primary-color);
-    font-size: 14px;
-    text-transform: uppercase;
-    padding: 12px 0;
-    background: linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, transparent 100%);
-    border-radius: 8px;
-    margin-bottom: 4px;
-}
-
-/* 修复 calendar 容器，避免重复 */
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
-    width: 100%;
-}
-
-/* 确保 #calendar 不会创建新的 grid 上下文 */
-#calendar {
-    display: contents;
-    grid-column: 1 / -1;
-}
-
-.calendar-day {
-    aspect-ratio: 1;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative; /* 重要！让小点可以绝对定位 */
-}
-
-.calendar-day:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 6px 20px rgba(217, 119, 6, 0.2);
-}
-
-.calendar-day.empty {
-    background-color: #f9fafb;
-    border-color: transparent;
-    cursor: default;
-    pointer-events: none;
-}
-
-.calendar-day.today {
-    border-color: #8b5cf6 !important;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%) !important;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15) !important;
-    position: relative; /* 为了让小点定位 */
-}
-
-.calendar-day.today .day-number {
-    color: #8b5cf6 !important;
-    font-weight: 800 !important;
-    font-size: 18px !important;
-}
-
-/* 小点样式 - 显示有预约的日子 */
-.appointment-dot {
-    position: absolute;
-    bottom: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    background-color: var(--primary-color);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-/* 今天的小点用紫色 */
-.calendar-day.today .appointment-dot {
-    background-color: #8b5cf6;
-}
-
-/* 有预约的日子用橙色边框 */
-.calendar-day.has-appointments {
-    border-color: var(--primary-color);
-    background: linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
-}
-
-.calendar-day.has-appointments .day-number {
-    color: var(--primary-color);
-    font-weight: 700;
-}
-
-/* 小点的跳动动画 */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: translateX(-50%) scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: translateX(-50%) scale(1.2);
-    }
-}
-
-/* 确保 calendar-day 是相对定位，方便小点绝对定位 */
-.calendar-day {
-    aspect-ratio: 1;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative; /* 重要！让小点可以绝对定位 */
-}
-
-/* --- 12. Appointments Sidebar --- */
-.appointments-sidebar {
-    background-color: var(--card-background);
-    padding: 32px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* 基础样式 - 移除固定的左边框颜色 */
-.appointment-item {
-    background: #fffbf0;
-    padding: 18px;
-    border-radius: 12px;
-    border-left: 4px solid; /* 移除固定颜色 */
-    margin-bottom: 14px;
-    transition: all 0.3s ease;
-}
-
-/* 根据状态设置左边框颜色 */
-.appointment-item.confirmed {
-    border-left-color: #10b981; /* 绿色 - confirmed */
-}
-
-.appointment-item.pending {
-    border-left-color: #f59e0b; /* 黄色/橙色 - pending */
-}
-
-.appointment-item.completed {
-    border-left-color: #6366f1; /* 蓝色 - completed */
-}
-
-.appointment-item.cancelled {
-    border-left-color: #ef4444; /* 红色 - cancelled */
-    opacity: 0.7;
-}
-
-/* Hover 效果 */
-.appointment-item:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-    transform: translateX(4px);
-}
-
-/* --- 13. Form Controls --- */
-.form-control {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 13px;
-}
-
-.form-control:focus {
-    border-color: var(--primary-color);
-    outline: none;
-}
-
-/* --- 14. Responsive --- */
-@media (max-width: 768px) {
-    #sidebar {
-        position: static;
-        width: 100%;
-    }
-    
-    #main-content-wrapper {
-        margin-left: 0;
-    }
-}
-
-/* --- 15. Chart and Info Grid --- */
-.chart-and-info-grid {
-    display: flex;
-    gap: 24px;
-    padding: 0 35px 35px;
-}
-
-.chart-panel, 
-.info-panel {
-    background-color: var(--card-background);
-    padding: 28px;
-    border-radius: 12px;
-    box-shadow: var(--shadow-md);
-    transition: all 0.3s ease;
-}
-
-.chart-panel:hover, 
-.info-panel:hover {
-    box-shadow: var(--shadow-lg);
-}
-
-.chart-panel {
-    flex: 3;
-    min-height: 420px;
-}
-
-.info-panel {
-    flex: 1;
-    min-height: 420px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    margin: -100px 35px 35px;
 }
 
 .panel-header {
@@ -644,463 +406,96 @@ body {
     margin-top: 4px;
 }
 
-.chart-options {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-chart-option {
-    padding: 8px 16px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-background);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: var(--text-color);
-    font-weight: 500;
-    font-size: 14px;
-    border-radius: 6px;
-}
-
-.btn-chart-option:hover {
-    background-color: #f3f4f6;
-    border-color: var(--primary-color);
-}
-
-.btn-chart-option.active {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
-}
-
-/* Loyalty Points Panel */
-.loyalty-header {
-    margin-bottom: 20px;
-}
-
-.loyalty-icon {
-    font-size: 48px;
-    color: var(--primary-color);
-}
-
-.stat-value-large {
-    font-size: 48px;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 15px 0;
-}
-
-.panel-subtitle {
-    color: var(--text-light);
-    font-size: 15px;
-    font-weight: 500;
-    margin-bottom: 25px;
-}
-
-.loyalty-stats {
+/* --- 10. Modal --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    margin-top: 30px;
-}
-
-.loyalty-stat-item {
-    display: flex;
-    justify-content: space-between;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
     align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #e5e7eb;
+    z-index: 1000;
 }
 
-.loyalty-stat-item:last-child {
-    border-bottom: none;
-}
-
-.loyalty-stat-label {
-    font-size: 14px;
-    color: var(--text-light);
-}
-
-.loyalty-stat-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-color);
-}
-
-/* Chart canvas */
-#appointmentChart {
-    max-height: 350px;
-    width: 100% !important;
-}
-
-/* --- 16. Additional Stats Elements --- */
-.stat-icon {
-    font-size: 32px;
-    color: var(--primary-color);
-    margin-bottom: 10px;
-}
-
-.stat-title {
-    font-size: 14px;
-    color: var(--text-light);
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-color);
-}
-
-.stat-extra {
-    font-size: 13px;
-    color: var(--text-light);
-    line-height: 1.5;
-}
-
-.change {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-}
-
-.change.up {
-    background-color: #d1fae5;
-    color: #059669;
-}
-
-.change.down {
-    background-color: #fee2e2;
-    color: #dc2626;
-}
-
-.change i {
-    font-size: 14px;
-    vertical-align: middle;
-}
-
-/* --- 17. Responsive for Chart Section --- */
-@media (max-width: 1024px) {
-    .chart-and-info-grid {
-        flex-direction: column;
+    .modal-backdrop.show {
+        display: flex;
     }
 
-    .chart-panel, 
-    .info-panel {
-        min-height: auto;
-    }
-}
-
-/* --- 18. Calendar Navigation Fix --- */
-.calendar-nav {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.month-year {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary-color);
-    min-width: 180px;
-    text-align: center;
-}
-
-.btn-nav {
-    padding: 10px 16px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    font-size: 18px;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
-    line-height: 1;
-}
-
-.btn-nav:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
-}
-
-.btn-nav:active {
-    transform: translateY(0);
-}
-
-/* --- 19. Fix Calendar Header Duplication --- */
-/* 确保只显示一次星期标题 */
-.calendar-day-header {
-    text-align: center;
-    font-weight: 700;
-    color: var(--primary-color);
-    font-size: 14px;
-    text-transform: uppercase;
-    padding: 12px 0;
-    background: linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, transparent 100%);
-    border-radius: 8px;
-    margin-bottom: 4px;
-}
-
-/* --- 20. Calendar Additional Styles --- */
-.calendar-day.has-appointments {
-    border-color: var(--primary-color);
-    background: linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
-}
-
-.calendar-day.has-appointments .day-number {
-    color: var(--primary-color);
-    font-weight: 700;
-}
-
-.appointment-dot {
-    position: absolute;
-    bottom: 8px;
-    width: 6px;
-    height: 6px;
-    background-color: var(--primary-color);
-    border-radius: 50%;
-}
-
-/* --- 21. Sidebar Header Styles --- */
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-.sidebar-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.sidebar-title i {
-    color: var(--primary-color);
-    font-size: 22px;
-}
-
-.selected-date-badge {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
-    color: #ffffff;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 13px;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
-}
-
-/* --- 22. Appointment List Styles --- */
-#appointmentsList {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-#appointmentsList::-webkit-scrollbar {
-    width: 6px;
-}
-
-#appointmentsList::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 3px;
-}
-
-#appointmentsList::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-    border-radius: 3px;
-}
-
-.appointment-time {
-    font-weight: 700;
-    color: var(--primary-color);
-    font-size: 14px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.appointment-details {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-.appointment-pet {
-    font-weight: 600;
-    color: var(--text-color);
-    font-size: 14px;
-}
-
-.appointment-service {
-    font-size: 13px;
-    color: var(--text-light);
-    font-style: italic;
-}
-
-.appointment-groomer {
-    font-size: 12px;
-    color: var(--text-light);
-}
-
-.appointment-status {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 12px;
+.modal-content {
+    background-color: var(--card-background);
+    padding: 35px;
     border-radius: 12px;
-    margin-top: 8px;
+    max-width: 550px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
 }
 
-.appointment-status.pending {
-    background-color: #fef3c7;
-    color: #d97706;
+/* --- 11. Generic Form styles --- */
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
 }
 
-.appointment-status.confirmed {
-    background-color: #d1fae5;
-    color: #059669;
-}
+    .form-control:focus {
+        border-color: var(--primary-color);
+        outline: none;
+    }
 
-.no-appointments {
-    text-align: center;
-    color: var(--text-light);
-    padding: 60px 20px;
-    font-style: italic;
-    font-size: 14px;
-}
-
-/* --- 23. Selected Day Styling --- */
-.calendar-day.selected {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%) !important;
-    color: #ffffff !important;
-    border-color: var(--primary-color) !important;
-    box-shadow: 0 8px 24px rgba(217, 119, 6, 0.35) !important;
-    transform: scale(1.05);
-}
-
-.calendar-day.selected::before {
-    opacity: 0;
-}
-
-.calendar-day.selected .day-number {
-    color: #ffffff !important;
-    font-weight: 700;
-}
-
-/* 选中的日期如果有预约，小点变成黄色 */
-.calendar-day.selected .appointment-dot {
-    background-color: #fbbf24 !important;
-}
-
-.calendar-day.selected:hover {
-    transform: scale(1.05);
-}
-
-/* Day number styling */
-.day-number {
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--text-color);
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 1;
-}
-
-/* --- 24. Today Selected Styling (紫色) --- */
-/* 当今天被选中时，使用紫色而不是橙色 */
-.calendar-day.today.selected {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
-    color: #ffffff !important;
-    border-color: #8b5cf6 !important;
-    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4) !important;
-    transform: scale(1.08);
-}
-
-.calendar-day.today.selected .day-number {
-    color: #ffffff !important;
-    font-weight: 800;
-}
-
-/* 今天被选中时，小点变成亮黄色 */
-.calendar-day.today.selected .appointment-dot {
-    background-color: #fbbf24 !important;
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-}
-
-.calendar-day.today.selected:hover {
-    transform: scale(1.08);
-    box-shadow: 0 10px 28px rgba(139, 92, 246, 0.5) !important;
-}
-
-/* --- 25. Form Styling (Add/Edit Groomer) --- */
 .form-group {
     margin-bottom: 20px;
 }
 
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text-color);
-    font-size: 14px;
-}
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-color);
+        font-size: 14px;
+    }
 
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
-.form-group input[type="number"],
-.form-group input[type="tel"],
-.form-group input[type="file"],
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    transition: all 0.3s ease;
-    background-color: #ffffff;
-}
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="number"],
+    .form-group input[type="tel"],
+    .form-group input[type="file"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+    }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.1);
-    background-color: #fffbf0;
-}
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.1);
+            background-color: #fffbf0;
+        }
 
-.form-group textarea {
-    resize: vertical;
-    min-height: 100px;
-}
+    .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-    color: #9ca3af;
-}
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #9ca3af;
+        }
 
-/* Form Grid Layout */
+/* Grid layout for forms */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1111,7 +506,6 @@ body {
     grid-column: 1 / -1;
 }
 
-/* Form Actions (buttons) */
 .form-actions {
     display: flex;
     gap: 12px;
@@ -1119,66 +513,28 @@ body {
     justify-content: flex-start;
 }
 
-/* Create Form Visibility */
-.create-form {
-    display: none;
-    background-color: var(--card-background);
-    padding: 28px;
-    border-radius: 12px;
-    box-shadow: var(--shadow-md);
-    margin: 0 0 35px;
-}
-
-.create-form.visible {
-    display: block;
-    animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Form Title */
-.create-form h2,
-.edit-form h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-color);
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-/* File Upload Styling */
+/* File upload button */
 .form-group input[type="file"] {
     padding: 8px;
     cursor: pointer;
 }
 
-.form-group input[type="file"]::file-selector-button {
-    padding: 8px 16px;
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    margin-right: 12px;
-    transition: all 0.3s ease;
-}
+    .form-group input[type="file"]::file-selector-button {
+        padding: 8px 16px;
+        background-color: var(--primary-color);
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-right: 12px;
+        transition: all 0.3s ease;
+    }
 
-.form-group input[type="file"]::file-selector-button:hover {
-    background-color: #b45309;
-}
+        .form-group input[type="file"]::file-selector-button:hover {
+            background-color: #b45309;
+        }
 
-/* Helper Text */
 .form-helper-text {
     font-size: 12px;
     color: var(--text-light);
@@ -1186,61 +542,7 @@ body {
     font-style: italic;
 }
 
-/* Actions Container */
-.actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 24px;
-    gap: 10px;
-}
-
-/* Cancel Button */
-.btn-cancel {
-    background-color: #6b7280;
-    color: #ffffff;
-    border: none;
-}
-
-.btn-cancel:hover {
-    background-color: #4b5563;
-}
-
-/* Save Button - Success (Cyan/Teal Color) */
-.btn-success {
-    background-color: #3bf78d; /* Cyan color */
-    color: #ffffff;
-    border: none;
-}
-
-    .btn-success:hover {
-        background-color: #02de61; /* Darker cyan on hover */
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
-    }
-
-/* Cancel Button - Secondary (Gray Color) */
-.btn-secondary {
-    background-color: #686968; /* Gray color */
-    color: #ffffff;
-    border: none;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563; /* Darker gray on hover */
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-}
-
-/* Ensure anchor tags styled as buttons behave properly */
-a.btn-secondary {
-    text-decoration: none;
-}
-
-/* Current Photo Preview in Edit Mode */
+/* Current Photo Preview (can be reused) */
 .current-photo-preview {
     margin-top: 8px;
     padding: 8px;
@@ -1249,20 +551,57 @@ a.btn-secondary {
     display: inline-block;
 }
 
-.current-photo-preview img {
-    display: block;
-    border: 2px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
+    .current-photo-preview img {
+        display: block;
+        border: 2px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
+    }
+
+/* Actions container (generic) */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 24px;
+    gap: 10px;
 }
 
-.text-muted {
-    color: var(--text-light) !important;
+/* ===== Admin custom styles for panels and add buttons ===== */
+.panel-header-wrapper { display: flex; justify-content: space-between; align-items: center; }
+.btn-add {
+ background: #ef8a24;
+ color: #fff;
+ border: none;
+ padding:10px 16px;
+ border-radius:8px;
+ display: inline-flex;
+ align-items: center;
+ gap:8px;
+ box-shadow: 02px 6px rgba(0, 0, 0, 0.08);
+ cursor: pointer;
 }
+.btn-add i { font-size:20px; }
 
-.d-block {
-    display: block !important;
+/* Checkbox tile styles to mimic radio-like selectable pills */
+.checkbox-tiles { display: flex; flex-wrap: wrap; gap: 12px; }
+.checkbox-tile {
+ display: inline-flex;
+ align-items: center;
+ padding: 14px 18px; /* larger clickable area */
+ border-radius: 10px;
+ background: #f3f4f6;
+ cursor: pointer;
+ border: 1px solid transparent;
+ min-width: 120px; /* make tile bigger since only 2 categories */
+ min-height: 48px;
+ font-size: 16px;
 }
+.checkbox-tile input { width: 18px; height: 18px; margin-right: 12px; flex: 0 0 auto; }
+.checkbox-tile span { flex: 1 1 auto; }
+.checkbox-tile.selected { background: #ef8a24; color: #fff; border-color: #ef8a24; }
+.checkbox-tile:hover { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06); }
+.checkbox-tile:focus-within { outline: 2px solid rgba(239, 138, 36, 0.18); }
 
-.mt-1 {
-    margin-top: 0.25rem !important;
+/* Small responsive tweak */
+@media (max-width: 480px) {
+ .checkbox-tile { min-width: 100px; padding: 10px 12px; font-size: 14px; }
 }
