@@ -1,4 +1,4 @@
-using PetGroomingAppointmentSystem.Services;
+﻿using PetGroomingAppointmentSystem.Services;
 using PetGroomingAppointmentSystem.Areas.Admin.Services;
 using PetGroomingAppointmentSystem.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,32 +17,19 @@ builder.Services.AddSqlServer<DB>($@"
 ");
 
 // -----------------------------
-// Register Admin Services (Dependency Injection)
-// From Areas/Admin/Services
+// If AddSqlServer<T> is not available in your environment, use this alternative:
+// builder.Services.AddDbContext<DB>(options =>
+//     options.UseSqlServer($@"
+//         Data Source=(LocalDB)\MSSQLLocalDB;
+//         AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
+//         Integrated Security=True;
+//     "));
 // -----------------------------
 
-// Email Service (Admin)
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, 
-        PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();
+// Add Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
-// Password Service (Admin)
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPasswordService, 
-       PetGroomingAppointmentSystem.Areas.Admin.Services.PasswordService>();
-
-// Phone Service (Admin)
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, 
-              PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
-
-// Validation Service (Admin)
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, 
-           PetGroomingAppointmentSystem.Areas.Admin.Services.ValidationService>();
-
-// -----------------------------
-// Register Global Services (Shared across all areas)
-// From Services/ folder
-// -----------------------------
-
-// Chatbot Service (Global - used by Customer area)
+// Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddHttpClient<ChatbotService>();
 

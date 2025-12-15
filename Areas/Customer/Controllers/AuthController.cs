@@ -35,10 +35,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // Format phone number: convert 01X1234567 or 01X-1234567 to 01X-1234567 format
+            // Format phone number
             string formattedPhoneNumber = FormatPhoneNumber(model.PhoneNumber);
 
-            // Validate formatted phone number
+            // Validate phone number format
             if (!ValidatePhoneFormat(formattedPhoneNumber))
             {
                 ModelState.AddModelError(nameof(model.PhoneNumber), "Invalid phone number format. Use 01X-XXXXXXX or 01X-XXXXXXXX");
@@ -47,7 +47,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
             // Clear expired lockouts before checking
             ClearExpiredLockouts(formattedPhoneNumber);
-
             var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
             // Check if account is currently locked
@@ -87,13 +86,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             // Successful login - reset failed attempts
             ResetFailedAttempts(formattedPhoneNumber);
 
+            // Set session for authenticated user
             HttpContext.Session.SetString("CustomerId", user.UserId);
             HttpContext.Session.SetString("CustomerName", user.Name);
             HttpContext.Session.SetString("CustomerPhone", user.Phone);
 
+            // Set "Remember Me" cookie if checked
             if (model.RememberMe)
             {
-                // Set cookie to remember login for 30 days
                 Response.Cookies.Append("RememberPhone", formattedPhoneNumber, new Microsoft.AspNetCore.Http.CookieOptions
                 {
                     Expires = DateTimeOffset.UtcNow.AddDays(30),
@@ -108,7 +108,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         /// <summary>
         /// Formats phone number to 01X-XXXXXXX or 01X-XXXXXXXX format
-        /// Accepts: 0121234567, 01212345678, 012-1234567, 012-12345678
         /// </summary>
         private string FormatPhoneNumber(string phoneNumber)
         {
@@ -134,7 +133,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         }
 
         /// <summary>
-        /// Validates if phone number is in correct format: 01X-XXXXXXX or 01X-XXXXXXXX
+        /// Validates phone number format
         /// </summary>
         private bool ValidatePhoneFormat(string phoneNumber)
         {
@@ -147,73 +146,199 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ForgotPassword(string phoneNumber, string email)
+        public async Task<IActionResult> ForgotPassword(string phoneNumber, string email, string verificationCode, string action)
         {
-            if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(email))
+            // Format phone numbers
+            string formattedPhoneNumber = FormatPhoneNumber(phoneNumber);
+
+            // Validate formatted phone number
+            if (!ValidatePhoneFormat(formattedPhoneNumber))
             {
-                ViewData["Error"] = "Phone number and email are required.";
+                ViewData["Error"] = "Invalid phone number format. Use 01X-XXXXXXX or 01X-XXXXXXXX";
                 return View();
             }
 
-            var user = _dbContext.Users
-                .FirstOrDefault(u => u.Phone == phoneNumber && u.Email == email && u.Role == "customer");
-
-            if (user != null)
+            // ACTION 1: Send Verification Code
+            if (action == "send" || string.IsNullOrEmpty(verificationCode))
             {
-                var resetToken = GenerateResetToken();
-                var resetLink = Url.Action("ResetPassword", "Auth", new { token = resetToken }, Request.Scheme);
+                if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(email))
+                {
+                    ViewData["Error"] = "Phone number and email are required.";
+                    return View();
+                }
 
-                try
+                // Find customer by phone and email
+                var user = _dbContext.Customers
+                    .FirstOrDefault(u => u.Phone == formattedPhoneNumber && u.Email == email && u.Role == "customer");
+
+                if (user != null)
                 {
-                    await _emailService.SendPasswordResetEmailAsync(user.Email, user.Name, resetLink ?? "");
+                    // Generate 6-digit verification code
+                    string code = GenerateVerificationCode();
+
+                    // Clear any existing codes for this user
+                    var existingTokens = _dbContext.PasswordResetTokens
+                        .Where(t => t.CustomerId == user.UserId && !t.IsVerified)
+                        .ToList();
+                    _dbContext.PasswordResetTokens.RemoveRange(existingTokens);
+
+                    // Create new verification code entry
+                    var resetToken = new PasswordResetToken
+                    {
+                        CustomerId = user.UserId,
+                        Email = email,
+                        Phone = formattedPhoneNumber,
+                        VerificationCode = code,
+                        CreatedAt = DateTime.UtcNow,
+                        ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+                        IsVerified = false,
+                        AttemptCount = 0
+                    };
+
+                    _dbContext.PasswordResetTokens.Add(resetToken);
+                    _dbContext.SaveChanges();
+
+                    // Send verification code email
+                    try
+                    {
+                        await _emailService.SendVerificationCodeEmailAsync(user.Email, user.Name, code);
+                        Console.WriteLine($"[VERIFICATION CODE] Code sent to {user.Email}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[VERIFICATION CODE ERROR] Failed to send code: {ex.Message}");
+                    }
+
+                    ViewData["CodeSent"] = true;
+                    ViewData["Email"] = email;
+                    ViewData["Phone"] = formattedPhoneNumber;
+                    ViewData["Success"] = "Verification code sent to your email. Please check your inbox.";
                 }
-                catch
+                else
                 {
-                    // Log error but still show success message for security
+                    ViewData["Success"] = "If an account exists with that phone number and email, a verification code will be sent.";
                 }
+
+                return View();
             }
 
-            ViewData["Success"] = "If an account exists with that phone number and email, a password reset link will be sent.";
+            // ACTION 2: Verify Code
+            if (action == "verify" && !string.IsNullOrEmpty(verificationCode))
+            {
+                if (string.IsNullOrEmpty(phoneNumber) || string.IsNullOrEmpty(email))
+                {
+                    ViewData["Error"] = "Phone number and email are required.";
+                    return View();
+                }
+
+                // Find the verification code
+                var resetToken = _dbContext.PasswordResetTokens
+                    .FirstOrDefault(t => t.Email == email &&
+                                        t.Phone == formattedPhoneNumber &&
+                                        t.VerificationCode == verificationCode &&
+                                        !t.IsVerified &&
+                                        t.ExpiresAt > DateTime.UtcNow);
+
+                if (resetToken == null)
+                {
+                    resetToken = _dbContext.PasswordResetTokens
+                        .FirstOrDefault(t => t.Email == email &&
+                                            t.Phone == formattedPhoneNumber &&
+                                            !t.IsVerified);
+
+                    if (resetToken != null)
+                    {
+                        resetToken.AttemptCount++;
+                        _dbContext.SaveChanges();
+                    }
+
+                    ViewData["Error"] = "Invalid verification code. Please try again.";
+                    ViewData["CodeSent"] = true;
+                    ViewData["Email"] = email;
+                    ViewData["Phone"] = formattedPhoneNumber;
+                    return View();
+                }
+
+                // Mark code as verified
+                resetToken.IsVerified = true;
+                resetToken.VerifiedAt = DateTime.UtcNow;
+                _dbContext.SaveChanges();
+
+                // Store in session for password reset
+                HttpContext.Session.SetString("ResetCustomerId", resetToken.CustomerId);
+                HttpContext.Session.SetString("ResetEmail", email);
+                HttpContext.Session.SetString("ResetPhone", formattedPhoneNumber);
+
+                return RedirectToAction("ResetPassword");
+            }
+
             return View();
         }
 
-        public IActionResult ResetPassword(string token)
+        public IActionResult ResetPassword()
         {
-            if (string.IsNullOrEmpty(token))
+            // Check if user has verified the code
+            var customerId = HttpContext.Session.GetString("ResetCustomerId");
+
+            if (string.IsNullOrEmpty(customerId))
             {
-                ViewData["Error"] = "Invalid reset token.";
-                return View();
+                return RedirectToAction("ForgotPassword");
             }
 
-            ViewData["ResetToken"] = token;
             return View();
         }
 
         [HttpPost]
-        public IActionResult ResetPassword(string token, string newPassword, string confirmPassword)
+        public IActionResult ResetPassword(string newPassword, string confirmPassword)
         {
+            // Get customer ID from session
+            var customerId = HttpContext.Session.GetString("ResetCustomerId");
+            var resetEmail = HttpContext.Session.GetString("ResetEmail");
+            var resetPhone = HttpContext.Session.GetString("ResetPhone");
+
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return RedirectToAction("ForgotPassword");
+            }
+
+            // Validate input
             if (string.IsNullOrEmpty(newPassword) || string.IsNullOrEmpty(confirmPassword))
             {
                 ViewData["Error"] = "Password and confirmation are required.";
-                ViewData["ResetToken"] = token;
                 return View();
             }
 
             if (newPassword != confirmPassword)
             {
                 ViewData["Error"] = "Passwords do not match.";
-                ViewData["ResetToken"] = token;
                 return View();
             }
 
             if (newPassword.Length < 8)
             {
-                ViewData["Error"] = "Password must be at least 6 characters.";
-                ViewData["ResetToken"] = token;
+                ViewData["Error"] = "Password must be at least 8 characters.";
                 return View();
             }
 
-            ViewData["Success"] = "Your password has been reset successfully. Please login with your new password.";
+            // Get customer and update password
+            var customer = _dbContext.Customers.FirstOrDefault(c => c.UserId == customerId);
+
+            if (customer == null)
+            {
+                ViewData["Error"] = "User not found.";
+                return View();
+            }
+
+            // Update password
+            customer.Password = newPassword;
+            _dbContext.SaveChanges();
+
+            // Clear session
+            HttpContext.Session.Remove("ResetCustomerId");
+            HttpContext.Session.Remove("ResetEmail");
+            HttpContext.Session.Remove("ResetPhone");
+
+            TempData["Success"] = "Your password has been reset successfully. Please login with your new password.";
             return RedirectToAction("Login");
         }
 
@@ -248,8 +373,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
+            // Format phone number first
+            string formattedPhone = FormatPhoneNumber(model.PhoneNumber);
+
             // Check if phone number already exists in database
-            if (_dbContext.Users.Any(u => u.Phone == model.PhoneNumber))
+            if (_dbContext.Users.Any(u => u.Phone == formattedPhone))
             {
                 ModelState.AddModelError("PhoneNumber", "Phone number already registered.");
 
@@ -268,7 +396,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 var lastCustomer = _dbContext.Customers
                     .OrderByDescending(c => c.UserId)
                     .FirstOrDefault();
-                
+
                 string lastId = lastCustomer?.UserId ?? "C000";
                 int newIdNumber = int.Parse(lastId.Substring(1)) + 1;
                 string newUserId = $"C{newIdNumber:D3}";
@@ -280,8 +408,8 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     Name = model.Name,
                     IC = model.IC,
                     Email = model.Email,
-                    Phone = model.PhoneNumber,
-                    Password = model.Password, // TODO: Hash password using bcrypt
+                    Phone = formattedPhone,
+                    Password = model.Password,
                     Role = "customer",
                     CreatedAt = DateTime.UtcNow,
                     LoyaltyPoint = 0,
@@ -316,13 +444,8 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         [HttpPost]
         public IActionResult CheckPhoneNumber(string phoneNumber)
         {
-            if (string.IsNullOrEmpty(phoneNumber))                                                  
+            if (string.IsNullOrEmpty(phoneNumber))
             {
-                var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
-                if (DateTime.UtcNow > lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
-                {
-                    loginAttempts.Remove(phoneNumber);
-                }
                 return Json(new { available = true });
             }
 
@@ -336,18 +459,18 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             // Store the referrer URL before clearing session
             string returnUrl = Request.Headers["Referer"].ToString();
-            
+
             HttpContext.Session.Clear();
-            
+
             // Set success message in TempData
             TempData["LogoutMessage"] = "Logout successfully";
-            
+
             // If there's a valid return URL, redirect back to it; otherwise go to home
             if (!string.IsNullOrEmpty(returnUrl) && returnUrl.Contains(Request.Host.ToString()))
             {
                 return Redirect(returnUrl);
             }
-            
+
             return RedirectToAction("Index", "Home");
         }
 
@@ -405,9 +528,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             return 15 * (int)Math.Pow(2, lockoutCount);
         }
 
-        private string GenerateResetToken()
+        private string GenerateVerificationCode()
         {
-            return Guid.NewGuid().ToString("N");
+            Random random = new Random();
+            return random.Next(100000, 999999).ToString();
         }
     }
 }

@@ -31,6 +31,7 @@ public class DB : DbContext
     public DbSet<Appointment> Appointments { get; set; }
 
     public DbSet<CustomerRedeemGift> CustomerRedeemGifts { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 }
 
 /* =========================
@@ -123,7 +124,6 @@ public class Customer : User
 
     public DateTime? RegisteredDate { get; set; }
 
-
     // Overrides inherited Pets and Appointments (for customer-specific records)
     [NotMapped]
     public new List<Pet> Pets { get; set; } = new List<Pet>();
@@ -132,7 +132,6 @@ public class Customer : User
     public new List<Appointment> Appointments { get; set; } = new List<Appointment>();
     
     public List<CustomerRedeemGift> Redeems { get; set; } = new List<CustomerRedeemGift>();
-    public string CustomerId { get; internal set; }
 }
 
 /* =========================
@@ -326,25 +325,4 @@ public class CustomerRedeemGift
     public DateTime? RedeemDate { get; set; }
 
     public int QuantityRedeemed { get; set; }
-}
-
-/* =========================
-   SERVICE SERVICE CATEGORY (Junction Table)
-   ========================= */
-public class ServiceServiceCategory
-{
-    [Key, MaxLength(6)]
-    public string SscId { get; set; } // e.g., SSC001
-
-    [MaxLength(10)]
-    public string ServiceId { get; set; }
-
-    [ForeignKey(nameof(ServiceId))]
-    public Service Service { get; set; }
-
-    [MaxLength(10)]
-    public string CategoryId { get; set; }
-
-    [ForeignKey(nameof(CategoryId))]
-    public ServiceCategory Category { get; set; }
 }

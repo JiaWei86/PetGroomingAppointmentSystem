@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PetGroomingAppointmentSystem.Models;
 
@@ -11,9 +12,11 @@ using PetGroomingAppointmentSystem.Models;
 namespace PetGroomingAppointmentSystem.Migrations
 {
     [DbContext(typeof(DB))]
-    partial class DBModelSnapshot : ModelSnapshot
+    [Migration("20251213171536_createResetPassword")]
+    partial class createResetPassword
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -251,6 +254,10 @@ namespace PetGroomingAppointmentSystem.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<string>("CategoryId")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -264,13 +271,11 @@ namespace PetGroomingAppointmentSystem.Migrations
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<string>("Status")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.HasKey("ServiceId");
 
                     b.HasIndex("AdminId");
+
+                    b.HasIndex("CategoryId");
 
                     b.ToTable("Services");
                 });
@@ -294,29 +299,6 @@ namespace PetGroomingAppointmentSystem.Migrations
                     b.HasIndex("AdminId");
 
                     b.ToTable("ServiceCategories");
-                });
-
-            modelBuilder.Entity("PetGroomingAppointmentSystem.Models.ServiceServiceCategory", b =>
-                {
-                    b.Property<string>("SscId")
-                        .HasMaxLength(6)
-                        .HasColumnType("nvarchar(6)");
-
-                    b.Property<string>("CategoryId")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("ServiceId")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.HasKey("SscId");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("ServiceServiceCategories");
                 });
 
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.User", b =>
@@ -506,7 +488,13 @@ namespace PetGroomingAppointmentSystem.Migrations
                         .WithMany("Services")
                         .HasForeignKey("AdminId");
 
+                    b.HasOne("PetGroomingAppointmentSystem.Models.ServiceCategory", "Category")
+                        .WithMany("Services")
+                        .HasForeignKey("CategoryId");
+
                     b.Navigation("Admin");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.ServiceCategory", b =>
@@ -516,21 +504,6 @@ namespace PetGroomingAppointmentSystem.Migrations
                         .HasForeignKey("AdminId");
 
                     b.Navigation("Admin");
-                });
-
-            modelBuilder.Entity("PetGroomingAppointmentSystem.Models.ServiceServiceCategory", b =>
-                {
-                    b.HasOne("PetGroomingAppointmentSystem.Models.ServiceCategory", "Category")
-                        .WithMany("ServiceServiceCategories")
-                        .HasForeignKey("CategoryId");
-
-                    b.HasOne("PetGroomingAppointmentSystem.Models.Service", "Service")
-                        .WithMany("ServiceServiceCategories")
-                        .HasForeignKey("ServiceId");
-
-                    b.Navigation("Category");
-
-                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.Admin", b =>
@@ -579,13 +552,11 @@ namespace PetGroomingAppointmentSystem.Migrations
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.Service", b =>
                 {
                     b.Navigation("Appointments");
-
-                    b.Navigation("ServiceServiceCategories");
                 });
 
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.ServiceCategory", b =>
                 {
-                    b.Navigation("ServiceServiceCategories");
+                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.User", b =>
