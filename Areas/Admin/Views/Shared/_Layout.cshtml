@@ -47,18 +47,6 @@
                         </a>
                     </li>
                     <li>
-                        <a class="@(ViewData["ActivePage"] as string == "Pet" ? "active" : "")"
-                           asp-area="Admin" asp-controller="Home" asp-action="Pet">
-                            <i class="material-icons">pets</i> Pets
-                        </a>
-                    </li>
-                    <li>
-                        <a class="@(ViewData["ActivePage"] as string == "LoyaltyPoint" ? "active" : "")"
-                           asp-area="Admin" asp-controller="Home" asp-action="LoyaltyPoint">
-                            <i class="material-icons">card_giftcard</i> Loyalty Points
-                        </a>
-                    </li>
-                    <li>
                         <a class="@(ViewData["ActivePage"] as string == "RedeemGift" ? "active" : "")"
                            asp-area="Admin" asp-controller="Home" asp-action="RedeemGift">
                             <i class="material-icons">redeem</i> Redeem Gifts

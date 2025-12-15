@@ -1,5 +1,7 @@
 ﻿@{
     ViewData["Title"] = "My Profile";
+    var customer = ViewBag.Customer as PetGroomingAppointmentSystem.Models.Customer;
+    var pets = ViewBag.Pets as List<PetGroomingAppointmentSystem.Models.Pet> ?? new List<PetGroomingAppointmentSystem.Models.Pet>();
 }
 
 <div class="bradcam_area breadcam_bg">
@@ -22,16 +24,17 @@
             <div class="col-lg-4 mb-4">
                 <div class="card shadow-sm profile-card-main">
                     <div class="card-body text-center">
-                        <!-- Avatar (uses uploaded path; replace with real avatar path later) -->
-                        <img src="/mnt/data/PetGroomingAppointmentSystem.zip"
+                        <!-- Avatar -->
+                        <img src="@(string.IsNullOrEmpty(customer?.Photo) ? "/Customer/img/default-avatar.png" : customer.Photo)"
                              alt="avatar"
                              class="rounded-circle mb-3 profile-avatar"
+                             id="profileAvatarDisplay"
                              style="object-fit:cover;" />
 
-                        <h4 class="card-title mb-0">Hachimi</h4>
-                        <div class="text-muted mb-2">+60 12-345 6789</div>
+                        <h4 class="card-title mb-0" id="profileName">@customer?.Name</h4>
+                        <div class="text-muted mb-2" id="profilePhone">@customer?.Phone</div>
 
-                        <p class="small text-muted">hachiminanbeludo@example.com</p>
+                        <p class="small text-muted" id="profileEmail">@customer?.Email</p>
 
                         <div class="d-grid gap-2">
                             <button type="button" class="btn btn-orange-primary" id="editProfileBtn" onclick="openEditModal()">Edit Profile</button>
@@ -44,29 +47,30 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item">
                             <strong>Member since:</strong>
-                            <span class="float-right">Jan 2024</span>
+                            <span class="float-right">@customer?.RegisteredDate?.ToString("MMM yyyy")</span>
                         </li>
 
                         <li class="list-group-item">
                             <strong>Status:</strong>
-                            <span class="badge-orange float-right">Active</span>
+                            <span class="badge-orange float-right">@(string.IsNullOrEmpty(customer?.Status) ? "ACTIVE" : customer.Status.ToUpper())</span>
                         </li>
 
                         <li class="list-group-item">
                             <strong>Loyalty Points:</strong>
-                            <span class="float-right text-warning font-weight-bold">999999</span>
+                            <span class="float-right text-warning font-weight-bold" id="loyaltyPointsDisplay">@customer?.LoyaltyPoint</span>
                         </li>
                     </ul>
                 </div>
+
 
                 <!-- Quick Actions card -->
                 <div class="card mt-3 quick-actions-card">
                     <div class="card-body">
                         <h6 class="card-title">Quick Actions</h6>
                         <div class="d-grid gap-2">
-                            <a href="#" class="btn btn-orange-primary btn-sm">+ Add Pet</a>
-                            <a href="#" class="btn btn-orange-outline btn-sm">Book Service</a>
-                            <a href="#" class="btn btn-orange-outline btn-sm">View Invoices</a>
+                            <button onclick="openAddPetModal()" class="btn btn-orange-primary btn-sm">+ Add Pet</button>
+                            <a href="/Customer/Home/Appointment" class="btn btn-orange-outline btn-sm">Book Service</a>
+                            <a href="/Customer/Home/History" class="btn btn-orange-outline btn-sm">View History</a>
                         </div>
                     </div>
                 </div>
@@ -75,8 +79,8 @@
                 <div class="card mt-3 promotion-card">
                     <div class="card-body">
                         <h6 class="card-title">Exclusive Offer</h6>
-                        <p class="small mb-2">You have a <strong>10% discount</strong> available for your first grooming this month.</p>
-                        <a href="#" class="btn btn-redeem btn-sm">Redeem Now</a>
+                        <p class="small mb-2">You have a <strong>10% discount</strong> available for your grooming service!</p>
+                        <a href="/Customer/Home/Appointment" class="btn btn-redeem btn-sm">Book Now</a>
                     </div>
                 </div>
             </div>
@@ -88,7 +92,7 @@
                         <!-- Tabs -->
                         <ul class="nav nav-tabs nav-tabs-orange" id="profileTab" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link active" id="pets-tab" data-toggle="tab" href="#pets" role="tab" aria-controls="pets" aria-selected="true">Pets</a>
+                                <a class="nav-link active" id="pets-tab" data-toggle="tab" href="#pets" role="tab" aria-controls="pets" aria-selected="true">Pets (@pets.Count)</a>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <a class="nav-link" id="loyalty-tab" data-toggle="tab" href="#loyalty" role="tab" aria-controls="loyalty" aria-selected="false">Loyalty & Rewards</a>
@@ -101,56 +105,46 @@
                         <div class="tab-content pt-3" id="profileTabContent">
                             <!-- Pets tab -->
                             <div class="tab-pane fade show active" id="pets" role="tabpanel" aria-labelledby="pets-tab">
-                                <div class="row gy-3">
-                                    <!-- Sample pet card -->
-                                    <div class="col-md-6">
-                                        <div class="card h-100 pet-card">
-                                            <div class="row no-gutters align-items-center">
-                                                <div class="col-4 text-center p-3">
-                                                    <img src="/images/pet-placeholder.png" alt="Pet photo"
-                                                         class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
-                                                </div>
-                                                <div class="col-8">
-                                                    <div class="card-body py-2">
-                                                        <h6 class="card-title mb-1">Bella</h6>
-                                                        <p class="small text-muted mb-1">Dog - Shih Tzu</p>
-                                                        <p class="small text-muted mb-1">DOB: 2019-05-12</p>
-                                                        <div class=".pet-card .d-flex.gap-2">
-                                                            <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('bella')">Edit</button>
-                                                            <a href="#" class="btn btn-sm btn-danger">Delete</a>
+                                <div class="row gy-3" id="petsContainer">
+                                    @if (pets.Any())
+                                    {
+                                        @foreach (var pet in pets)
+                                        {
+                                            <div class="col-md-6">
+                                                <div class="card h-100 pet-card">
+                                                    <div class="row no-gutters align-items-center">
+                                                        <div class="col-4 text-center p-3">
+                                                            <img src="@(string.IsNullOrEmpty(pet.Photo) ? "/Customer/img/default-pet.png" : pet.Photo)" 
+                                                                 alt="@pet.Name"
+                                                                 class="rounded-circle" 
+                                                                 style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
+                                                        </div>
+                                                        <div class="col-8">
+                                                            <div class="card-body py-2">
+                                                                <h6 class="card-title mb-1">@pet.Name</h6>
+                                                                <p class="small text-muted mb-1">@pet.Type - @pet.Breed</p>
+                                                                <p class="small text-muted mb-1">Age: @pet.Age years</p>
+                                                                <div class="d-flex gap-2">
+                                                                    <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
+                                                                    <button type="button" class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="col-12">
+                                            <p class="text-center text-muted">No pets yet. Add your first pet!</p>
                                         </div>
-                                    </div>
-
-                                    <!-- another sample pet -->
-                                    <div class="col-md-6">
-                                        <div class="card h-100 pet-card">
-                                            <div class="row no-gutters align-items-center">
-                                                <div class="col-4 text-center p-3">
-                                                    <img src="/images/pet-placeholder.png" alt="Pet photo"
-                                                         class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
-                                                </div>
-                                                <div class="col-8">
-                                                    <div class="card-body py-2">
-                                                        <h6 class="card-title mb-1">Milo</h6>
-                                                        <p class="small text-muted mb-1">Cat - Domestic Short Hair</p>
-                                                        <p class="small text-muted mb-1">DOB: 2021-11-03</p>
-                                                        <div class=".pet-card .d-flex.gap-2">
-                                                            <button type="button" class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('milo')">Edit</button>
-                                                            <a href="#" class="btn btn-sm btn-danger">Delete</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    }
                                 </div>
 
                                 <div class="mt-3 text-center">
-                                    <a href="#" class="btn btn-sm btn-orange-primary">+ Add New Pet</a>
+                                    <button onclick="openAddPetModal()" class="btn btn-sm btn-orange-primary">+ Add New Pet</button>
                                 </div>
                             </div>
 
@@ -160,15 +154,17 @@
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
                                             <h6 class="mb-3">Points Balance</h6>
-                                            <div class="loyalty-points-display">125 pts</div>
-                                            <p class="small text-muted">Earn points for every booking. Redeem for discounts.</p>
+                                            <div class="loyalty-points-display" id="loyaltyBalance">@customer?.LoyaltyPoint pts</div>
+                                            <p class="small text-muted">Earn points for every booking. Redeem for rewards.</p>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
-                                            <h6 class="mb-3">Next Reward</h6>
-                                            <p class="small text-muted">Get a free nail-trim at 200 pts</p>
-                                            <a href="#" class="btn btn-sm btn-orange-primary">Redeem</a>
+                                            <h6 class="mb-3">Tier Status</h6>
+                                            <p class="small text-muted">You are a valued member!</p>
+                                            <a href="/Customer/Home/Index#redeem_gift_area_start" class="btn btn-sm btn-orange-primary">
+                                                <i class="fa fa-gift"></i> Redeem Rewards
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -202,22 +198,22 @@
                             <div class="col-md-4">
                                 <div class="service-box">
                                     <div class="mb-2"><strong>Full Groom</strong></div>
-                                    <div class="small text-muted mb-2">Recommended for long-haired dogs</div>
-                                    <a href="#" class="btn btn-sm btn-orange-primary">Book</a>
+                                    <div class="small text-muted mb-2">Complete grooming package</div>
+                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="service-box">
                                     <div class="mb-2"><strong>Nail Trim</strong></div>
                                     <div class="small text-muted mb-2">Quick & safe</div>
-                                    <a href="#" class="btn btn-sm btn-orange-primary">Book</a>
+                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="service-box">
-                                    <div class="mb-2"><strong>Vaccination Reminder</strong></div>
-                                    <div class="small text-muted mb-2">Stay protected</div>
-                                    <a href="#" class="btn btn-sm btn-orange-primary">Set Reminder</a>
+                                    <div class="mb-2"><strong>Bath & Brush</strong></div>
+                                    <div class="small text-muted mb-2">Fresh & clean</div>
+                                    <a href="/Customer/Home/Appointment" class="btn btn-sm btn-orange-primary">Book</a>
                                 </div>
                             </div>
                         </div>
@@ -260,59 +256,32 @@
                 <div class="tab-content" id="accountSettingsTabContent">
                     <!-- Edit Profile Tab -->
                     <div class="tab-pane fade show active" id="edit-profile-content" role="tabpanel" aria-labelledby="edit-profile-tab">
-                        <form id="editProfileForm">
+                        <form id="editProfileForm" enctype="multipart/form-data" onsubmit="submitEditProfile(event)">
                             <!-- Photo Upload Section -->
                             <div class="photo-upload-section mb-4">
                                 <div class="text-center">
-                                    <!-- Image Preview (shown by default) -->
+                                    <!-- Image Preview -->
                                     <div class="photo-preview-wrapper mb-3" id="photoPreviewWrapper">
                                         <img id="photoPreview" 
-                                             src="/mnt/data/PetGroomingAppointmentSystem.zip"
+                                             src="@(string.IsNullOrEmpty(customer?.Photo) ? "/Customer/img/default-avatar.png" : customer.Photo)"
                                              alt="Profile Photo"
                                              class="rounded-circle"
                                              style="width:120px;height:120px;object-fit:cover;border:3px solid #ff9500;cursor:pointer;" 
                                              onclick="openImageEditor()" />
                                         <small style="display: block; margin-top: 8px; color: #999;">Click to edit</small>
                                     </div>
-                                    
-                                    <!-- Webcam Section (Hidden by default) -->
-                                    <div id="webcamSection" class="webcam-section" style="display:none;">
-                                        <video id="webcamVideo" 
-                                               class="webcam-video rounded-circle mb-2"
-                                               width="120" 
-                                               height="120" 
-                                               autoplay
-                                               playsinline
-                                               style="object-fit:cover;border:3px solid #ff9500;display:block;margin:0 auto;">
-                                        </video>
-                                        <div class="webcam-controls mt-2">
-                                            <button type="button" class="btn btn-sm btn-success" onclick="captureWebcamPhoto()">
-                                                <i class="fa fa-camera"></i> Capture Photo
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-secondary" onclick="stopWebcam()">
-                                                <i class="fa fa-times"></i> Close Webcam
-                                            </button>
-                                        </div>
-                                    </div>
 
                                     <!-- File Upload Input -->
                                     <div class="photo-upload-input mt-3">
                                         <input type="file" 
                                                id="photoInput" 
-                                               name="photo" 
+                                               name="photoFile" 
                                                accept="image/*" 
                                                class="form-control"
                                                onchange="previewPhoto(event)" />
                                         <small class="text-muted d-block mt-2">
                                             <i class="fa fa-info-circle"></i> Recommended: 300x300px, Max 5MB
                                         </small>
-                                    </div>
-
-                                    <!-- Webcam Toggle Button -->
-                                    <div class="mt-3">
-                                        <button type="button" class="btn btn-sm btn-primary" id="webcamToggleBtn" onclick="startWebcam()">
-                                            <i class="fa fa-video-camera"></i> Use Webcam
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -321,7 +290,6 @@
 
                             <!-- Form Fields -->
                             <div class="row">
-                                <!-- Full Name -->
                                 <div class="col-md-6 mb-3">
                                     <label for="fullName" class="form-label">
                                         <strong>Full Name</strong>
@@ -331,12 +299,10 @@
                                            class="form-control edit-profile-input" 
                                            id="fullName" 
                                            name="name"
-                                           placeholder="Enter your full name"
-                                           value="Hachimi"
+                                           value="@customer?.Name"
                                            required />
                                 </div>
 
-                                <!-- IC Number -->
                                 <div class="col-md-6 mb-3">
                                     <label for="icNumber" class="form-label">
                                         <strong>IC Number</strong>
@@ -346,14 +312,12 @@
                                            class="form-control edit-profile-input" 
                                            id="icNumber" 
                                            name="ic"
-                                           placeholder="e.g., 123456-12-1234"
-                                           value="123456-12-1234"
+                                           value="@customer?.IC"
                                            required />
                                 </div>
                             </div>
 
                             <div class="row">
-                                <!-- Email -->
                                 <div class="col-md-6 mb-3">
                                     <label for="email" class="form-label">
                                         <strong>Email Address</strong>
@@ -363,40 +327,20 @@
                                            class="form-control edit-profile-input" 
                                            id="email" 
                                            name="email"
-                                           placeholder="your.email@example.com"
-                                           value="hachiminanbeludo@example.com"
+                                           value="@customer?.Email"
                                            required />
                                 </div>
 
-                                <!-- Age -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="age" class="form-label">
-                                        <strong>Age</strong>
-                                        <span class="text-danger">*</span>
+                                    <label for="phone" class="form-label">
+                                        <strong>Phone Number</strong>
                                     </label>
-                                    <input type="number" 
+                                    <input type="tel" 
                                            class="form-control edit-profile-input" 
-                                           id="age" 
-                                           name="age"
-                                           placeholder="Enter your age"
-                                           value="28"
-                                           min="18"
-                                           max="120"
-                                           required />
+                                           id="phone" 
+                                           name="phone"
+                                           value="@customer?.Phone" />
                                 </div>
-                            </div>
-
-                            <!-- Phone Number (optional) -->
-                            <div class="mb-3">
-                                <label for="phone" class="form-label">
-                                    <strong>Phone Number</strong>
-                                </label>
-                                <input type="tel" 
-                                       class="form-control edit-profile-input" 
-                                       id="phone" 
-                                       name="phone"
-                                       placeholder="e.g., +60 12-345 6789"
-                                       value="+60 12-345 6789" />
                             </div>
 
                             <!-- Success Message -->
@@ -419,8 +363,7 @@
 
                     <!-- Change Password Tab -->
                     <div class="tab-pane fade" id="change-password-content" role="tabpanel" aria-labelledby="change-password-tab">
-                        <form id="changePasswordForm">
-                            <!-- Current Password -->
+                        <form id="changePasswordForm" onsubmit="submitChangePassword(event)">
                             <div class="mb-3">
                                 <label for="currentPassword" class="form-label">
                                     <strong>Current Password</strong>
@@ -430,11 +373,9 @@
                                        class="form-control edit-profile-input" 
                                        id="currentPassword" 
                                        name="currentPassword"
-                                       placeholder="Enter your current password"
                                        required />
                             </div>
 
-                            <!-- New Password -->
                             <div class="mb-3">
                                 <label for="newPassword" class="form-label">
                                     <strong>New Password</strong>
@@ -444,14 +385,12 @@
                                        class="form-control edit-profile-input" 
                                        id="newPassword" 
                                        name="newPassword"
-                                       placeholder="Enter your new password"
                                        required />
                                 <small class="text-muted d-block mt-2">
                                     <i class="fa fa-info-circle"></i> Password must be at least 8 characters long
                                 </small>
                             </div>
 
-                            <!-- Confirm New Password -->
                             <div class="mb-3">
                                 <label for="confirmPassword" class="form-label">
                                     <strong>Confirm New Password</strong>
@@ -461,23 +400,9 @@
                                        class="form-control edit-profile-input" 
                                        id="confirmPassword" 
                                        name="confirmPassword"
-                                       placeholder="Confirm your new password"
                                        required />
                             </div>
 
-                            <!-- Password Requirements -->
-                            <div class="password-requirements p-3 bg-light rounded mb-3">
-                                <h6 class="mb-2"><i class="fa fa-check-circle text-success"></i> Password Requirements:</h6>
-                                <ul class="small text-muted mb-0">
-                                    <li>At least 8 characters long</li>
-                                    <li>Contains uppercase letter (A-Z)</li>
-                                    <li>Contains lowercase letter (a-z)</li>
-                                    <li>Contains number (0-9)</li>
-                                    <li>Contains special character (!#$%^&*)</li>
-                                </ul>
-                            </div>
-
-                            <!-- Success Message -->
                             <div id="passwordSuccessMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
                                 <i class="fa fa-check-circle"></i> Password changed successfully!
                                 <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
@@ -485,7 +410,6 @@
                                 </button>
                             </div>
 
-                            <!-- Error Message -->
                             <div id="passwordErrorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
                                 <i class="fa fa-exclamation-circle"></i> <span id="passwordErrorText"></span>
                                 <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
@@ -509,30 +433,31 @@
     </div>
 </div>
 
-<!-- Edit Pet Profile Modal -->
-<div id="editPetOverlay" class="custom-modal-overlay pet-modal-overlay">
+<!-- Add Pet Modal -->
+<div id="addPetOverlay" class="custom-modal-overlay pet-modal-overlay">
     <div class="custom-modal-dialog pet-modal-dialog">
         <div class="custom-modal-content edit-pet-modal">
             <div class="custom-modal-header edit-pet-header">
                 <div class="pet-header-content">
                     <h5 class="custom-modal-title">
-                        <i class="fa fa-paw"></i> Edit Pet Profile
+                        <i class="fa fa-paw"></i> <span id="petModalTitle">Add New Pet</span>
                     </h5>
-                    <p class="pet-header-subtitle mb-0">Update your pet's information</p>
+                    <p class="pet-header-subtitle mb-0">Create a new pet profile</p>
                 </div>
-                <button type="button" class="custom-close-btn" onclick="closeEditPetModal()">
+                <button type="button" class="custom-close-btn" onclick="closeAddPetModal()">
                     <span>&times;</span>
                 </button>
             </div>
 
             <div class="custom-modal-body edit-pet-body">
-                <form id="editPetForm">
-                    <!-- Pet Photo Upload Section -->
+                <form id="editPetForm" enctype="multipart/form-data" onsubmit="submitPetForm(event)">
+                    <input type="hidden" id="petIdInput" name="petId" value="" />
+
                     <div class="pet-photo-upload-section mb-4">
                         <div class="text-center">
                             <div class="pet-photo-preview-wrapper mb-3">
                                 <img id="petPhotoPreview" 
-                                     src="/images/pet-placeholder.png"
+                                     src="/Customer/img/default-pet.png"
                                      alt="Pet Photo"
                                      class="rounded-circle"
                                      style="width:130px;height:130px;object-fit:cover;border:4px dashed #ff9500;" />
@@ -543,7 +468,7 @@
                             <div class="pet-photo-upload-input">
                                 <input type="file" 
                                        id="petPhotoInput" 
-                                       name="photo" 
+                                       name="petPhotoFile" 
                                        accept="image/*" 
                                        class="form-control"
                                        onchange="previewPetPhoto(event)" />
@@ -556,7 +481,6 @@
 
                     <hr class="pet-divider">
 
-                    <!-- Pet Name & Age Row -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="petName" class="form-label pet-form-label">
@@ -567,30 +491,23 @@
                                    class="form-control edit-pet-input" 
                                    id="petName" 
                                    name="name"
-                                   placeholder="e.g., Bella, Max, Luna"
-                                   value="Bella"
                                    required />
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label for="petAge" class="form-label pet-form-label">
                                 <i class="fa fa-birthday-cake"></i> <strong>Age (Years)</strong>
-                                <span class="text-danger">*</span>
                             </label>
                             <input type="number" 
                                    class="form-control edit-pet-input" 
                                    id="petAge" 
                                    name="age"
-                                   placeholder="e.g., 3"
-                                   value="5"
                                    min="0"
                                    max="50"
-                                   step="0.5"
-                                   required />
+                                   step="0.5" />
                         </div>
                     </div>
 
-                    <!-- Pet Type & Breed Row -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="petType" class="form-label pet-form-label">
@@ -599,27 +516,22 @@
                             </label>
                             <select class="form-control edit-pet-input" id="petType" name="type" required>
                                 <option value="">Select pet type</option>
-                                <option value="Dog" selected>Dog</option>
-                                <option value="Cat">Cat</option>
+                                <option value="Dog">🐕 Dog</option>
+                                <option value="Cat">🐱 Cat</option>
                             </select>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label for="petBreed" class="form-label pet-form-label">
                                 <i class="fa fa-paw"></i> <strong>Breed</strong>
-                                <span class="text-danger">*</span>
                             </label>
                             <input type="text" 
                                    class="form-control edit-pet-input" 
                                    id="petBreed" 
-                                   name="breed"
-                                   placeholder="e.g., Shih Tzu, Golden Retriever"
-                                   value="Shih Tzu"
-                                   required />
+                                   name="breed" />
                         </div>
                     </div>
 
-                    <!-- Pet Remark/Notes -->
                     <div class="mb-3">
                         <label for="petRemark" class="form-label pet-form-label">
                             <i class="fa fa-sticky-note"></i> <strong>Remarks / Special Notes</strong>
@@ -627,19 +539,17 @@
                         <textarea class="form-control edit-pet-input" 
                                   id="petRemark" 
                                   name="remark"
-                                  rows="4"
-                                  placeholder="e.g., Allergies, behavioral notes, medical conditions, grooming preferences...">Friendly and playful. Sensitive to loud noises.</textarea>
+                                  rows="3"
+                                  placeholder="Any allergies, behaviors, or special care requirements..."></textarea>
                     </div>
 
-                    <!-- Success Message -->
                     <div id="petSuccessMessage" class="alert alert-success alert-dismissible fade show" role="alert" style="display:none;">
-                        <i class="fa fa-check-circle"></i> Pet profile updated successfully!
+                        <i class="fa fa-check-circle"></i> <span id="petSuccessText">Pet added successfully!</span>
                         <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
 
-                    <!-- Error Message -->
                     <div id="petErrorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" style="display:none;">
                         <i class="fa fa-exclamation-circle"></i> <span id="petErrorText"></span>
                         <button type="button" class="close" onclick="this.parentElement.style.display='none';" aria-label="Close">
@@ -650,18 +560,16 @@
             </div>
 
             <div class="custom-modal-footer edit-pet-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditPetModal()">
+                <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">
                     <i class="fa fa-times"></i> Cancel
                 </button>
                 <button type="submit" class="btn btn-primary edit-pet-save-btn" form="editPetForm">
-                    <i class="fa fa-heart"></i> Save Pet Info
+                    <i class="fa fa-heart"></i> Save Pet
                 </button>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Add this new modal before the closing body tag, before the webcam canvas -->
 
 <!-- Image Editor Modal -->
 <div id="imageEditorOverlay" class="custom-modal-overlay">
@@ -679,7 +587,7 @@
                 <div id="imageEditorContainer">
                     <img id="editorImage" style="max-width: 100%; max-height: 400px; margin-bottom: 20px;">
                 </div>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; justify-content: center, flex-wrap: wrap; margin-bottom: 20px;">
                     <button type="button" class="btn btn-sm" style="background: #ff9500; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="rotateImage(90)">
                         <i class="fa fa-rotate-right"></i> Rotate
                     </button>
@@ -706,371 +614,400 @@
     </div>
 </div>
 
-<!-- Hidden Canvas for Capturing Webcam Frame -->
 <canvas id="webcamCanvas" style="display:none;"></canvas>
 
-<!-- JavaScript for Modals, Webcam, and Photo Preview -->
 <script>
-// Image Editor Variables
-let imageEditorData = {
-    originalSrc: '',
-    rotation: 0,
-    scale: 1,
-    targetElement: null,
-    isWebcamImage: false
-};
-
-// User Profile Modal Functions
-function openEditModal() {
-    document.getElementById('editProfileOverlay').classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeEditModal() {
-    document.getElementById('editProfileOverlay').classList.remove('show');
-    document.body.style.overflow = 'auto';
-    stopWebcam();
-}
-
-// Image Editor Functions
-function openImageEditor() {
-    const photoPreview = document.getElementById('photoPreview');
-    imageEditorData.originalSrc = photoPreview.src;
-    imageEditorData.targetElement = photoPreview;
-    imageEditorData.rotation = 0;
-    imageEditorData.scale = 1;
-    imageEditorData.isWebcamImage = false;
-    
-    document.getElementById('editorImage').src = imageEditorData.originalSrc;
-    document.getElementById('imageEditorOverlay').classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeImageEditor() {
-    document.getElementById('imageEditorOverlay').classList.remove('show');
-    document.body.style.overflow = 'auto';
-    resetImageEditorState();
-}
-
-function rotateImage(angle) {
-    imageEditorData.rotation += angle;
-    updateImageTransform();
-}
-
-function zoomImage(scale) {
-    imageEditorData.scale *= scale;
-    if (imageEditorData.scale < 0.5) imageEditorData.scale = 0.5;
-    if (imageEditorData.scale > 3) imageEditorData.scale = 3;
-    updateImageTransform();
-}
-
-function resetImage() {
-    imageEditorData.rotation = 0;
-    imageEditorData.scale = 1;
-    updateImageTransform();
-}
-
-function updateImageTransform() {
-    const editorImage = document.getElementById('editorImage');
-    editorImage.style.transform = `rotate(${imageEditorData.rotation}deg) scale(${imageEditorData.scale})`;
-    editorImage.style.transition = 'transform 0.3s ease';
-}
-
-function confirmImageEdit() {
-    const editorImage = document.getElementById('editorImage');
-    const canvas = document.createElement('canvas');
-    
-    // Set canvas size
-    canvas.width = 300;
-    canvas.height = 300;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((imageEditorData.rotation * Math.PI) / 180);
-    ctx.scale(imageEditorData.scale, imageEditorData.scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    
-    const img = new Image();
-    img.onload = function() {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const editedImageSrc = canvas.toDataURL('image/jpeg', 0.9);
-        
-        // Update the preview
-        if (imageEditorData.targetElement) {
-            imageEditorData.targetElement.src = editedImageSrc;
-        }
-        
-        // Store in hidden input if it's a webcam image
-        if (imageEditorData.isWebcamImage) {
-            const hiddenInput = document.getElementById('webcamImageData');
-            if (hiddenInput) {
-                hiddenInput.value = editedImageSrc;
-            }
-        }
-        
-        closeImageEditor();
-        showSuccess('Photo edited successfully!');
-    };
-    img.src = imageEditorData.originalSrc;
-}
-
-function resetImageEditorState() {
-    imageEditorData = {
+    let imageEditorData = {
         originalSrc: '',
         rotation: 0,
         scale: 1,
         targetElement: null,
         isWebcamImage: false
     };
-}
 
-// Tab Switching for Submit Button
-document.addEventListener('DOMContentLoaded', function() {
-    const editProfileTab = document.getElementById('edit-profile-tab');
-    const changePasswordTab = document.getElementById('change-password-tab');
-    const submitBtn = document.getElementById('submitBtn');
-
-    if (editProfileTab) {
-        editProfileTab.addEventListener('click', function() {
-            submitBtn.form = 'editProfileForm';
-            submitBtn.innerHTML = '<i class="fa fa-save"></i> Save Changes';
-        });
+    function openEditModal() {
+        document.getElementById('editProfileOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
     }
 
-    if (changePasswordTab) {
-        changePasswordTab.addEventListener('click', function() {
-            submitBtn.form = 'changePasswordForm';
-            submitBtn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
-        });
+    function closeEditModal() {
+        document.getElementById('editProfileOverlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
     }
-});
 
-// Webcam Functions
-let webcamStream = null;
-
-function startWebcam() {
-    const video = document.getElementById('webcamVideo');
-    const webcamSection = document.getElementById('webcamSection');
-    const photoPreviewWrapper = document.getElementById('photoPreviewWrapper');
-
-    const constraints = { 
-        video: { 
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-        },
-        audio: false 
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints)
-        .then(function(stream) {
-            webcamStream = stream;
-            video.srcObject = stream;
-            
-            video.onloadedmetadata = function() {
-                video.play().catch(function(error) {
-                    console.error('Error playing video:', error);
-                });
-            };
-            
-            webcamSection.style.display = 'block';
-            photoPreviewWrapper.style.display = 'none';
-            console.log('Webcam started successfully');
+    function submitEditProfile(event) {
+        event.preventDefault();
+    
+        const formData = new FormData(document.getElementById('editProfileForm'));
+    
+        fetch('/Customer/Home/UpdateProfile', {
+            method: 'POST',
+            body: formData
         })
-        .catch(function(error) {
-            console.error('Error accessing webcam:', error);
-            let errorMsg = 'Unable to access webcam. ';
-            
-            if (error.name === 'NotAllowedError') {
-                errorMsg += 'Permission denied. Please allow camera access.';
-            } else if (error.name === 'NotFoundError') {
-                errorMsg += 'No camera found on this device.';
-            } else if (error.name === 'NotReadableError') {
-                errorMsg += 'Camera is already in use by another application.';
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess('Profile updated successfully!');
+                document.getElementById('profileName').textContent = formData.get('name');
+                document.getElementById('profilePhone').textContent = formData.get('phone');
+                document.getElementById('profileEmail').textContent = formData.get('email');
+                setTimeout(() => closeEditModal(), 1500);
+            } else {
+                showError(data.message);
             }
-            
-            alert(errorMsg);
-            showError(errorMsg);
+        })
+        .catch(error => {
+            showError('Error updating profile');
+            console.error('Error:', error);
         });
-}
+    }
 
-function stopWebcam() {
-    const webcamSection = document.getElementById('webcamSection');
-    const photoPreviewWrapper = document.getElementById('photoPreviewWrapper');
-    const video = document.getElementById('webcamVideo');
-
-    if (webcamStream) {
-        webcamStream.getTracks().forEach(track => {
-            track.stop();
+    function submitChangePassword(event) {
+        event.preventDefault();
+    
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+    
+        if (newPassword !== confirmPassword) {
+            showPasswordError('Passwords do not match!');
+            return;
+        }
+    
+        const formData = new FormData(document.getElementById('changePasswordForm'));
+    
+        fetch('/Customer/Home/ChangePassword', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPasswordSuccess('Password changed successfully!');
+                document.getElementById('changePasswordForm').reset();
+                setTimeout(() => closeEditModal(), 1500);
+            } else {
+                showPasswordError(data.message);
+            }
+        })
+        .catch(error => {
+            showPasswordError('Error changing password');
+            console.error('Error:', error);
         });
-        webcamStream = null;
     }
 
-    video.srcObject = null;
-    webcamSection.style.display = 'none';
-    photoPreviewWrapper.style.display = 'block';
-}
-
-function captureWebcamPhoto() {
-    const video = document.getElementById('webcamVideo');
-    const canvas = document.getElementById('webcamCanvas');
-    const photoPreview = document.getElementById('photoPreview');
-
-    if (!video.videoWidth || !video.videoHeight) {
-        alert('Please wait for the camera to load before capturing.');
-        return;
+    function openAddPetModal() {
+        document.getElementById('petIdInput').value = '';
+        document.getElementById('petModalTitle').textContent = 'Add New Pet';
+        document.getElementById('editPetForm').reset();
+        document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
+        document.getElementById('addPetOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    function openEditPetModal(petId) {
+        // Fetch pet data from server
+        fetch(`/Customer/Home/GetPetById?petId=${encodeURIComponent(petId)}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const pet = data.data;
+                
+                // Populate form fields with pet data
+                document.getElementById('petIdInput').value = pet.petId;
+                document.getElementById('petName').value = pet.name || '';
+                document.getElementById('petAge').value = pet.age || '';
+                document.getElementById('petType').value = pet.type || '';
+                document.getElementById('petBreed').value = pet.breed || '';
+                document.getElementById('petRemark').value = pet.remark || '';
+                
+                // Set photo preview
+                if (pet.photo) {
+                    document.getElementById('petPhotoPreview').src = pet.photo;
+                } else {
+                    document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
+                }
+                
+                // Update modal title
+                document.getElementById('petModalTitle').textContent = 'Edit Pet';
+                
+                // Show modal
+                document.getElementById('addPetOverlay').classList.add('show');
+                document.body.style.overflow = 'hidden';
+            } else {
+                showPetError(data.message || 'Failed to load pet data');
+            }
+        })
+        .catch(error => {
+            showPetError('Error loading pet data');
+            console.error('Error:', error);
+        });
+    }
 
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    function closeAddPetModal() {
+        document.getElementById('addPetOverlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
 
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
-    photoPreview.src = imageData;
-
-    stopWebcam();
+    function submitPetForm(event) {
+        event.preventDefault();
     
-    // Set up image editor for webcam capture
-    imageEditorData.originalSrc = imageData;
-    imageEditorData.targetElement = photoPreview;
-    imageEditorData.rotation = 0;
-    imageEditorData.scale = 1;
-    imageEditorData.isWebcamImage = true;
+        const petId = document.getElementById('petIdInput').value;
+        const formData = new FormData(document.getElementById('editPetForm'));
+        const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
     
-    showSuccess('Photo captured! Click on the image to edit before saving.');
-}
-
-function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    const errorText = document.getElementById('errorText');
-    errorText.textContent = message;
-    errorDiv.style.display = 'block';
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
-}
-
-function showSuccess(message) {
-    const successDiv = document.getElementById('successMessage');
-    successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-    successDiv.style.display = 'block';
-    setTimeout(() => {
-        successDiv.style.display = 'none';
-    }, 5000);
-}
-
-// Pet Profile Modal Functions
-function openEditPetModal(petName) {
-    document.getElementById('editPetOverlay').classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeEditPetModal() {
-    document.getElementById('editPetOverlay').classList.remove('show');
-    document.body.style.overflow = 'auto';
-}
-
-// Modal Overlay Handlers
-var profileOverlay = document.getElementById('editProfileOverlay');
-profileOverlay.addEventListener('click', function(event) {
-    if (event.target === profileOverlay) {
-        closeEditModal();
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPetSuccess(petId ? 'Pet updated successfully!' : 'Pet added successfully!');
+                setTimeout(() => {
+                    closeAddPetModal();
+                    location.reload();
+                }, 1500);
+            } else {
+                showPetError(data.message);
+            }
+        })
+        .catch(error => {
+            showPetError('Error saving pet');
+            console.error('Error:', error);
+        });
     }
-});
 
-var petOverlay = document.getElementById('editPetOverlay');
-petOverlay.addEventListener('click', function(event) {
-    if (event.target === petOverlay) {
-        closeEditPetModal();
+    function deletePet(petId, petName) {
+        if (!confirm(`Are you sure you want to delete ${petName}?`)) {
+            return;
+        }
+
+        // ✅ Use FormData instead of JSON
+        const formData = new FormData();
+        formData.append('petId', petId);
+
+        fetch('/Customer/Home/DeletePet', {
+            method: 'POST',
+            body: formData  // ✅ Send as form data, not JSON
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Pet deleted successfully!');
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error deleting pet');
+            console.error('Error:', error);
+        });
     }
-});
 
-var imageEditorOverlay = document.getElementById('imageEditorOverlay');
-imageEditorOverlay.addEventListener('click', function(event) {
-    if (event.target === imageEditorOverlay) {
-        closeImageEditor();
+    function openImageEditor() {
+        const photoPreview = document.getElementById('photoPreview');
+        imageEditorData.originalSrc = photoPreview.src;
+        imageEditorData.targetElement = photoPreview;
+        imageEditorData.rotation = 0;
+        imageEditorData.scale = 1;
+    
+        document.getElementById('editorImage').src = imageEditorData.originalSrc;
+        document.getElementById('imageEditorOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
     }
-});
 
-// Close modals with Escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeEditModal();
-        closeEditPetModal();
-        closeImageEditor();
+    function closeImageEditor() {
+        document.getElementById('imageEditorOverlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
     }
-});
 
-// Create hidden input for webcam image data
-const form = document.getElementById('editProfileForm');
-if (form) {
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.id = 'webcamImageData';
-    hiddenInput.name = 'webcamImageData';
-    hiddenInput.value = '';
-    form.appendChild(hiddenInput);
-}
+    function rotateImage(angle) {
+        imageEditorData.rotation += angle;
+        updateImageTransform();
+    }
 
-// Photo Preview Functions
-function previewPhoto(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const photoPreview = document.getElementById('photoPreview');
-            photoPreview.src = e.target.result;
-            
-            // Set up image editor
-            imageEditorData.originalSrc = e.target.result;
-            imageEditorData.targetElement = photoPreview;
-            imageEditorData.rotation = 0;
-            imageEditorData.scale = 1;
-            imageEditorData.isWebcamImage = false;
-            
-            document.getElementById('photoPreviewWrapper').style.display = 'block';
-            document.getElementById('webcamSection').style.display = 'none';
-            
-            showSuccess('Photo selected! Click on the image to edit.');
+    function zoomImage(scale) {
+        imageEditorData.scale *= scale;
+        if (imageEditorData.scale < 0.5) imageEditorData.scale = 0.5;
+        if (imageEditorData.scale > 3) imageEditorData.scale = 3;
+        updateImageTransform();
+    }
+
+    function resetImage() {
+        imageEditorData.rotation = 0;
+        imageEditorData.scale = 1;
+        updateImageTransform();
+    }
+
+    function updateImageTransform() {
+        const editorImage = document.getElementById('editorImage');
+        editorImage.style.transform = `rotate(${imageEditorData.rotation}deg) scale(${imageEditorData.scale})`;
+        editorImage.style.transition = 'transform 0.3s ease';
+    }
+
+    function confirmImageEdit() {
+        const editorImage = document.getElementById('editorImage');
+        const canvas = document.createElement('canvas');
+    
+        canvas.width = 300;
+        canvas.height = 300;
+    
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((imageEditorData.rotation * Math.PI) / 180);
+        ctx.scale(imageEditorData.scale, imageEditorData.scale);
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    
+        const img = new Image();
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const editedImageSrc = canvas.toDataURL('image/jpeg', 0.9);
+        
+            if (imageEditorData.targetElement) {
+                imageEditorData.targetElement.src = editedImageSrc;
+            }
+        
+            closeImageEditor();
+            showSuccess('Photo edited successfully!');
         };
-        reader.readAsDataURL(file);
+        img.src = imageEditorData.originalSrc;
     }
-}
 
-function previewPhotoForEdit(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const photoPreview = document.getElementById('photoPreview');
-            photoPreview.src = e.target.result;
-            
-            // Set up image editor
-            imageEditorData.originalSrc = e.target.result;
-            imageEditorData.targetElement = photoPreview;
-            imageEditorData.rotation = 0;
-            imageEditorData.scale = 1;
-            imageEditorData.isWebcamImage = false;
-            
-            document.getElementById('photoPreviewWrapper').style.display = 'block';
-            document.getElementById('webcamSection').style.display = 'none';
-            
-            showSuccess('Photo selected! Click on the image to edit.');
-        };
-        reader.readAsDataURL(file);
+    function previewPhoto(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoPreview = document.getElementById('photoPreview');
+                photoPreview.src = e.target.result;
+                showSuccess('Photo selected!');
+            };
+            reader.readAsDataURL(file);
+        }
     }
-}
 
-function previewPetPhoto(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('petPhotoPreview').src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+    function previewPetPhoto(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('petPhotoPreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
     }
-}
+
+    function showSuccess(message) {
+        const successDiv = document.getElementById('successMessage');
+        successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+        successDiv.style.display = 'block';
+        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        errorText.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+    }
+
+    function showPasswordSuccess(message) {
+        const successDiv = document.getElementById('passwordSuccessMessage');
+        successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + message + '<button type="button" class="close" onclick="this.parentElement.style.display=\'none\';" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+        successDiv.style.display = 'block';
+        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
+    }
+
+    function showPasswordError(message) {
+        const errorDiv = document.getElementById('passwordErrorMessage');
+        const errorText = document.getElementById('passwordErrorText');
+        errorText.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+    }
+
+    function showPetSuccess(message) {
+        const successDiv = document.getElementById('petSuccessMessage');
+        const successText = document.getElementById('petSuccessText');
+        successText.textContent = message;
+        successDiv.style.display = 'block';
+        setTimeout(() => { successDiv.style.display = 'none'; }, 5000);
+    }
+
+    function showPetError(message) {
+        const errorDiv = document.getElementById('petErrorMessage');
+        const errorText = document.getElementById('petErrorText');
+        errorText.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var profileOverlay = document.getElementById('editProfileOverlay');
+        if (profileOverlay) {
+            profileOverlay.addEventListener('click', function(event) {
+                if (event.target === profileOverlay) {
+                    closeEditModal();
+                }
+            });
+        }
+
+        var petOverlay = document.getElementById('addPetOverlay');
+        if (petOverlay) {
+            petOverlay.addEventListener('click', function(event) {
+                if (event.target === petOverlay) {
+                    closeAddPetModal();
+                }
+            });
+        }
+
+        var imageEditorOverlay = document.getElementById('imageEditorOverlay');
+        if (imageEditorOverlay) {
+            imageEditorOverlay.addEventListener('click', function(event) {
+                if (event.target === imageEditorOverlay) {
+                    closeImageEditor();
+                }
+            });
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeAddPetModal();
+            closeImageEditor();
+        }
+    });
+
+        function redirectAndScroll(event) {
+        event.preventDefault();
+
+        // Navigate to the Index page
+        window.location.href = '/Customer/Home/Index';
+
+        // After a short delay, scroll to the redeem gift section
+        setTimeout(() => {
+            const redeemSection = document.querySelector('section:has(> .container > .row > .col-lg-7:has(.section_title:has(h3:contains("🎁"))))');
+
+            if (redeemSection) {
+                redeemSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                // Fallback: scroll by searching for the text
+                const sections = document.querySelectorAll('section');
+                for (let section of sections) {
+                    if (section.textContent.includes('🎁 Redeem Gift')) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        break;
+                    }
+                }
+            }
+        }, 500);
+    }
 </script>
+
+
+

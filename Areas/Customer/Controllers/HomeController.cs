@@ -14,11 +14,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
     public class HomeController : Controller
     {
         private readonly DB _db;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public HomeController(DB db)
+        public HomeController(DB db, IWebHostEnvironment webHostEnvironment)
         {
             _db = db;
+            _webHostEnvironment = webHostEnvironment;
         }
+
 
         public IActionResult Index()
         {
@@ -57,8 +60,289 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         public IActionResult Profile()
         {
+            // Get current logged-in customer from SESSION
+            var userId = HttpContext.Session.GetString("CustomerId");
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            var customer = _db.Customers
+                .Include(c => c.Redeems)
+                .FirstOrDefault(c => c.UserId == userId);
+
+            if (customer == null)
+            {
+                return NotFound("Customer not found");
+            }
+
+            // ✅ Use userId instead of customer.CustomerId
+            var pets = _db.Pets.Where(p => p.CustomerId == userId).ToList();
+
+            // Pass customer data to view
+            ViewBag.Customer = customer;
+            ViewBag.Pets = pets;
+
             return View();
         }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProfile(string name, string email, string ic, string phone)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
+                if (customer == null)
+                    return NotFound("Customer not found");
+
+                // Update customer information
+                customer.Name = name;
+                customer.Email = email;
+                customer.IC = ic;
+                customer.Phone = phone;
+
+                // Handle photo upload
+                if (Request.Form.Files.Count > 0)
+                {
+                    var photoFile = Request.Form.Files[0];
+                    if (photoFile.Length > 0)
+                    {
+                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
+                        if (!Directory.Exists(uploadsFolder))
+                            Directory.CreateDirectory(uploadsFolder);
+
+                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(fileStream);
+                        }
+
+                        customer.Photo = "/uploads/customers/" + uniqueFileName;
+                    }
+                }
+
+                _db.Customers.Update(customer);
+                _db.SaveChanges();
+
+                // Update session name if changed
+                HttpContext.Session.SetString("CustomerName", customer.Name);
+
+                return Json(new { success = true, message = "Profile updated successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult ChangePassword(string currentPassword, string newPassword)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
+                if (customer == null)
+                    return NotFound("Customer not found");
+
+                // Verify current password (plain text comparison)
+                if (customer.Password != currentPassword)
+                    return BadRequest(new { success = false, message = "Current password is incorrect" });
+
+                // Update to new password (plain text)
+                customer.Password = newPassword;
+                _db.Customers.Update(customer);
+                _db.SaveChanges();
+
+                return Json(new { success = true, message = "Password changed successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult GetPets()
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // ✅ Use UserId instead of CustomerId
+                var pets = _db.Pets.Where(p => p.CustomerId == userId).ToList();
+                return Json(new { success = true, data = pets });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddPet(string name, string type, string breed, int? age, string remark)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var pet = new Pet
+                {
+                    PetId = "P" + Guid.NewGuid().ToString("N").Substring(0, 9).ToUpper(),
+                    Name = name,
+                    Type = type,
+                    Breed = breed,
+                    Age = age,
+                    Remark = remark,
+                    CustomerId = userId  // ✅ Use userId directly, not customer.CustomerId
+                };
+
+                // Handle pet photo upload
+                if (Request.Form.Files.Count > 0)
+                {
+                    var photoFile = Request.Form.Files[0];
+                    if (photoFile.Length > 0)
+                    {
+                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
+                        if (!Directory.Exists(uploadsFolder))
+                            Directory.CreateDirectory(uploadsFolder);
+
+                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(fileStream);
+                        }
+
+                        pet.Photo = "/uploads/pets/" + uniqueFileName;
+                    }
+                }
+
+                _db.Pets.Add(pet);
+                _db.SaveChanges();
+
+                return Json(new { success = true, message = "Pet added successfully!", data = pet });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdatePet(string petId, string name, string type, string breed, int? age, string remark)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // ✅ Use userId instead of customer.CustomerId
+                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+                if (pet == null)
+                    return NotFound("Pet not found");
+
+                pet.Name = name;
+                pet.Type = type;
+                pet.Breed = breed;
+                pet.Age = age;
+                pet.Remark = remark;
+
+                // Handle pet photo upload
+                if (Request.Form.Files.Count > 0)
+                {
+                    var photoFile = Request.Form.Files[0];
+                    if (photoFile.Length > 0)
+                    {
+                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
+                        if (!Directory.Exists(uploadsFolder))
+                            Directory.CreateDirectory(uploadsFolder);
+
+                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(fileStream);
+                        }
+
+                        pet.Photo = "/uploads/pets/" + uniqueFileName;
+                    }
+                }
+
+                _db.Pets.Update(pet);
+                _db.SaveChanges();
+
+                return Json(new { success = true, message = "Pet updated successfully!", data = pet });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult DeletePet(string petId)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // ✅ Use userId instead of customer.CustomerId
+                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+                if (pet == null)
+                    return NotFound("Pet not found");
+
+                _db.Pets.Remove(pet);
+                _db.SaveChanges();
+
+                return Json(new { success = true, message = "Pet deleted successfully!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public IActionResult GetPetById(string petId)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("CustomerId");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+                if (pet == null)
+                    return NotFound("Pet not found");
+
+                return Json(new { success = true, data = pet });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
 
         public IActionResult About()
         {

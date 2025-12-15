@@ -21,10 +21,6 @@
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="About">About Us</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Appointment">Appointment</a></li>
-                                    @if (string.IsNullOrEmpty(customerName))
-                                    {
-                                        <li><a asp-area="Customer" asp-controller="Home" asp-action="Profile">Profile</a></li>
-                                    }
                                     <li>
                                         @if (!string.IsNullOrEmpty(customerName))
                                         {
