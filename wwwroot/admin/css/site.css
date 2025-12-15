@@ -383,7 +383,7 @@ body {
     padding: 28px;
     border-radius: 12px;
     box-shadow: var(--shadow-md);
-    margin: -100px 35px 35px;
+    margin:  35px 35px;
 }
 
 .panel-header {

@@ -17,16 +17,46 @@
         /* Position the server-rendered alert like RedeemGift (aligned with topbar/sidebar) */
         #alertMessage, .dynamic-alert {
             position: fixed;
-            top:85px;
-            left: calc(var(--sidebar-width) +35px);
-            right:35px;
-            z-index:9999;
-            padding:24px32px !important;
-            font-size:18px !important;
-            font-weight:600 !important;
-            border-radius:12px !important;
-            box-shadow:08px20px rgba(0,0,0,0.25);
+            top: 85px;
+            left: calc(var(--sidebar-width) + 35px);
+            right: 35px;
+            z-index: 9999;
+            padding: 24px 32px !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            animation: slideDown 0.5s ease;
         }
+
+        .dynamic-alert.alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+            color: #065f46 !important;
+            border-left: 6px solid #10b981 !important;
+        }
+
+        .dynamic-alert.alert-danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+            color: #991b1b !important;
+            border-left: 6px solid #ef4444 !important;
+        }
+
+        .dynamic-alert.alert-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+            color: #92400e !important;
+            border-left: 6px solid #f59e0b !important;
+        }
+
+        .dynamic-alert strong {
+            font-size: 20px !important;
+            margin-right: 8px;
+        }
+
+        #alertMessage.fade-out, .dynamic-alert.fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+
 
         /* Lift panel slightly so table aligns like RedeemGift page */
         .panel {
@@ -38,7 +68,7 @@
         .checkbox-item { position: relative; display: inline-block; }
         .checkbox-item input[type="checkbox"] {
             position: absolute; left:12px; top:50%; transform: translateY(-50%);
-            width:18px; height:18px; opacity:0; z-index:3; cursor: pointer; margin:0;
+            width:25px; height:18px; opacity:0; z-index:3; cursor: pointer; margin:0;
         }
         .checkbox-tile {
             position: relative; padding:10px18px10px44px; border-radius:10px;
@@ -50,7 +80,13 @@
         }
         .checkbox-item input[type="checkbox"]:checked + .checkbox-tile { background: #fffaf6; border-color: #f2d2b2; }
         .checkbox-item input[type="checkbox"]:checked + .checkbox-tile::before { background-color: #0ea5a9; border-color: #0ea5a9; }
-        .checkbox-tile > span { position: relative; z-index:5; color: #111827 !important; }
+
+        .checkbox-tile > span {
+            position: relative;
+            z-index: 5;
+            padding-left: 20px;
+            color: #111827 !important;
+        }
 
         /* Inline edit specific styles (kept from original) */
         .data-table tbody tr td[colspan="8"] { background-color: #fffbeb; padding:0 !important; }
@@ -73,6 +109,49 @@
         .data-table tbody tr td[colspan="8"] table td { vertical-align: middle; }
         .data-table tbody tr td[colspan="8"] table td .form-control { margin:0; }
         .data-table tbody tr td[colspan="8"] table td textarea.form-control { resize: vertical; }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000; /* Ensure it's on top */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            color: #000;
+        }
     </style>
 }
 
@@ -90,7 +169,7 @@
 @if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success dynamic-alert" id="alertMessage">
-        @TempData["SuccessMessage"]
+        <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
     </div>
 }
 @if (TempData["WarningMessage"] != null)
@@ -112,7 +191,8 @@
     <!-- Create Service form (hidden by default) -->
     <div class="panel create-form" id="createServiceForm" style="display:none; margin-top:18px;">
         <h3 class="panel-title">Create New Service</h3>
-        <form id="addServiceForm" method="post" class="form-grid">
+        <form id="addServiceForm" method="post" class="form-grid" asp-action="Service" asp-controller="Home" asp-area="Admin">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="actionType" value="create" />
             <div class="form-group">
                 <label for="serviceName">Service Name</label>
@@ -210,8 +290,7 @@
                                             foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
                                             {
                                                 var cbId = "edit_cat_" + c.CategoryId + "_" + service.ServiceId;
-                                                var isSelected = service.ServiceServiceCategories.Any(ssc => ssc.CategoryId ==
-                                                c.CategoryId);
+                                                var isSelected = service.ServiceServiceCategories.Any(ssc => ssc.CategoryId == c.CategoryId);
                                                 <label class="checkbox-item" style="margin-bottom:5px;">
                                                     <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId"
                                                         @(isSelected ? "checked" : "") />
@@ -282,7 +361,7 @@
                                     <i class="material-icons">edit</i> Edit
                                 </a>
                                 <button type="button" class="btn btn-sm btn-action delete-btn"
-                                    onclick="deleteService('@service.ServiceId')">
+                                    onclick="deleteService('@service.ServiceId', '@service.Name')">
                                     <i class="material-icons">delete</i> Delete
                                 </button>
                             </td>
@@ -294,10 +373,33 @@
     </div>
 </div>
 
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal-backdrop">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+        <div style="padding: 20px 0;">
+            <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
+                <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
+            </div>
+            <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
+            <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">
+                    Cancel
+                </button>
+                <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- hidden antiforgery token for AJAX posts -->
 <div style="display:none">@Html.AntiForgeryToken()</div>
 
 @section Scripts {
+    <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
     <script>
         // bind tile behavior: keep label visual in sync with checkbox state (for server-set checked values)
         function showDynamicAlert(message, type = 'success') {
@@ -310,7 +412,13 @@
             const alertDiv = document.createElement('div');
             alertDiv.id = 'dynamic-alert-container';
             alertDiv.className = `alert dynamic-alert alert-${type}`;
-            alertDiv.innerHTML = message;
+
+            if (type === 'success') {
+                alertDiv.innerHTML = `<strong>✔️ Success:</strong> ${message}`;
+            } else {
+                alertDiv.innerHTML = `<strong>❌ Error:</strong> ${message}`;
+            }
+
 
             document.body.appendChild(alertDiv);
 
@@ -318,149 +426,96 @@
                 alertDiv.classList.add('fade-out');
                 setTimeout(() => {
                     alertDiv.remove();
-                },500);
-            },5000); // Auto-hide after5 seconds
- }
+                }, 500);
+            }, 5000); // Auto-hide after 5 seconds
+        }
 
 
- function bindCategoryTiles(rootId) {
- const root = document.getElementById(rootId);
- if (!root) return;
- root.querySelectorAll('input[type="checkbox"][name="SelectedCategories"]').forEach(cb => {
- // the visual tile is the sibling span with class .checkbox-tile
- const tile = cb.parentElement ? cb.parentElement.querySelector('.checkbox-tile') : null;
- if (!tile) return;
- if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
- cb.addEventListener('change', () => {
- if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
- });
- });
- }
+        function bindCategoryTiles(rootId) {
+            const root = document.getElementById(rootId);
+            if (!root) return;
+            root.querySelectorAll('input[type="checkbox"][name="SelectedCategories"]').forEach(cb => {
+                // the visual tile is the sibling span with class .checkbox-tile
+                const tile = cb.parentElement ? cb.parentElement.querySelector('.checkbox-tile') : null;
+                if (!tile) return;
+                if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
+                cb.addEventListener('change', () => {
+                    if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
+                });
+            });
+        }
 
- window.showCreateForm = function () {
- var form = document.getElementById('createServiceForm');
- if (form) {
- form.style.display = 'block';
- form.scrollIntoView({ behavior: 'smooth', block: 'center' });
- }
- };
+        function submitEditForm(serviceId, name) {
+            const formId = 'editServiceForm_' + serviceId;
+            const form = document.getElementById(formId);
+            if (!form) {
+                console.error('Edit form not found:', formId);
+                return;
+            }
 
- function closeConfirmModal() {
- const m = document.getElementById('confirmModal');
- if (m) m.style.display = 'none';
- const btn = document.getElementById('confirmBtn');
- if (btn) btn.onclick = null;
- }
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            window.confirmEdit({ target: form, preventDefault: () => { } }, name);
+        }
 
- function showConfirmModal(title, message, onConfirm) {
- const m = document.getElementById('confirmModal');
- if (!m) return;
- document.getElementById('confirmTitle').innerText = title || 'Confirm Action';
- document.getElementById('confirmMessage').innerText = message || '';
- m.style.display = 'flex'; // 使用 flex 来启用居中
- const btn = document.getElementById('confirmBtn');
- btn.onclick = function () {
- closeConfirmModal();
- if (typeof onConfirm === 'function') onConfirm();
- };
- }
+        async function deleteService(serviceId, serviceName) {
+            const onConfirm = async () => {
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
+                try {
+                    const resp = await fetch('@Url.Action("DeleteServiceAjax", "Home", new { area = "Admin" })', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ serviceId: serviceId, __RequestVerificationToken: token })
+                    });
+                    const data = await resp.json();
 
- function submitAddForm() {
- const form = document.getElementById('addServiceForm');
- if (!form) return;
+                    window.closeConfirmModal(); // Close modal after fetch
 
- if (!form.checkValidity()) {
- form.reportValidity();
- return;
- }
+                    if (data && data.success) {
+                        const row = document.querySelector('tr[data-service-id="' + serviceId + '"]');
+                        if (row) row.remove();
+                        showDynamicAlert(data.message || 'Service deleted successfully!', 'success');
+                    } else {
+                        showDynamicAlert(data?.message || 'Failed to delete service', 'danger');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    window.closeConfirmModal(); // Also close modal on error
+                    showDynamicAlert('An unexpected error occurred. Failed to delete service.', 'danger');
+                }
+            };
 
- showConfirmModal('Create Service', 'Are you sure you want to create this new service?', function () {
- //直接提交，移除第二次确认
- form.submit();
- });
- }
+            GroomerManager.showConfirmModal(
+                'Delete Service?',
+                `Are you sure you want to delete "${serviceName}"? This cannot be undone.`,
+                'delete_forever',
+                '#ef4444',
+                onConfirm
+            );
+        }
 
- function submitEditForm(serviceId, name) {
- const formId = 'editServiceForm_' + serviceId;
- const form = document.getElementById(formId);
- if (!form) {
- console.error('Edit form not found:', formId);
- return;
- }
+        document.addEventListener('DOMContentLoaded', function () {
+            // Auto-hide server-rendered alerts
+            const alertMessage = document.getElementById('alertMessage');
+            if (alertMessage) {
+                setTimeout(function () {
+                    alertMessage.classList.add('fade-out');
+                    setTimeout(function () {
+                        if (alertMessage && alertMessage.parentNode) {
+                            alertMessage.parentNode.removeChild(alertMessage);
+                        }
+                    }, 500);
+                }, 5000);
+            }
 
- if (!form.checkValidity()) {
- form.reportValidity();
- return;
- }
-
- showConfirmModal('Update Service', `Are you sure you want to save changes to "${name}"?`, function () {
- //直接提交，移除第二次确认
- form.submit();
- });
- }
-
- async function deleteService(serviceId) {
- showConfirmModal('Delete Service', `Delete service ${serviceId}?`, async function () {
- const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
- const token = tokenInput ? tokenInput.value : '';
- try {
- const resp = await fetch('@Url.Action("DeleteServiceAjax", "Home", new { area = "Admin" })', {
- method: 'POST',
- headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
- body: new URLSearchParams({ serviceId: serviceId, __RequestVerificationToken: token })
- });
- const data = await resp.json();
- if (data && data.success) {
- const row = document.querySelector('tr[data-service-id="' + serviceId + '"]');
- if (row) row.remove();
- showDynamicAlert(data.message || 'Service deleted successfully!', 'success');
- } else {
- alert(data?.message || 'Failed to delete service');
- }
- } catch (err) {
- console.error(err);
- alert('Failed to delete service');
- }
- });
- }
-
- document.addEventListener('DOMContentLoaded', function () {
- // Auto-hide server-rendered alerts
- const alertMessage = document.getElementById('alertMessage');
- if (alertMessage) {
- setTimeout(function () {
- alertMessage.classList.add('fade-out');
- setTimeout(function () {
- if (alertMessage && alertMessage.parentNode) {
- alertMessage.parentNode.removeChild(alertMessage);
- }
- },500);
- },5000);
- }
-
- var createForm = document.getElementById('createServiceForm');
- if (createForm) createForm.style.display = 'none';
- bindCategoryTiles('category');
- var btnAddService = document.getElementById('btnAddService');
- if btnAddService) btnAddService.addEventListener('click', window.showCreateForm);
- });
- </script>
+            var createForm = document.getElementById('createServiceForm');
+            if (createForm) createForm.style.display = 'none';
+            bindCategoryTiles('category');
+            var btnAddService = document.getElementById('btnAddService');
+            if (btnAddService) btnAddService.addEventListener('click', window.showCreateForm);
+        });
+    </script>
 }
-
-<!-- Confirmation Modal (shared for add/edit/delete) -->
-<div id="confirmModal" class="modal-backdrop" style="display:none; align-items:center; justify-content:center;">
- <div class="modal-content" style="max-width:450px;">
- <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
- <div style="text-align:center; padding:20px0;">
- <div style="font-size:48px; color:var(--primary-color); margin-bottom:20px;">
- <i class="material-icons" id="confirmIcon" style="font-size:64px;">help_outline</i>
- </div>
- <h3 id="confirmTitle" style="margin-bottom:15px; color:var(--text-color);">Confirm Action</h3>
- <p id="confirmMessage" style="color:var(--text-light); margin-bottom:30px; font-size:15px;"></p>
- <div style="display:flex; gap:12px; justify-content:center;">
- <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width:100px;">Cancel</button>
- <button id="confirmBtn" class="btn btn-primary" style="min-width:100px;">Confirm</button>
- </div>
- </div>
- </div>
-</div>

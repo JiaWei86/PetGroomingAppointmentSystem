@@ -224,6 +224,8 @@ const GroomerManager = (() => {
     };
 
     const showConfirmModal = (title, message, icon, iconColor, confirmCallback) => {
+        // Ensure modal elements exist before querying them
+        try { ensureConfirmModal(); } catch (e) { /* ignore */ }
         const modal = document.getElementById('confirmModal');
         const confirmBtn = document.getElementById('confirmBtn');
         const confirmIcon = document.getElementById('confirmIcon');
@@ -330,7 +332,8 @@ const GroomerManager = (() => {
         confirmAdd,
         confirmEdit,
         confirmDelete,
-        closeConfirmModal
+        closeConfirmModal,
+        showConfirmModal
     };
 })();
 
@@ -346,6 +349,27 @@ window.confirmAdd = GroomerManager.confirmAdd;
 window.confirmEdit = GroomerManager.confirmEdit;
 window.confirmDelete = GroomerManager.confirmDelete;
 window.closeConfirmModal = GroomerManager.closeConfirmModal;
+
+// Expose submitAddForm for Service page (uses confirm modal flow)
+window.submitAddForm = function () {
+	const form = document.getElementById('addServiceForm');
+	if (!form) return;
+
+	if (!form.checkValidity()) {
+		form.reportValidity();
+		return;
+	}
+
+	const serviceName = document.getElementById('serviceName')?.value || 'Service';
+	// reuse confirmEdit flow: it expects (event, name)
+	try {
+		window.confirmEdit({ target: form, preventDefault: () => { } }, serviceName);
+	} catch (err) {
+		// fallback: directly submit
+		form.submit();
+	}
+};
+
 
 /* ========================================
    GLOBAL INITIALIZATION
@@ -374,3 +398,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+/* ensure confirm modal exists in DOM; create minimal modal if missing */
+function ensureConfirmModal() {
+ if (document.getElementById('confirmModal')) return;
+
+ const modalHtml = `
+ <div id="confirmModal" class="modal-backdrop" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:10000;">
+ <div class="modal-content" style="background:#fff; border-radius:8px; padding:20px; max-width:450px; width:90%; box-shadow:010px30px rgba(0,0,0,0.2);">
+ <span class="close-btn" style="position:absolute; right:12px; top:8px; cursor:pointer; font-size:20px;" onclick="GroomerManager.closeConfirmModal()">&times;</span>
+ <div style="text-align:center; padding:10px0;">
+ <div style="font-size:48px; color:var(--primary-color); margin-bottom:20px;">
+ <i class="material-icons" id="confirmIcon" style="font-size:64px;">help_outline</i>
+ </div>
+ <h3 id="confirmTitle" style="margin-bottom:15px;">Confirm Action</h3>
+ <p id="confirmMessage" style="margin-bottom:30px; color:#666;"></p>
+ <div style="display:flex; gap:12px; justify-content:center;">
+ <button onclick="GroomerManager.closeConfirmModal()" class="btn btn-action" style="min-width:100px;">Cancel</button>
+ <button id="confirmBtn" class="btn btn-primary" style="min-width:100px;">Confirm</button>
+ </div>
+ </div>
+ </div>
+ </div>`;
+
+ const container = document.createElement('div');
+ container.innerHTML = modalHtml;
+ document.body.appendChild(container.firstElementChild);
+}

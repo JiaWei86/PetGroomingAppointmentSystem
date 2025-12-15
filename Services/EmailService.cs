@@ -6,12 +6,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace PetGroomingAppointmentSystem.Services
 {
-    public interface IEmailService
-    {
-        Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode);
-        Task SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true);
-    }
-
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
@@ -21,23 +15,74 @@ namespace PetGroomingAppointmentSystem.Services
             _configuration = configuration;
         }
 
-        public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
+        public async Task<bool> SendStaffCredentialsEmailAsync(string toEmail, string staffName, string staffId, string temporaryPassword, string email, string phone, string loginUrl)
         {
-            var subject = "Password Reset Verification Code";
+            try
+            {
+                var subject = "Your Staff Account Credentials";
+                var htmlBody = $@"
+                    <html>
+                    <body style='font-family: Arial, sans-serif;'>
+                        <h2 style='color: #d97706;'>Welcome {staffName}</h2>
+                        <p>Your staff account has been created. Use the credentials below to login:</p>
+                        <ul>
+                            <li><strong>Staff ID:</strong> {staffId}</li>
+                            <li><strong>Email:</strong> {email}</li>
+                            <li><strong>Temporary Password:</strong> {temporaryPassword}</li>
+                            <li><strong>Phone:</strong> {phone}</li>
+                        </ul>
+                        <p>You can login here: <a href='{loginUrl}'>{loginUrl}</a></p>
+                        <p>Please change your password after first login.</p>
+                        <hr>
+                        <p style='color: #999; font-size:12px;'>Pet Grooming Appointment System</p>
+                    </body>
+                    </html>";
+
+                await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EMAIL ERROR] SendStaffCredentialsEmailAsync failed: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode)
+        {
+            var subject = "Verification Code";
             var htmlBody = $@"
                 <html>
-                    <body style='font-family: Arial, sans-serif;'>
-                        <h2 style='color: #ff9500;'>Password Reset Verification Code</h2>
-                        <p>Hello {toName},</p>
-                        <p>We received a request to reset your password. Please use the following verification code:</p>
-                        <p style='background-color: #f0f0f0; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; color: #ff9500; border-radius: 5px; letter-spacing: 5px;'>
-                            {verificationCode}
-                        </p>
-                        <p>This code will expire in <strong>10 minutes</strong>.</p>
-                        <p>If you did not request this, please ignore this email.</p>
-                        <hr>
-                        <p style='color: #999; font-size: 12px;'>Pet Grooming Appointment System</p>
-                    </body>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h2 style='color: #d97706;'>Verification Code</h2>
+                    <p>Hello {toName},</p>
+                    <p>Your verification code is:</p>
+                    <p style='background-color: #f0f0f0; padding:15px; text-align: center; font-size:24px; font-weight: bold; color: #d97706; border-radius:5px; letter-spacing:5px;'>
+                        {verificationCode}
+                    </p>
+                    <p>This code will expire shortly.</p>
+                    <hr>
+                    <p style='color: #999; font-size:12px;'>Pet Grooming Appointment System</p>
+                </body>
+                </html>";
+
+            await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
+        }
+
+        public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
+        {
+            var subject = "Password Reset";
+            var htmlBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h2 style='color: #d97706;'>Password Reset</h2>
+                    <p>Hello {toName},</p>
+                    <p>Click the link below to reset your password:</p>
+                    <p><a href='{resetLink}'>{resetLink}</a></p>
+                    <p>If you didn't request a password reset, please ignore this email.</p>
+                    <hr>
+                    <p style='color: #999; font-size:12px;'>Pet Grooming Appointment System</p>
+                </body>
                 </html>";
 
             await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
@@ -58,7 +103,7 @@ namespace PetGroomingAppointmentSystem.Services
                 Console.WriteLine($"[EMAIL DEBUG] SMTP Host: {host}, Port: {port}");
 
                 // Validate configuration
-                if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(host) || port == 0)
+                if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(host) || port ==0)
                 {
                     Console.WriteLine("[EMAIL ERROR] SMTP settings are not configured properly.");
                     Console.WriteLine($"[EMAIL ERROR] User: {(string.IsNullOrEmpty(user) ? "MISSING" : "OK")}");
@@ -84,14 +129,14 @@ namespace PetGroomingAppointmentSystem.Services
                     {
                         Host = host,
                         Port = port,
-                        EnableSsl = false,  // Port 587 uses STARTTLS (not implicit SSL)
+                        EnableSsl = false, // Port587 uses STARTTLS (not implicit SSL)
                         DeliveryMethod = SmtpDeliveryMethod.Network,
                         UseDefaultCredentials = false,
                         Credentials = new NetworkCredential(user, pass),
-                        Timeout = 20000  // Increased timeout to 20 seconds
+                        Timeout =20000 // Increased timeout to20 seconds
                     })
                     {
-                        // Enable STARTTLS for port 587
+                        // Enable STARTTLS for port587
                         smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
 
                         try

@@ -194,7 +194,8 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         public IActionResult GetServices()
         {
             var dogServices = _db.Services
-                .Where(s => s.Category.Name.ToLower() == "dog")
+                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "dog"))
                 .Select(s => new 
                 {
                     serviceId = s.ServiceId,
@@ -203,9 +204,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     durationTime = s.DurationTime
                 })
                 .ToList();
-
+ 
             var catServices = _db.Services
-                .Where(s => s.Category.Name.ToLower() == "cat")
+                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "cat"))
                 .Select(s => new 
                 {
                     serviceId = s.ServiceId,
@@ -214,7 +216,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     durationTime = s.DurationTime
                 })
                 .ToList();
-
+ 
             return Json(new { dogServices, catServices });
         }
 

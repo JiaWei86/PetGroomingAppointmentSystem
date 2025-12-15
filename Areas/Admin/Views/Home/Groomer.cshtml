@@ -298,9 +298,10 @@
 
 @if (TempData["SuccessMessage"] != null)
 {
-  <div class="alert alert-success" id="alertMessage">
-    @TempData["SuccessMessage"]
-  </div>
+  
+    <div class="alert alert-success" id="alertMessage">
+        <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
+    </div>
 }
 
 @if (TempData["WarningMessage"] != null)
@@ -612,6 +613,7 @@
 
 
 @section Scripts {
+  <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
   <script src="~/admin/js/groomer.js?v=@DateTime.Now.Ticks"></script>
 }
 

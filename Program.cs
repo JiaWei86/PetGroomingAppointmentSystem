@@ -26,8 +26,13 @@ builder.Services.AddSqlServer<DB>($@"
 //     "));
 // -----------------------------
 
-// Add Email Service
-builder.Services.AddScoped<IEmailService, EmailService>();
+// Add Admin Email Service (explicit namespace to avoid ambiguity)
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();
+
+// Register Admin area support services
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPasswordService, PetGroomingAppointmentSystem.Areas.Admin.Services.PasswordService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, PetGroomingAppointmentSystem.Areas.Admin.Services.ValidationService>();
 
 // Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
