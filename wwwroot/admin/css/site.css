@@ -131,6 +131,9 @@ body {
     display: flex;
     flex-direction: column;
     background-color: var(--background-color);
+    overflow-x: hidden; /* ADD THIS */
+    max-width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
+    width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
 }
 
 /* --- 4. Top Bar --- */
@@ -222,10 +225,12 @@ body {
 /* --- 6. Stats Grid (generic cards) --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 24px;
     padding: 0 35px;
     margin-bottom: 35px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .stat-card {
@@ -235,6 +240,8 @@ body {
     box-shadow: var(--shadow-md);
     border-left: 5px solid;
     transition: all 0.3s ease;
+    min-width: 0; /* Prevents grid items from overflowing */
+    overflow: hidden;
 }
 
     .stat-card:hover {
