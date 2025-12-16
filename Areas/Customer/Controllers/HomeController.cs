@@ -22,6 +22,30 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
 
+        // ========== STATUS CHECK HELPER METHODS (Profile Only) ==========
+        
+        private Models.Customer? GetCurrentCustomerFromSession()
+        {
+            var userId = HttpContext.Session.GetString("CustomerId");
+            if (string.IsNullOrEmpty(userId)) return null;
+            return _db.Customers.FirstOrDefault(c => c.UserId == userId);
+        }
+
+        private bool IsCustomerBlocked(Models.Customer? customer)
+        {
+            return customer?.Status?.ToLower() == "blocked";
+        }
+
+        private IActionResult BlockedResponse(string action = "perform this action")
+        {
+            return Json(new { 
+                success = false, 
+                message = $"Your account is blocked. You cannot {action}.",
+                statusCode = "BLOCKED"
+            });
+        }
+
+        // =================================================================
 
         public IActionResult Index()
         {
@@ -91,13 +115,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Unauthorized();
 
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return NotFound("Customer not found");
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("update profile");
 
                 // Update customer information
                 customer.Name = name;
@@ -146,13 +170,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Unauthorized();
 
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return NotFound("Customer not found");
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("change password");
 
                 // Verify current password (plain text comparison)
                 if (customer.Password != currentPassword)
@@ -195,19 +219,39 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Unauthorized();
+
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("add pet");
+
+                // Generate sequential PetId (P001, P002, etc.)
+                int nextNumber = 1;
+                
+                var existingPetIds = _db.Pets
+                    .Where(p => p.PetId.StartsWith("P"))
+                    .Select(p => p.PetId)
+                    .ToList();
+
+                if (existingPetIds.Any())
+                {
+                    // Extract numeric part and find the maximum
+                    nextNumber = existingPetIds
+                        .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
+                        .Max() + 1;
+                }
 
                 var pet = new Pet
                 {
-                    PetId = "P" + Guid.NewGuid().ToString("N").Substring(0, 9).ToUpper(),
+                    PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
                     Name = name,
                     Type = type,
                     Breed = breed,
                     Age = age,
                     Remark = remark,
-                    CustomerId = userId  // ✅ Use userId directly, not customer.CustomerId
+                    CustomerId = customer.UserId
                 };
 
                 // Handle pet photo upload
@@ -248,12 +292,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Unauthorized();
 
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("update pet");
+
                 // ✅ Use userId instead of customer.CustomerId
-                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == customer.UserId);
                 if (pet == null)
                     return NotFound("Pet not found");
 
@@ -301,12 +349,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Unauthorized();
 
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("delete pet");
+
                 // ✅ Use userId instead of customer.CustomerId
-                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+                var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == customer.UserId);
                 if (pet == null)
                     return NotFound("Pet not found");
 
@@ -354,13 +406,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                var userId = HttpContext.Session.GetString("CustomerId");
-                if (string.IsNullOrEmpty(userId))
+                var customer = GetCurrentCustomerFromSession();
+                if (customer == null)
                     return Json(new { success = false, message = "Not logged in" });
 
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return Json(new { success = false, message = "Customer not found" });
+                // ========== STATUS CHECK ==========
+                if (IsCustomerBlocked(customer))
+                    return BlockedResponse("update profile");
 
                 // Update basic info
                 customer.Name = name;
@@ -398,7 +450,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                                         if (!Directory.Exists(uploadsFolder))
                                             Directory.CreateDirectory(uploadsFolder);
 
-                                        var uniqueFileName = $"{userId}_photo{i}_{Guid.NewGuid():N}.jpg";
+                                        var uniqueFileName = $"{customer.UserId}_photo{i}_{Guid.NewGuid():N}.jpg";
                                         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                                         await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
@@ -581,7 +633,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var dogServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
                 .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "dog"))
-                .Select(s => new 
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
@@ -589,11 +641,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     durationTime = s.DurationTime
                 })
                 .ToList();
- 
+
             var catServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
                 .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "cat"))
-                .Select(s => new 
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
@@ -601,7 +653,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     durationTime = s.DurationTime
                 })
                 .ToList();
- 
+
             return Json(new { dogServices, catServices });
         }
 
@@ -634,7 +686,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 // Save appointment for each selected pet
                 var appointmentIds = new List<string>();
-                
+
                 foreach (var petId in request.PetIds)
                 {
                     // Verify pet belongs to customer (use userId as CustomerId)
@@ -662,9 +714,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 _db.SaveChanges();
 
-                return Ok(new 
-                { 
-                    success = true, 
+                return Ok(new
+                {
+                    success = true,
                     message = "Appointment(s) booked successfully!",
                     appointmentIds = appointmentIds
                 });
@@ -701,7 +753,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     appointmentId = a.AppointmentId,
                     date = a.AppointmentDateTime?.ToString("MMM dd, yyyy"),
-                    time = a.AppointmentDateTime?.ToString("hh:mm tt"),                         
+                    time = a.AppointmentDateTime?.ToString("hh:mm tt"),
                     petName = a.Pet?.Name,
                     petImage = a.Pet?.Photo,
                     groomerName = a.Staff?.Name ?? "Not assigned",
@@ -897,7 +949,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 var txtContent = GenerateReceiptTxt(appointment, customer);
                 var fileName = $"Receipt_{appointmentId}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-                
+
                 return File(
                     Encoding.UTF8.GetBytes(txtContent),
                     "text/plain",
@@ -1031,7 +1083,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 // Customer Section
                 var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
                 document.Add(customerHeader);
-                
+
                 var customerTable = new PdfPTable(2);
                 customerTable.SetWidths(new float[] { 30, 70 });
                 customerTable.AddCell(new PdfPCell(new Phrase("Name:", normalFont)) { Border = 0 });
@@ -1117,4 +1169,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         public string Groomer { get; set; }
         public string Notes { get; set; }
     }
+
 }
+

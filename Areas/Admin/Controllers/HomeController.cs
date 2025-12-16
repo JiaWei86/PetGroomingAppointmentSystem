@@ -733,12 +733,25 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Customer ID and Pet Name are required" });
             }
 
-            // Generate Pet ID using GUID (same as Customer side) to avoid parsing issues
-            string newPetId = "P" + Guid.NewGuid().ToString("N").Substring(0, 9).ToUpper();
+            // Generate sequential PetId (P001, P002, etc.) - same as Customer side
+            int nextNumber = 1;
+
+            var existingPetIds = await _db.Pets
+                .Where(p => p.PetId.StartsWith("P"))
+                .Select(p => p.PetId)
+                .ToListAsync();
+
+            if (existingPetIds.Any())
+            {
+                // Extract numeric part and find the maximum
+                nextNumber = existingPetIds
+                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
+                    .Max() + 1;
+            }
 
             var pet = new Pet
             {
-                PetId = newPetId,
+                PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
                 Name = petName,
                 Type = petType,
                 Breed = petBreed,

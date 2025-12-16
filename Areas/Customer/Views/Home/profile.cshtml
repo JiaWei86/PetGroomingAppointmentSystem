@@ -14,10 +14,44 @@
         photoList.Add("/Customer/img/default-avatar.png");
     }
     var hasMultiplePhotos = photoList.Count > 1 || (photoList.Count == 1 && photoList[0] != "/Customer/img/default-avatar.png");
+    
+    // Status control variables
+    var customerStatus = customer?.Status?.ToLower() ?? "active";
+    var isBlocked = customerStatus == "blocked";
+    var isInactive = customerStatus == "inactive";
+    var isActive = customerStatus == "active" || string.IsNullOrEmpty(customer?.Status);
 }
 
 <!-- Link to external CSS -->
 <link rel="stylesheet" href="~/Customer/css/multi-avatar.css" />
+<link rel="stylesheet" href="~/Customer/css/status-control.css" />
+
+@* ========== BLOCKED ACCOUNT OVERLAY ========== *@
+@if (isBlocked)
+{
+    <div class="blocked-overlay" id="blockedOverlay">
+        <div class="blocked-notice">
+            <div class="blocked-notice-icon">
+                <i class="fa fa-ban"></i>
+            </div>
+            <h3>Account Blocked</h3>
+            <p>
+                Your account has been blocked by the administrator. 
+                You can view your profile information, but all account operations have been disabled.
+            </p>
+            <div class="blocked-notice-contact">
+                <p>
+                    If you believe this is a mistake, please contact our support team at
+                    <a href="mailto:support@petgrooming.com">support@petgrooming.com</a> or call 
+                    <a href="tel:+601145892563">+6011 4589 2563</a>
+                </p>
+            </div>
+            <a href="/Customer/Auth/Logout" class="btn-logout">
+                <i class="fa fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+}
 
 <div class="bradcam_area breadcam_bg">
     <div class="container">
@@ -31,13 +65,27 @@
     </div>
 </div>
 
-<div class="profile-page-wrapper">
+<div class="profile-page-wrapper @(isBlocked ? "profile-blocked" : "")">
     <div class="container py-4">
+        
+        @* ========== INACTIVE STATUS WARNING BANNER ========== *@
+        @if (isInactive)
+        {
+            <div class="inactive-warning-banner">
+                <i class="fa fa-exclamation-triangle"></i>
+                <div class="warning-content">
+                    <h5>Account Inactive</h5>
+                    <p>Your account is currently inactive. Some features like redeeming gifts are restricted. Please contact support if you need assistance.</p>
+                </div>
+            </div>
+        }
+        
         <div class="row">
             <!-- Left column: profile card -->
             <div class="col-lg-4 mb-4">
                 <div class="card shadow-sm profile-card-main">
                     <div class="card-body text-center">
+
                         <!-- Animated Avatar -->
                         <div class="animated-avatar-container" id="animatedAvatarContainer">
                             @for (int i = 0; i < photoList.Count; i++)
@@ -65,7 +113,6 @@
                                             onclick="goToPhoto(@i)"></button>
                                 }
                             </div>
-                            
                         }
 
                         <h4 class="card-title mb-0 mt-3" id="profileName">@customer?.Name</h4>
@@ -73,7 +120,18 @@
                         <p class="small text-muted" id="profileEmail">@customer?.Email</p>
 
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-orange-primary" onclick="openEditModal()">Edit Profile</button>
+                            @if (!isBlocked)
+                            {
+                                <button type="button" class="btn btn-orange-primary" onclick="openEditModal()">
+                                    <i class="fa fa-edit"></i> Edit Profile
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-blocked" disabled title="Account blocked">
+                                    <i class="fa fa-lock"></i> Edit Profile
+                                </button>
+                            }
                             <a href="/Customer/Home/History" class="btn btn-orange-outline">
                                 <i class="fa fa-history"></i> View History
                             </a>
@@ -87,7 +145,37 @@
                         </li>
                         <li class="list-group-item">
                             <strong>Status:</strong>
-                            <span class="badge-orange float-right">@(string.IsNullOrEmpty(customer?.Status) ? "ACTIVE" : customer.Status.ToUpper())</span>
+                            <span class="float-right">
+                                @{
+                                    var statusClass = customerStatus switch
+                                    {
+                                        "blocked" => "status-badge-blocked",
+                                        "inactive" => "status-badge-inactive",
+                                        _ => "status-badge-active"
+                                    };
+                                    var statusText = customerStatus switch
+                                    {
+                                        "blocked" => "BLOCKED",
+                                        "inactive" => "INACTIVE",
+                                        _ => "ACTIVE"
+                                    };
+                                }
+                                <span class="status-badge @statusClass">@statusText</span>
+                                @if (isInactive)
+                                {
+                                    <span class="status-info-tooltip">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span class="tooltip-text">Gift redemption is restricted</span>
+                                    </span>
+                                }
+                                @if (isBlocked)
+                                {
+                                    <span class="status-info-tooltip">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span class="tooltip-text">Account operations disabled</span>
+                                    </span>
+                                }
+                            </span>
                         </li>
                         <li class="list-group-item">
                             <strong>Loyalty Points:</strong>
@@ -101,8 +189,24 @@
                     <div class="card-body">
                         <h6 class="card-title">Quick Actions</h6>
                         <div class="d-grid gap-2">
-                            <button onclick="openAddPetModal()" class="btn btn-orange-primary btn-sm">+ Add Pet</button>
-                            <a href="/Customer/Home/Appointment" class="btn btn-orange-outline btn-sm">Book Service</a>
+                            @if (!isBlocked)
+                            {
+                                <button onclick="openAddPetModal()" class="btn btn-orange-primary btn-sm">
+                                    <i class="fa fa-plus"></i> Add Pet
+                                </button>
+                                <a href="/Customer/Home/Appointment" class="btn btn-orange-outline btn-sm">
+                                    <i class="fa fa-calendar"></i> Book Service
+                                </a>
+                            }
+                            else
+                            {
+                                <button class="btn btn-blocked btn-sm" disabled>
+                                    <i class="fa fa-lock"></i> Add Pet
+                                </button>
+                                <button class="btn btn-blocked btn-sm" disabled>
+                                    <i class="fa fa-lock"></i> Book Service
+                                </button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -145,10 +249,13 @@
                                                                 <h6 class="card-title mb-1">@pet.Name</h6>
                                                                 <p class="small text-muted mb-1">@pet.Type - @pet.Breed</p>
                                                                 <p class="small text-muted mb-1">Age: @pet.Age years</p>
-                                                                <div class="d-flex gap-2">
-                                                                    <button class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
-                                                                    <button class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
-                                                                </div>
+                                                                @if (!isBlocked)
+                                                                {
+                                                                    <div class="d-flex gap-2">
+                                                                        <button class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
+                                                                        <button class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
+                                                                    </div>
+                                                                }
                                                             </div>
                                                         </div>
                                                     </div>
@@ -163,9 +270,14 @@
                                         </div>
                                     }
                                 </div>
-                                <div class="mt-3 text-center">
-                                    <button onclick="openAddPetModal()" class="btn btn-sm btn-orange-primary">+ Add New Pet</button>
-                                </div>
+                                @if (!isBlocked)
+                                {
+                                    <div class="mt-3 text-center">
+                                        <button onclick="openAddPetModal()" class="btn btn-sm btn-orange-primary">
+                                            <i class="fa fa-plus"></i> Add New Pet
+                                        </button>
+                                    </div>
+                                }
                             </div>
 
                             <!-- Loyalty Tab -->
@@ -180,9 +292,30 @@
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
                                             <h6>Tier Status</h6>
-                                            <a href="/Customer/Home/Index#redeem_gift_area_start" class="btn btn-sm btn-orange-primary">
-                                                <i class="fa fa-gift"></i> Redeem Rewards
-                                            </a>
+                                            @if (isBlocked)
+                                            {
+                                                <button class="btn btn-sm btn-blocked" disabled title="Account blocked">
+                                                    <i class="fa fa-lock"></i> Redeem Rewards
+                                                </button>
+                                            }
+                                            else if (isInactive)
+                                            {
+                                                <div class="redeem-restricted">
+                                                    <button class="btn btn-sm btn-orange-primary" disabled>
+                                                        <i class="fa fa-gift"></i> Redeem Rewards
+                                                    </button>
+                                                </div>
+                                                <p class="inactive-restriction-msg">
+                                                    <i class="fa fa-exclamation-triangle"></i> 
+                                                    Gift redemption is restricted for inactive accounts.
+                                                </p>
+                                            }
+                                            else
+                                            {
+                                                <a href="/Customer/Home/Index#redeem_gift_area_start" class="btn btn-sm btn-orange-primary">
+                                                    <i class="fa fa-gift"></i> Redeem Rewards
+                                                </a>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -423,7 +556,7 @@
     </div>
 </div>
 
-<!-- Add Pet Modal (simplified) -->
+<!-- Add Pet Modal -->
 <div id="addPetOverlay" class="custom-modal-overlay pet-modal-overlay">
     <div class="custom-modal-dialog pet-modal-dialog">
         <div class="custom-modal-content edit-pet-modal">
@@ -480,39 +613,15 @@
 
 <canvas id="webcamCanvas" style="display:none;"></canvas>
 
-<style>
-    /* Password Strength Indicator Styles */
-    .password-strength .progress {
-        background-color: #e9ecef;
-        border-radius: 3px;
-    }
-    .password-strength .progress-bar.bg-danger { background-color: #dc3545 !important; }
-    .password-strength .progress-bar.bg-warning { background-color: #ffc107 !important; }
-    .password-strength .progress-bar.bg-info { background-color: #17a2b8 !important; }
-    .password-strength .progress-bar.bg-success { background-color: #28a745 !important; }
-    
-    #passwordMatchText.text-success { color: #28a745 !important; }
-    #passwordMatchText.text-danger { color: #dc3545 !important; }
-    
-    /* Tab styling in modal */
-    #editProfileTabs .nav-link {
-        color: #666;
-        border: none;
-        padding: 10px 20px;
-    }
-    #editProfileTabs .nav-link.active {
-        color: #ff9500;
-        border-bottom: 2px solid #ff9500;
-        background: transparent;
-    }
-    #editProfileTabs .nav-link:hover {
-        color: #ff9500;
-    }
-</style>
-
 <script>
+    // ========== STATUS CONTROL VARIABLES ==========
+    const customerStatus = '@customerStatus';
+    const isBlocked = @(isBlocked.ToString().ToLower());
+    const isInactive = @(isInactive.ToString().ToLower());
+    const isActive = @(isActive.ToString().ToLower());
+
     // ========== PHOTO DATA STORAGE ==========
-    let uploadedPhotos = []; // Array of { id, src, isExisting }
+    let uploadedPhotos = [];
     
     // Initialize with existing photos
     @if (hasMultiplePhotos)
@@ -528,6 +637,41 @@
             }
         ];
         </text>
+    }
+
+    // ========== STATUS CHECK HELPER ==========
+    function checkStatusBeforeAction(actionName) {
+        if (isBlocked) {
+            showBlockedToast('Action Blocked', 'Your account is blocked. You cannot ' + actionName + '.');
+            return false;
+        }
+        return true;
+    }
+
+    function showBlockedToast(title, message) {
+        // Remove existing toast if any
+        const existingToast = document.querySelector('.action-blocked-toast');
+        if (existingToast) existingToast.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'action-blocked-toast';
+        toast.innerHTML = `
+            <i class="fa fa-ban"></i>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+        `;
+        document.body.appendChild(toast);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 5000);
     }
 
     // ========== AVATAR ANIMATION ==========
@@ -558,27 +702,19 @@
         const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
         const indicators = document.querySelectorAll('.avatar-indicator');
         
-        photos[currentPhotoIndex].classList.remove('active');
+        if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.remove('active');
         if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
         
         currentPhotoIndex = index;
         
-        photos[currentPhotoIndex].classList.add('active');
+        if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.add('active');
         if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
-    }
-
-    function toggleAnimation() {
-        isAnimationPaused = !isAnimationPaused;
-        const icon = document.getElementById('pauseIcon');
-        if (isAnimationPaused) {
-            icon.className = 'fa fa-play';
-        } else {
-            icon.className = 'fa fa-pause';
-        }
     }
 
     // ========== MULTI-FILE UPLOAD ==========
     function handleMultiFileSelect(event) {
+        if (!checkStatusBeforeAction('upload photos')) return;
+        
         const files = event.target.files;
         if (!files.length) return;
         
@@ -593,7 +729,6 @@
             reader.readAsDataURL(file);
         }
         
-        // Clear input so same files can be selected again
         event.target.value = '';
     }
 
@@ -622,7 +757,6 @@
         const emptyMsg = document.getElementById('emptyPhotosMessage');
         const clearBtn = document.getElementById('clearPhotosBtn');
         
-        // Clear existing thumbnails (except empty message)
         grid.querySelectorAll('.photo-thumbnail').forEach(el => el.remove());
         
         if (uploadedPhotos.length === 0) {
@@ -675,6 +809,8 @@
     });
 
     dropZone?.addEventListener('drop', function(e) {
+        if (!checkStatusBeforeAction('upload photos')) return;
+        
         const files = e.dataTransfer.files;
         for (let i = 0; i < files.length; i++) {
             if (!files[i].type.startsWith('image/')) continue;
@@ -690,6 +826,8 @@
     let webcamData = { stream: null, capturedImage: null };
 
     async function openWebcamModal() {
+        if (!checkStatusBeforeAction('use webcam')) return;
+        
         document.getElementById('webcamOverlay').classList.add('show');
         document.getElementById('webcamContainer').style.display = 'block';
         document.getElementById('capturedPreviewContainer').style.display = 'none';
@@ -755,13 +893,13 @@
 
     // ========== MODALS ==========
     function openEditModal() {
+        if (!checkStatusBeforeAction('edit profile')) return;
+        
         document.getElementById('editProfileOverlay').classList.add('show');
         document.body.style.overflow = 'hidden';
         renderPhotoGrid();
         updatePhotosInput();
-        // Reset to Profile Info tab
         $('#editProfileTabs a[href="#profileInfoTab"]').tab('show');
-        // Clear password form
         document.getElementById('changePasswordForm').reset();
         hidePasswordMessages();
     }
@@ -774,6 +912,8 @@
     // ========== FORM SUBMISSION ==========
     function submitEditProfile(event) {
         event.preventDefault();
+        
+        if (!checkStatusBeforeAction('update profile')) return;
         
         const formData = new FormData(document.getElementById('editProfileForm'));
         
@@ -830,23 +970,13 @@
         let strength = 0;
         let feedback = '';
         
-        // Length check
         if (password.length >= 8) strength += 25;
         if (password.length >= 12) strength += 10;
-        
-        // Uppercase check
         if (/[A-Z]/.test(password)) strength += 20;
-        
-        // Lowercase check
         if (/[a-z]/.test(password)) strength += 15;
-        
-        // Number check
         if (/[0-9]/.test(password)) strength += 15;
-        
-        // Special character check
         if (/[^A-Za-z0-9]/.test(password)) strength += 15;
         
-        // Update UI
         bar.style.width = strength + '%';
         bar.classList.remove('bg-danger', 'bg-warning', 'bg-info', 'bg-success');
         
@@ -899,14 +1029,14 @@
     function submitChangePassword(event) {
         event.preventDefault();
         
+        if (!checkStatusBeforeAction('change password')) return;
+        
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
         
-        // Hide previous messages
         hidePasswordMessages();
         
-        // Validation
         if (!currentPassword || !newPassword || !confirmPassword) {
             document.getElementById('passwordErrorMessage').textContent = 'All fields are required.';
             document.getElementById('passwordErrorMessage').style.display = 'block';
@@ -931,12 +1061,10 @@
             return;
         }
         
-        // Disable button during submission
         const btn = document.getElementById('changePasswordBtn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing...';
         
-        // Submit to server
         const formData = new FormData();
         formData.append('currentPassword', currentPassword);
         formData.append('newPassword', newPassword);
@@ -954,13 +1082,8 @@
                 document.getElementById('passwordSuccessMessage').textContent = data.message || 'Password changed successfully!';
                 document.getElementById('passwordSuccessMessage').style.display = 'block';
                 document.getElementById('changePasswordForm').reset();
-                hidePasswordMessages();
-                document.getElementById('passwordSuccessMessage').style.display = 'block';
                 
-                // Close modal after success
-                setTimeout(() => {
-                    closeEditModal();
-                }, 2000);
+                setTimeout(() => { closeEditModal(); }, 2000);
             } else {
                 document.getElementById('passwordErrorMessage').textContent = data.message || 'Failed to change password.';
                 document.getElementById('passwordErrorMessage').style.display = 'block';
@@ -976,14 +1099,21 @@
 
     // ========== PET FUNCTIONS ==========
     function openAddPetModal() {
+        if (!checkStatusBeforeAction('add pet')) return;
+        
         document.getElementById('petIdInput').value = '';
         document.getElementById('petModalTitle').textContent = 'Add Pet';
         document.getElementById('editPetForm').reset();
         document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
+        document.getElementById('petSuccessMessage').style.display = 'none';
+        document.getElementById('petErrorMessage').style.display = 'none';
         document.getElementById('addPetOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
     }
 
     function openEditPetModal(petId) {
+        if (!checkStatusBeforeAction('edit pet')) return;
+        
         fetch(`/Customer/Home/GetPetById?petId=${petId}`)
         .then(r => r.json())
         .then(data => {
@@ -997,17 +1127,24 @@
                 document.getElementById('petRemark').value = pet.remark || '';
                 document.getElementById('petPhotoPreview').src = pet.photo || '/Customer/img/default-pet.png';
                 document.getElementById('petModalTitle').textContent = 'Edit Pet';
+                document.getElementById('petSuccessMessage').style.display = 'none';
+                document.getElementById('petErrorMessage').style.display = 'none';
                 document.getElementById('addPetOverlay').classList.add('show');
+                document.body.style.overflow = 'hidden';
             }
         });
     }
 
     function closeAddPetModal() {
         document.getElementById('addPetOverlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
     }
 
     function submitPetForm(event) {
         event.preventDefault();
+        
+        if (!checkStatusBeforeAction('save pet')) return;
+        
         const petId = document.getElementById('petIdInput').value;
         const formData = new FormData(document.getElementById('editPetForm'));
         const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
@@ -1016,15 +1153,23 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
+                document.getElementById('petSuccessMessage').textContent = petId ? 'Pet updated!' : 'Pet added!';
+                document.getElementById('petSuccessMessage').style.display = 'block';
                 setTimeout(() => { closeAddPetModal(); location.reload(); }, 1000);
             } else {
                 document.getElementById('petErrorMessage').textContent = data.message;
                 document.getElementById('petErrorMessage').style.display = 'block';
             }
+        })
+        .catch(error => {
+            document.getElementById('petErrorMessage').textContent = 'Error saving pet';
+            document.getElementById('petErrorMessage').style.display = 'block';
         });
     }
 
     function deletePet(petId, petName) {
+        if (!checkStatusBeforeAction('delete pet')) return;
+        
         if (!confirm(`Delete ${petName}?`)) return;
         const formData = new FormData();
         formData.append('petId', petId);
@@ -1067,3 +1212,5 @@
         });
     });
 </script>
+
+
