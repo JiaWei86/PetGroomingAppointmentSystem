@@ -8,19 +8,24 @@ namespace PetGroomingAppointmentSystem.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "CategoryId",
-                table: "Services");
+            migrationBuilder.Sql(@"
+                IF EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS 
+                          WHERE TABLE_NAME='Services' AND COLUMN_NAME='CategoryId')
+                BEGIN
+                    ALTER TABLE [Services] DROP COLUMN [CategoryId];
+                END
+            ");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "CategoryId",
-                table: "Services",
-                type: "nvarchar(10)",
-                maxLength: 10,
-                nullable: true);
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS 
+                              WHERE TABLE_NAME='Services' AND COLUMN_NAME='CategoryId')
+                BEGIN
+                    ALTER TABLE [Services] ADD [CategoryId] nvarchar(10) NULL;
+                END
+            ");
         }
     }
 }
