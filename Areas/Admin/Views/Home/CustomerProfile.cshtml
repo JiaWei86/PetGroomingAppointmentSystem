@@ -1,0 +1,838 @@
+﻿
+@using PetGroomingAppointmentSystem.Models;
+@model Customer
+
+@{
+    ViewData["Title"] = $"Customer Profile - {Model?.Name}";
+    ViewData["ActivePage"] = "Customer";
+}
+
+<div class="content-header">
+    <a href="@Url.Action("Customer", "Home", new { area = "Admin" })" class="btn btn-sm btn-secondary">← Back to Customers</a>
+    <h1 class="page-title">👤 Customer Profile</h1>
+</div>
+
+<div class="customer-profile-wrapper">
+    <div class="profile-container">
+        
+        <!-- Left Column: Customer Info Card -->
+        <div>
+            <div class="profile-card">
+                <!-- Avatar -->
+                <img src="@(Model?.Photo ?? "/uploads/placeholder.png")"
+                     alt="@Model?.Name"
+                     class="profile-avatar" />
+
+                <h4>@Model?.Name</h4>
+                <div class="profile-card-email">@Model?.Email</div>
+
+                <button type="button" class="btn btn-primary profile-edit-btn" id="editProfileBtn" onclick="openEditModal()">
+                    ✏️ Edit Profile
+                </button>
+
+                <!-- Customer Info List -->
+                <div class="profile-info-list">
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Phone:</span>
+                        <span class="profile-info-value">@Model?.Phone</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">IC Number:</span>
+                        <span class="profile-info-value">@Model?.IC</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Member Since:</span>
+                        <span class="profile-info-value">@Model?.RegisteredDate?.ToString("MMM yyyy")</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Status:</span>
+                        <span class="status-tag @(Model?.Status == "active" ? "status-active" : "status-inactive")">
+                            @Model?.Status?.ToUpper()
+                        </span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Loyalty Points:</span>
+                        <span class="profile-info-value loyalty-points" id="loyaltyPointsDisplay">@Model?.LoyaltyPoint pts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions-card">
+                <h6>Quick Actions</h6>
+                <div class="quick-actions-buttons">
+                    <button type="button" class="btn btn-primary quick-actions-btn" onclick="openAddPetModal()">
+                        🐾 Add Pet
+                    </button>
+                    <button type="button" class="btn btn-primary quick-actions-btn" onclick="openAdjustLoyaltyModal()">
+                        🎁 Adjust Points
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Tabs for Pets & Loyalty -->
+        <div class="profile-content-card">
+            <!-- Tab Navigation -->
+            <div class="profile-tabs">
+                <button onclick="switchTab('pets')" class="profile-tab-btn active" id="pets-tab-btn">
+                    🐾 Pets (@(Model?.Pets?.Count ?? 0))
+                </button>
+                <button onclick="switchTab('loyalty')" class="profile-tab-btn" id="loyalty-tab-btn">
+                    💎 Loyalty Points
+                </button>
+            </div>
+
+            <!-- Pets Tab Content -->
+            <div id="pets-content" class="profile-tab-content active">
+                @if (Model?.Pets?.Count > 0)
+                {
+                    <div class="pets-grid">
+                        @foreach (var pet in Model.Pets)
+                        {
+                            <div class="pet-item">
+                                <img src="@(pet?.Photo ?? "/images/pet-placeholder.png")"
+                                     alt="@pet?.Name"
+                                     class="pet-avatar" />
+                                <div class="pet-info">
+                                    <h6 class="pet-name">@pet?.Name</h6>
+                                    <p class="pet-detail">@pet?.Type - @pet?.Breed</p>
+                                    <p class="pet-last-detail">Age: @pet?.Age years</p>
+                                    <div class="action-buttons">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="editPet('@pet?.PetId')">
+                                            ✏️ Edit
+                                        </button>
+                                        <button type="button" class="btn btn-sm delete-btn" onclick="deletePet('@pet?.PetId', '@pet?.Name')">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div style="text-align: center; margin-top: 16px;">
+                        <button type="button" class="btn btn-primary" onclick="openAddPetModal()">
+                            ➕ Add New Pet
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state-message">
+                        <p>No pets assigned yet.</p>
+                        <button type="button" class="btn btn-primary" onclick="openAddPetModal()">
+                            ➕ Add First Pet
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- Loyalty Points Tab Content -->
+            <div id="loyalty-content" class="profile-tab-content">
+                <div class="loyalty-grid">
+                    <div class="loyalty-balance-card">
+                        <h6 class="loyalty-balance-label">Current Balance</h6>
+                        <div class="loyalty-balance-amount">
+                            <span id="loyaltyBalanceDisplay">@Model?.LoyaltyPoint</span>
+                            <span class="loyalty-balance-unit">pts</span>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openAdjustLoyaltyModal()">
+                            💎 Adjust Points
+                        </button>
+                    </div>
+                    <div class="loyalty-benefits-card">
+                        <h6>Loyalty Tier Benefits</h6>
+                        <div class="loyalty-tier-item">
+                            <span class="loyalty-tier-name">Silver (100+ pts):</span><br>
+                            <span class="loyalty-tier-description">5% discount on services</span>
+                        </div>
+                        <div class="loyalty-tier-item">
+                            <span class="loyalty-tier-name">Gold (500+ pts):</span><br>
+                            <span class="loyalty-tier-description">10% discount + priority booking</span>
+                        </div>
+                        <div class="loyalty-tier-item">
+                            <span class="loyalty-tier-name">Platinum (1000+ pts):</span><br>
+                            <span class="loyalty-tier-description">15% discount + free monthly service</span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model?.Redeems?.Count > 0)
+                {
+                    <div class="redemptions-card">
+                        <div class="redemptions-header">
+                            Recent Redemptions
+                        </div>
+                        @foreach (var redeem in Model.Redeems.Take(5))
+                        {
+                            <div class="redemption-item">
+                                <div class="redemption-details">
+                                    <strong>@redeem.Gift?.Name</strong>
+                                    <span class="redemption-date">@redeem.RedeemDate?.ToString("MMM dd, yyyy")</span>
+                                </div>
+                                <span class="redemption-points">
+                                    -@(redeem.QuantityRedeemed * redeem.Gift?.LoyaltyPointCost ?? 0) pts
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="editProfileOverlay" class="edit-modal-overlay">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <h5>✏️ Edit Customer Profile</h5>
+            <button type="button" onclick="closeEditModal()" class="edit-modal-close-btn">×</button>
+        </div>
+
+        <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Full Name <span class="modal-form-required">*</span></label>
+                    <input type="text" name="Name" value="@Model?.Name" required class="modal-form-input" />
+                </div>
+                <div class="modal-form-group">
+                    <label>Email <span class="modal-form-required">*</span></label>
+                    <input type="email" name="Email" value="@Model?.Email" required class="modal-form-input" />
+                </div>
+            </div>
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Phone <span class="modal-form-required">*</span></label>
+                    <input type="tel" name="Phone" value="@Model?.Phone" required class="modal-form-input" />
+                </div>
+                <div class="modal-form-group">
+                    <label>IC Number</label>
+                    <input type="text" name="IC" value="@Model?.IC" class="modal-form-input" />
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Status</label>
+                <select name="Status" id="editStatus" class="modal-form-select">
+                    <option value="active">Active</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Profile Photo</label>
+                <input type="file" name="PhotoUpload" accept="image/*" class="modal-form-input" />
+                <small class="modal-form-help-text">Leave empty to keep current photo</small>
+            </div>
+
+            <div class="modal-form-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Pet Modal -->
+<div id="addPetOverlay" class="edit-modal-overlay">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <h5>🐾 Add New Pet</h5>
+            <button type="button" onclick="closeAddPetModal()" class="edit-modal-close-btn">×</button>
+        </div>
+
+        <form id="addPetForm" onsubmit="submitAddPet(event)">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Pet Name <span class="modal-form-required">*</span></label>
+                    <input type="text" id="petName" name="petName" required class="modal-form-input" placeholder="e.g., Buddy" />
+                </div>
+                <div class="modal-form-group">
+                    <label>Pet Type <span class="modal-form-required">*</span></label>
+                    <select id="petType" name="petType" required class="modal-form-select">
+                        <option value="">Select Type</option>
+                        <option value="Dog">🐕 Dog</option>
+                        <option value="Cat">🐱 Cat</option>
+
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Breed</label>
+                    <input type="text" id="petBreed" name="petBreed" class="modal-form-input" placeholder="e.g., Golden Retriever" />
+                </div>
+                <div class="modal-form-group">
+                    <label>Age (Years)</label>
+                    <input type="number" id="petAge" name="petAge" min="0" max="50" step="0.5" class="modal-form-input" />
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Special Notes/Remarks</label>
+                <textarea id="petRemark" name="petRemark" class="modal-form-input" rows="3" placeholder="Allergies, behaviors, or special care requirements..."></textarea>
+            </div>
+
+            <div id="petErrorMessage" class="alert alert-danger" style="display:none;"></div>
+            <div id="petSuccessMessage" class="alert alert-success" style="display:none;"></div>
+
+            <div class="modal-form-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">💾 Add Pet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Adjust Loyalty Points Modal -->
+<div id="adjustLoyaltyOverlay" class="edit-modal-overlay">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <h5>💎 Adjust Loyalty Points</h5>
+            <button type="button" onclick="closeAdjustLoyaltyModal()" class="edit-modal-close-btn">×</button>
+        </div>
+
+        <form id="adjustLoyaltyForm" onsubmit="submitAdjustLoyalty(event)">
+            <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div class="loyalty-adjustment-info">
+                <p><strong>Current Balance:</strong> <span id="currentBalance">@Model?.LoyaltyPoint</span> pts</p>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Adjustment Type <span class="modal-form-required">*</span></label>
+                <div class="adjustment-type-options">
+                    <label class="radio-label">
+                        <input type="radio" name="adjustmentType" value="add" checked required />
+                        <span>➕ Add Points</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="adjustmentType" value="subtract" required />
+                        <span>➖ Subtract Points</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Amount <span class="modal-form-required">*</span></label>
+                <input type="number" id="loyaltyAmount" name="loyaltyAmount" min="0" max="999999" required class="modal-form-input" placeholder="Enter amount" />
+            </div>
+
+            <div class="loyalty-preview-info">
+                <p><strong>New Balance:</strong> <span id="newBalance">@Model?.LoyaltyPoint</span> pts</p>
+            </div>
+
+            <div id="loyaltyErrorMessage" class="alert alert-danger" style="display:none;"></div>
+            <div id="loyaltySuccessMessage" class="alert alert-success" style="display:none;"></div>
+
+            <div class="modal-form-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAdjustLoyaltyModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">💾 Confirm Adjustment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add/Edit Pet Modal -->
+<div id="editPetOverlay" class="edit-modal-overlay">
+    <div class="edit-modal-content">
+        <div class="edit-modal-header">
+            <h5 id="petModalTitle">🐾 Add New Pet</h5>
+            <button type="button" onclick="closeEditPetModal()" class="edit-modal-close-btn">×</button>
+        </div>
+
+        <form id="editPetForm" onsubmit="submitEditPet(event)">
+            <input type="hidden" id="editPetId" name="petId" value="" />
+            <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Pet Name <span class="modal-form-required">*</span></label>
+                    <input type="text" id="editPetName" name="petName" required class="modal-form-input" placeholder="e.g., Buddy" />
+                </div>
+                <div class="modal-form-group">
+                    <label>Pet Type <span class="modal-form-required">*</span></label>
+                    <select id="editPetType" name="petType" required class="modal-form-select">
+                        <option value="">Select Type</option>
+                        <option value="Dog">🐕 Dog</option>
+                        <option value="Cat">🐱 Cat</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-form-grid-2">
+                <div class="modal-form-group">
+                    <label>Breed</label>
+                    <input type="text" id="editPetBreed" name="petBreed" class="modal-form-input" placeholder="e.g., Golden Retriever" />
+                </div>
+                <div class="modal-form-group">
+                    <label>Age (Years)</label>
+                    <input type="number" id="editPetAge" name="petAge" min="0" max="50" step="0.5" class="modal-form-input" />
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Special Notes/Remarks</label>
+                <textarea id="editPetRemark" name="petRemark" class="modal-form-input" rows="3" placeholder="Allergies, behaviors, or special care requirements..."></textarea>
+            </div>
+
+            <div id="editPetErrorMessage" class="alert alert-danger" style="display:none;"></div>
+            <div id="editPetSuccessMessage" class="alert alert-success" style="display:none;"></div>
+
+            <div class="modal-form-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditPetModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">💾 Save Pet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        const customerId = '@Model?.UserId';
+        const currentLoyaltyPoints = @Model?.LoyaltyPoint;
+
+        // Create a safe pet DTO array to avoid circular references
+        const petsData = [
+            @foreach (var pet in Model?.Pets ?? new List<Pet>())
+            {
+                    <text>
+                    {
+                        petId: '@pet.PetId',
+                        name: '@(pet.Name?.Replace("'", "\\'") ?? "")',
+                        type: '@(pet.Type ?? "")',
+                        breed: '@(pet.Breed?.Replace("'", "\\'") ?? "")',
+                        age: @(pet.Age ?? 0),
+                        remark: '@(pet.Remark?.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "") ?? "")'
+                    },
+                    </text>
+            }
+        ];
+
+        // Get CSRF token from the Add Pet form specifically
+        function getAntiForgeryToken() {
+            // Try to get from the addPetForm first
+            const addPetForm = document.getElementById('addPetForm');
+            if (addPetForm) {
+                const token = addPetForm.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) return token.value;
+            }
+            // Fallback to any token on the page
+            const anyToken = document.querySelector('input[name="__RequestVerificationToken"]');
+            return anyToken ? anyToken.value : '';
+        }
+
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // ========== EVENT LISTENERS INITIALIZATION ==========
+            // Loyalty adjustment type change listeners
+            const adjustmentRadios = document.querySelectorAll('input[name="adjustmentType"]');
+            adjustmentRadios.forEach(radio => {
+                radio.addEventListener('change', updateLoyaltyPreview);
+            });
+
+            // Loyalty amount input listener
+            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
+            if (loyaltyAmountInput) {
+                loyaltyAmountInput.addEventListener('input', updateLoyaltyPreview);
+            }
+
+            // ========== OVERLAY CLICK HANDLING ==========
+            const editProfileOverlay = document.getElementById('editProfileOverlay');
+            if (editProfileOverlay) {
+                editProfileOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) closeEditModal();
+                });
+            }
+
+            const addPetOverlay = document.getElementById('addPetOverlay');
+            if (addPetOverlay) {
+                addPetOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) closeAddPetModal();
+                });
+            }
+
+            const adjustLoyaltyOverlay = document.getElementById('adjustLoyaltyOverlay');
+            if (adjustLoyaltyOverlay) {
+                adjustLoyaltyOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) closeAdjustLoyaltyModal();
+                });
+            }
+
+            const editPetOverlay = document.getElementById('editPetOverlay');
+            if (editPetOverlay) {
+                editPetOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) closeEditPetModal();
+                });
+            }
+
+            // ========== INITIAL LOYALTY PREVIEW ==========
+            updateLoyaltyPreview();
+        });
+
+        // ========== MODAL MANAGEMENT ==========
+        function openEditModal() {
+            document.getElementById('editProfileOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            var currentStatus = '@Model?.Status';
+            document.getElementById('editStatus').value = currentStatus;
+        }
+
+        function closeEditModal() {
+            document.getElementById('editProfileOverlay').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        function openAddPetModal() {
+            document.getElementById('addPetOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            // Reset individual fields instead of the entire form (to preserve the anti-forgery token)
+            document.getElementById('petName').value = '';
+            document.getElementById('petType').value = '';
+            document.getElementById('petBreed').value = '';
+            document.getElementById('petAge').value = '';
+            document.getElementById('petRemark').value = '';
+            hideMessages('pet');
+        }
+
+        function closeAddPetModal() {
+            document.getElementById('addPetOverlay').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        function openAdjustLoyaltyModal() {
+            document.getElementById('adjustLoyaltyOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('adjustLoyaltyForm').reset();
+            updateLoyaltyPreview();
+            hideMessages('loyalty');
+        }
+
+        function closeAdjustLoyaltyModal() {
+            document.getElementById('adjustLoyaltyOverlay').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        // ========== TAB MANAGEMENT ==========
+        function switchTab(tab) {
+            document.getElementById('pets-content').classList.remove('active');
+            document.getElementById('loyalty-content').classList.remove('active');
+            document.getElementById('pets-tab-btn').classList.remove('active');
+            document.getElementById('loyalty-tab-btn').classList.remove('active');
+
+            if (tab === 'pets') {
+                document.getElementById('pets-content').classList.add('active');
+                document.getElementById('pets-tab-btn').classList.add('active');
+            } else if (tab === 'loyalty') {
+                document.getElementById('loyalty-content').classList.add('active');
+                document.getElementById('loyalty-tab-btn').classList.add('active');
+            }
+        }
+
+        // ========== PET MANAGEMENT ==========
+        function submitAddPet(event) {
+            event.preventDefault();
+            console.log('Adding pet...');
+
+            const petName = document.getElementById('petName').value.trim();
+            const petType = document.getElementById('petType').value.trim();
+            const petBreed = document.getElementById('petBreed').value.trim();
+            const petAge = document.getElementById('petAge').value ? parseInt(document.getElementById('petAge').value) : null;
+            const petRemark = document.getElementById('petRemark').value.trim();
+
+            // Validation
+            if (!petName || !petType) {
+                showMessage('pet', 'Pet name and type are required', 'error');
+                return;
+            }
+
+            // Use FormData like the Customer side does
+            const formData = new FormData();
+            formData.append('customerId', customerId);
+            formData.append('petName', petName);
+            formData.append('petType', petType);
+            formData.append('petBreed', petBreed);
+            if (petAge !== null) formData.append('petAge', petAge);
+            formData.append('petRemark', petRemark);
+            formData.append('__RequestVerificationToken', getAntiForgeryToken());
+
+            console.log('Sending pet data with FormData...');
+            console.log('Token:', getAntiForgeryToken());
+
+            fetch('/Admin/Home/AddPetToCustomer', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    showMessage('pet', 'Pet added successfully!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showMessage('pet', data.message || 'Failed to add pet', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showMessage('pet', 'An error occurred: ' + error.message, 'error');
+            });
+        }
+
+        function editPet(petId) {
+            openEditPetModal(petId);
+        }
+
+        function deletePet(petId, petName) {
+            if (confirm(`Are you sure you want to delete ${petName}?`)) {
+                const formData = new FormData();
+                formData.append('petId', petId);
+                formData.append('__RequestVerificationToken', getAntiForgeryToken());
+
+                fetch('/Admin/Home/DeletePet', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('🗑️ Pet deleted successfully');
+                        location.reload();
+                    } else {
+                        alert('Failed to delete pet: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting pet');
+                });
+            }
+        }
+
+        // ========== EDIT PET MODAL MANAGEMENT ==========
+        function openEditPetModal(petId) {
+            // Find pet from petsData array
+            const pet = petsData.find(p => p.petId === petId);
+
+            if (!pet) {
+                showMessage('editPet', 'Pet not found', 'error');
+                return;
+            }
+
+            // Populate form with pet data
+            document.getElementById('editPetId').value = pet.petId;
+            document.getElementById('editPetName').value = pet.name || '';
+            document.getElementById('editPetType').value = pet.type || '';
+            document.getElementById('editPetBreed').value = pet.breed || '';
+            document.getElementById('editPetAge').value = pet.age || '';
+            document.getElementById('editPetRemark').value = pet.remark || '';
+
+            // Update modal title
+            document.getElementById('petModalTitle').textContent = `✏️ Edit ${pet.name}`;
+
+            // Show modal
+            document.getElementById('editPetOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            hideMessages('editPet');
+        }
+
+        function closeEditPetModal() {
+            document.getElementById('editPetOverlay').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        function submitEditPet(event) {
+            event.preventDefault();
+            console.log('Editing pet...');
+
+            const petId = document.getElementById('editPetId').value;
+            const petName = document.getElementById('editPetName').value.trim();
+            const petType = document.getElementById('editPetType').value.trim();
+            const petBreed = document.getElementById('editPetBreed').value.trim();
+            const petAge = document.getElementById('editPetAge').value ? parseInt(document.getElementById('editPetAge').value) : null;
+            const petRemark = document.getElementById('editPetRemark').value.trim();
+
+            // Validation
+            if (!petId || !petName || !petType) {
+                showMessage('editPet', 'Pet ID, name, and type are required', 'error');
+                return;
+            }
+
+            // Use FormData like the Customer side does
+            const formData = new FormData();
+            formData.append('petId', petId);
+            formData.append('petName', petName);
+            formData.append('petType', petType);
+            formData.append('petBreed', petBreed);
+            if (petAge !== null) formData.append('petAge', petAge);
+            formData.append('petRemark', petRemark);
+            formData.append('__RequestVerificationToken', getAntiForgeryToken());
+
+            console.log('Sending pet edit data with FormData...');
+
+            fetch('/Admin/Home/UpdatePet', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    showMessage('editPet', 'Pet updated successfully!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showMessage('editPet', data.message || 'Failed to update pet', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showMessage('editPet', 'An error occurred: ' + error.message, 'error');
+            });
+        }
+
+        // ========== LOYALTY POINTS MANAGEMENT ==========
+        function updateLoyaltyPreview() {
+            const adjustmentTypeRadio = document.querySelector('input[name="adjustmentType"]:checked');
+            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
+
+            if (!adjustmentTypeRadio || !loyaltyAmountInput) return;
+
+            const adjustmentType = adjustmentTypeRadio.value;
+            const amount = parseInt(loyaltyAmountInput.value) || 0;
+            let newBalance = currentLoyaltyPoints;
+
+            if (adjustmentType === 'add') {
+                newBalance = currentLoyaltyPoints + amount;
+            } else if (adjustmentType === 'subtract') {
+                newBalance = Math.max(0, currentLoyaltyPoints - amount);
+            }
+
+            const newBalanceEl = document.getElementById('newBalance');
+            if (newBalanceEl) {
+                newBalanceEl.textContent = newBalance;
+            }
+        }
+
+        function submitAdjustLoyalty(event) {
+            event.preventDefault();
+            console.log('Adjusting loyalty points...');
+
+            const adjustmentTypeRadio = document.querySelector('input[name="adjustmentType"]:checked');
+            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
+
+            if (!adjustmentTypeRadio || !loyaltyAmountInput) {
+                showMessage('loyalty', 'Form elements not found', 'error');
+                return;
+            }
+
+            const adjustmentType = adjustmentTypeRadio.value;
+            const amount = parseInt(loyaltyAmountInput.value) || 0;
+
+            if (amount <= 0) {
+                showMessage('loyalty', 'Amount must be a positive number', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('customerId', customerId);
+            formData.append('adjustmentType', adjustmentType);
+            formData.append('amount', amount);
+
+            console.log('Sending loyalty data...');
+
+            fetch('/Admin/Home/AdjustLoyaltyPoints', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    showMessage('loyalty', 'Loyalty points adjusted successfully!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showMessage('loyalty', data.message || 'Failed to adjust points', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                showMessage('loyalty', 'An error occurred: ' + error.message, 'error');
+            });
+        }
+
+        // ========== MESSAGE HANDLING ==========
+        function showMessage(type, message, messageType) {
+            const errorEl = document.getElementById(type + 'ErrorMessage');
+            const successEl = document.getElementById(type + 'SuccessMessage');
+
+            if (!errorEl || !successEl) {
+                console.error('Message elements not found for type:', type);
+                return;
+            }
+
+            if (messageType === 'error') {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+            } else {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+                errorEl.style.display = 'none';
+            }
+
+            setTimeout(() => {
+                hideMessages(type);
+            }, 5000);
+        }
+
+        function hideMessages(type) {
+            const errorEl = document.getElementById(type + 'ErrorMessage');
+            const successEl = document.getElementById(type + 'SuccessMessage');
+
+            if (errorEl) errorEl.style.display = 'none';
+            if (successEl) successEl.style.display = 'none';
+        }
+
+        // ========== KEYBOARD HANDLING ==========
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeEditModal();
+                closeAddPetModal();
+                closeEditPetModal();
+                closeAdjustLoyaltyModal();
+            }
+        });
+    </script>
+}

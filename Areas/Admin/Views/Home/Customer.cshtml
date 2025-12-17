@@ -1,10 +1,14 @@
+﻿@using PetGroomingAppointmentSystem.Models;
+@model List<Customer>
+
 @{
     ViewData["Title"] = "Customer Management";
     ViewData["ActivePage"] = "Customer";
 }
 
 <div class="content-header">
-    <h1 class="page-title">Customer Management</h1>
+    <h1 class="page-title">👥 Customer Management</h1>
+    <p class="page-subtitle">Manage all customers and their information</p>
 </div>
 
 <!-- Filters Section -->
@@ -23,13 +27,18 @@
         </div>
 
         <div class="form-group">
-            <label for="searchCity">City</label>
-            <input type="text" id="searchCity" name="searchCity" class="form-control" placeholder="City" />
+            <label for="searchStatus">Status</label>
+            <select id="searchStatus" name="searchStatus" class="form-control">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="blocked">Blocked</option>
+                <option value="inactive">Inactive</option>
+            </select>
         </div>
 
         <div class="form-group">
             <label>&nbsp;</label>
-            <button type="submit" class="btn btn-primary">Filter</button>
+            <button type="submit" class="btn btn-primary">🔍 Filter</button>
             <button type="reset" class="btn btn-reset">Reset</button>
         </div>
     </form>
@@ -37,71 +46,12 @@
 
 <!-- Customers Table -->
 <div class="panel">
-    @{
-        // Hard-coded sample data
-        var customers = new List<dynamic>
-        {
-            new { 
-                Id = 1, 
-                FirstName = "John", 
-                LastName = "Doe", 
-                Email = "john@example.com", 
-                PhoneNumber = "555-1234", 
-                Address = "123 Main St", 
-                City = "New York", 
-                PostalCode = "10001", 
-                CreatedAt = DateTime.Parse("Jan 15, 2024"), 
-                Pets = new List<dynamic> { new { Id = 1, Name = "Buddy", Type = "Dog" }, new { Id = 3, Name = "Max", Type = "Dog" } },
-                LoyaltyPoints = new List<dynamic> { new { PointsBalance = 250 } }
-            },
-            new { 
-                Id = 2, 
-                FirstName = "Sarah", 
-                LastName = "Johnson", 
-                Email = "sarah@example.com", 
-                PhoneNumber = "555-5678", 
-                Address = "456 Oak Ave", 
-                City = "Los Angeles", 
-                PostalCode = "90001", 
-                CreatedAt = DateTime.Parse("Feb 10, 2024"), 
-                Pets = new List<dynamic> { new { Id = 2, Name = "Whiskers", Type = "Cat" } },
-                LoyaltyPoints = new List<dynamic> { new { PointsBalance = 150 } }
-            },
-            new { 
-                Id = 3, 
-                FirstName = "Michael", 
-                LastName = "Smith", 
-                Email = "michael@example.com", 
-                PhoneNumber = "555-9012", 
-                Address = "789 Pine Rd", 
-                City = "Chicago", 
-                PostalCode = "60601", 
-                CreatedAt = DateTime.Parse("Mar 05, 2024"), 
-                Pets = new List<dynamic>(),
-                LoyaltyPoints = new List<dynamic> { new { PointsBalance = 500 } }
-            },
-            new { 
-                Id = 4, 
-                FirstName = "Emily", 
-                LastName = "Davis", 
-                Email = "emily@example.com", 
-                PhoneNumber = "555-3456", 
-                Address = "321 Elm St", 
-                City = "Houston", 
-                PostalCode = "77001", 
-                CreatedAt = DateTime.Parse("Apr 12, 2024"), 
-                Pets = new List<dynamic> { new { Id = 4, Name = "Rex", Type = "Dog" } },
-                LoyaltyPoints = new List<dynamic> { new { PointsBalance = 300 } }
-            }
-        };
-    }
-
     <div class="panel-header-wrapper">
-        <h3 class="panel-title">Customers (@customers.Count)</h3>
-        <button class="btn btn-primary" onclick="showCreateForm()">+ New Customer</button>
+        <h3 class="panel-title">Customers (@Model.Count)</h3>
+        <button class="btn btn-primary" onclick="openAddCustomerModal()">➕ New Customer</button>
     </div>
 
-    @if (customers.Count > 0)
+    @if (Model.Count > 0)
     {
         <div class="table-responsive">
             <table class="data-table">
@@ -110,42 +60,41 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
-                        <th>City</th>
-                        <th>Postal Code</th>
-                        <th>Pets</th>
-                        <th>Loyalty Points</th>
+                        <th>Status</th>
                         <th>Created</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var customer in customers)
+                    @foreach (var customer in Model)
                     {
+                        var statusClass = customer.Status == "active" ? "status-active" : "status-inactive";
+                        
                         <tr>
-                            <td><strong>@customer.FirstName @customer.LastName</strong></td>
-                            <td>@customer.Email</td>
-                            <td>@customer.PhoneNumber</td>
-                            <td>@customer.City</td>
-                            <td>@customer.PostalCode</td>
-                            <td><span class="badge">@((customer.Pets as List<dynamic>).Count)</span></td>
                             <td>
-                                @{
-                                    var loyaltyPoints = (customer.LoyaltyPoints as List<dynamic>).FirstOrDefault();
-                                    if (loyaltyPoints != null)
-                                    {
-                                        <span class="points-badge">@loyaltyPoints.PointsBalance</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="points-badge">0</span>
-                                    }
-                                }
+                                <strong>@customer.Name</strong>
                             </td>
-                            <td>@customer.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td>@customer.Email</td>
+                            <td>@customer.Phone</td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="showCustomerDetails(@customer.Id)">View</button>
-                                <button class="btn btn-sm btn-action edit-btn" onclick="editCustomer(@customer.Id)">Edit</button>
-                                <button class="btn btn-sm btn-action delete-btn" onclick="deleteCustomer(@customer.Id)">Delete</button>
+                                <span class="status-tag @statusClass">@customer.Status?.ToUpper()</span>
+                            </td>
+                            <td>@customer.CreatedAt?.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="@Url.Action("CustomerProfile", "Home", new { area = "Admin", customerId = customer.UserId })" 
+                                       class="btn btn-sm btn-info">
+                                       👁️ View
+                                    </a>
+                                    <button class="btn btn-sm btn-action edit-btn" 
+                                            onclick="editCustomer('@customer.UserId')">
+                                       ✏️ Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-action delete-btn" 
+                                            onclick="deleteCustomer('@customer.UserId', '@customer.Name')">
+                                       🗑️ Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -156,167 +105,266 @@
     else
     {
         <div class="empty-state">
-            <p>No customers found.</p>
+            <p>😢 No customers found. <a href="javascript:openAddCustomerModal()">Create one now</a></p>
         </div>
     }
 </div>
 
-<!-- View Customer Details Modal (Read-only) -->
-<div id="customerViewModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="viewTitle">Customer Details</h2>
-            <button class="close-btn" onclick="closeViewModal()">&times;</button>
-        </div>
-
-        <div class="modal-body">
-            <div class="details-grid">
-                <div class="detail-row">
-                    <span class="detail-label">Name:</span>
-                    <span class="detail-value" id="viewName"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Email:</span>
-                    <span class="detail-value" id="viewEmail"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Phone:</span>
-                    <span class="detail-value" id="viewPhone"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Address:</span>
-                    <span class="detail-value" id="viewAddress"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">City:</span>
-                    <span class="detail-value" id="viewCity"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Postal Code:</span>
-                    <span class="detail-value" id="viewPostalCode"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Created:</span>
-                    <span class="detail-value" id="viewCreatedAt"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Updated:</span>
-                    <span class="detail-value" id="viewUpdatedAt"></span>
-                </div>
+<!-- Add/Edit Customer Modal -->
+<div id="customerModalOverlay" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerModalTitle">➕ Add New Customer</h5>
+                <button type="button" class="modal-close-btn" onclick="closeCustomerModal()">×</button>
             </div>
 
-            <!-- Tabs for Pets and Loyalty Points -->
-            <div class="customer-details-tabs">
-                <div class="tabs-nav">
-                    <button class="tab-btn active" onclick="switchTab('pets-tab')">Pets</button>
-                    <button class="tab-btn" onclick="switchTab('loyalty-tab')">Loyalty Points</button>
-                </div>
+            <form id="customerForm" asp-controller="Home" asp-action="CreateCustomer" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <!-- Tabs -->
+                    <div class="modal-tabs">
+                        <button type="button" class="modal-tab-btn active" onclick="switchModalTab('customer')">
+                            👤 Customer Info
+                        </button>
+                        <button type="button" class="modal-tab-btn" onclick="switchModalTab('pet')">
+                            🐾 Pet (Optional)
+                        </button>
+                    </div>
 
-                <!-- Pets Tab -->
-                <div id="pets-tab" class="tab-content active">
-                    <div id="petsList" class="pets-list-container">
-                        <p class="empty-message">No pets assigned</p>
+                    <!-- Customer Information Tab -->
+                    <div id="customer-tab" class="modal-tab-content active">
+                        <div class="form-section-title">Basic Information</div>
+                        
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
+                                <label>Full Name <span class="required">*</span></label>
+                                <input type="text" id="customerName" name="Name" class="modal-form-input" required placeholder="John Doe" />
+                            </div>
+                            <div class="modal-form-group">
+                                <label>Email <span class="required">*</span></label>
+                                <input type="email" id="customerEmail" name="Email" class="modal-form-input" required placeholder="john@example.com" />
+                            </div>
+                        </div>
+
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
+                                <label>Phone Number <span class="required">*</span></label>
+                                <input type="tel" id="customerPhone" name="Phone" class="modal-form-input" required placeholder="123-456-7890" />
+                            </div>
+                            <div class="modal-form-group">
+                                <label>IC Number</label>
+                                <input type="text" id="customerIC" name="IC" class="modal-form-input" placeholder="123456789012" />
+                            </div>
+                        </div>
+
+                        <div class="form-section-title">Profile Settings</div>
+
+                        <div class="modal-form-row">
+                            <div class="modal-form-group">
+                                <label>Status</label>
+                                <select id="customerStatus" name="Status" class="modal-form-select">
+                                    <option value="active" selected>Active</option>
+                                    <option value="blocked">Blocked</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="modal-form-group">
+                                <label>Profile Photo</label>
+                                <div class="file-upload-wrapper">
+                                    <input type="file" id="customerPhoto" name="PhotoUpload" class="modal-form-input" accept="image/*" />
+                                    <span id="photoFileName" class="file-name-display">No file chosen</span>
+                                </div>
+                                <small class="form-help-text">Max 5MB, PNG/JPG recommended</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pet Information Tab (Optional) -->
+                    <div id="pet-tab" class="modal-tab-content">
+                        <div class="form-section-info">
+                            💡 Adding a pet is optional. You can add pets later from the customer profile.
+                        </div>
+
+                        <div class="pet-toggle-wrapper">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="addPetCheckbox" onchange="togglePetFields()" />
+                                <span>Add a pet for this customer</span>
+                            </label>
+                        </div>
+
+                        <div id="petFields" style="display: none;">
+                            <div class="form-section-title">Pet Information</div>
+
+                            <div class="modal-form-row">
+                                <div class="modal-form-group">
+                                    <label>Pet Name <span class="required">*</span></label>
+                                    <input type="text" id="petName" name="PetName" class="modal-form-input" placeholder="Buddy" />
+                                </div>
+                                <div class="modal-form-group">
+                                    <label>Pet Type <span class="required">*</span></label>
+                                    <select id="petType" name="PetType" class="modal-form-select">
+                                        <option value="">Select Pet Type</option>
+                                        <option value="Dog">🐕 Dog</option>
+                                        <option value="Cat">🐱 Cat</option>
+                                        <option value="Rabbit">🐰 Rabbit</option>
+                                        <option value="Bird">🐦 Bird</option>
+                                        <option value="Other">📌 Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="modal-form-row">
+                                <div class="modal-form-group">
+                                    <label>Breed</label>
+                                    <input type="text" id="petBreed" name="PetBreed" class="modal-form-input" placeholder="Golden Retriever" />
+                                </div>
+                                <div class="modal-form-group">
+                                    <label>Age (Years)</label>
+                                    <input type="number" id="petAge" name="PetAge" class="modal-form-input" min="0" max="50" placeholder="3" />
+                                </div>
+                            </div>
+
+                            <div class="modal-form-row">
+                                <div class="modal-form-group full-width">
+                                    <label>Special Notes/Remarks</label>
+                                    <textarea id="petRemark" name="PetRemark" class="modal-form-textarea" placeholder="Any special care requirements, allergies, or behaviors..." rows="3"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="modal-form-row">
+                                <div class="modal-form-group">
+                                    <label>Pet Photo</label>
+                                    <div class="file-upload-wrapper">
+                                        <input type="file" id="petPhoto" name="PetPhotoUpload" class="modal-form-input" accept="image/*" />
+                                        <span id="petPhotoFileName" class="file-name-display">No file chosen</span>
+                                    </div>
+                                    <small class="form-help-text">Optional - Max 5MB</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Loyalty Points Tab -->
-                <div id="loyalty-tab" class="tab-content">
-                    <div class="loyalty-summary">
-                        <div class="loyalty-card">
-                            <div class="loyalty-label">Total Points</div>
-                            <div class="loyalty-value" id="loyaltyPointsValue">0</div>
-                        </div>
-                        <div class="loyalty-card">
-                            <div class="loyalty-label">Last Updated</div>
-                            <div class="loyalty-value" id="loyaltyLastUpdated">N/A</div>
-                        </div>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save Customer</button>
                 </div>
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Create/Edit Customer Form -->
-<div class="panel create-form" id="createCustomerForm">
-    <h3 class="panel-title">Create New Customer</h3>
-
-    <form asp-controller="Home" asp-action="CreateCustomer" method="post" class="form-grid">
-        <div class="form-group">
-            <label for="firstName">First Name</label>
-            <input type="text" id="firstName" name="FirstName" required />
-        </div>
-
-        <div class="form-group">
-            <label for="lastName">Last Name</label>
-            <input type="text" id="lastName" name="LastName" required />
-        </div>
-
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="Email" required />
-        </div>
-
-        <div class="form-group">
-            <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" name="PhoneNumber" required />
-        </div>
-
-        <div class="form-group">
-            <label for="address">Address</label>
-            <input type="text" id="address" name="Address" required />
-        </div>
-
-        <div class="form-group">
-            <label for="city">City</label>
-            <input type="text" id="city" name="City" required />
-        </div>
-
-        <div class="form-group">
-            <label for="postalCode">Postal Code</label>
-            <input type="text" id="postalCode" name="PostalCode" required />
-        </div>
-
-        <div class="form-actions">
-            <button type="button" class="btn btn-reset" onclick="hideCreateForm()">Cancel</button>
-            <button type="submit" class="btn btn-success">Save Customer</button>
-        </div>
-    </form>
-</div>
-
 @section Scripts {
     <script>
-        function showCreateForm() {
-            document.getElementById('createCustomerForm').classList.add('visible');
-            document.querySelector('html').style.overflow = 'hidden';
+        // Modal Management
+        function openAddCustomerModal() {
+            document.getElementById('customerModalOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerModalTitle').textContent = '➕ Add New Customer';
+            switchModalTab('customer');
+            resetPetFields();
         }
 
-        function hideCreateForm() {
-            document.getElementById('createCustomerForm').classList.remove('visible');
-            document.querySelector('html').style.overflow = 'auto';
+        function closeCustomerModal() {
+            document.getElementById('customerModalOverlay').classList.remove('show');
+            document.body.style.overflow = 'auto';
         }
 
-        function editCustomer(id) {
-            alert('Edit functionality for customer #' + id + ' would go here');
-            showCreateForm();
-        }
+        // Tab Switching
+        function switchModalTab(tab) {
+            // Hide all tabs
+            document.getElementById('customer-tab').classList.remove('active');
+            document.getElementById('pet-tab').classList.remove('active');
 
-        function deleteCustomer(id) {
-            if (confirm('Are you sure you want to delete this customer?')) {
-                alert('Customer #' + id + ' deleted successfully');
-                location.reload();
+            // Remove active class from buttons
+            const buttons = document.querySelectorAll('.modal-tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab and mark button as active
+            if (tab === 'customer') {
+                document.getElementById('customer-tab').classList.add('active');
+                buttons[0].classList.add('active');
+            } else if (tab === 'pet') {
+                document.getElementById('pet-tab').classList.add('active');
+                buttons[1].classList.add('active');
             }
         }
 
-        document.addEventListener('click', function(event) {
-            const form = document.getElementById('createCustomerForm');
-            if (event.target === form) {
-                hideCreateForm();
+        // Pet Fields Toggle
+        function togglePetFields() {
+            const checkbox = document.getElementById('addPetCheckbox');
+            const petFields = document.getElementById('petFields');
+            
+            if (checkbox.checked) {
+                petFields.style.display = 'block';
+            } else {
+                petFields.style.display = 'none';
+                resetPetFields();
             }
+        }
+
+        function resetPetFields() {
+            document.getElementById('addPetCheckbox').checked = false;
+            document.getElementById('petFields').style.display = 'none';
+            document.getElementById('customerForm').querySelector('#petName').value = '';
+            document.getElementById('customerForm').querySelector('#petType').value = '';
+            document.getElementById('customerForm').querySelector('#petBreed').value = '';
+            document.getElementById('customerForm').querySelector('#petAge').value = '';
+            document.getElementById('customerForm').querySelector('#petRemark').value = '';
+        }
+
+        // File Upload Display
+        document.getElementById('customerPhoto')?.addEventListener('change', function() {
+            const fileName = this.files[0]?.name || 'No file chosen';
+            document.getElementById('photoFileName').textContent = fileName;
+        });
+
+        document.getElementById('petPhoto')?.addEventListener('change', function() {
+            const fileName = this.files[0]?.name || 'No file chosen';
+            document.getElementById('petPhotoFileName').textContent = fileName;
+        });
+
+        // Customer Actions - FIX DELETE TO WORK WITHOUT PAGE REDIRECT
+        function editCustomer(customerId) {
+            window.location.href = `/Admin/Home/CustomerProfile?customerId=${customerId}`;
+        }
+
+        function deleteCustomer(customerId, customerName) {
+            if (confirm(`Are you sure you want to delete ${customerName}? This action cannot be undone.`)) {
+                // Send AJAX request to delete directly
+                fetch(`/Admin/Home/DeleteCustomer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `customerId=${encodeURIComponent(customerId)}`
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Delete successful - show message and reload
+                        alert(`${customerName} has been deleted successfully.`);
+                        location.reload();
+                    } else {
+                        alert('Failed to delete customer. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the customer.');
+                });
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('customerModalOverlay')?.addEventListener('click', function(e) {
+            if (e.target === this) closeCustomerModal();
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeCustomerModal();
         });
     </script>
 }

@@ -444,90 +444,172 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         [HttpPost]
         public IActionResult CheckPhoneNumber(string phoneNumber)
         {
-            if (string.IsNullOrEmpty(phoneNumber))
+            try
             {
-                return Json(new { available = true });
+                Console.WriteLine($"\n\n{'='*60}");
+                Console.WriteLine($"CheckPhoneNumber CALLED");
+                Console.WriteLine($"{'='*60}");
+                Console.WriteLine($"Input phoneNumber: '{phoneNumber}'");
+                Console.WriteLine($"Input type: {phoneNumber?.GetType().Name ?? "NULL"}");
+                Console.WriteLine($"Input length: {phoneNumber?.Length ?? 0}");
+
+                if (string.IsNullOrEmpty(phoneNumber))
+                {
+                    Console.WriteLine($"ERROR: phoneNumber is null or empty - returning available: true");
+                    return Json(new { available = true });
+                }
+
+                string cleanedInput = System.Text.RegularExpressions.Regex.Replace(phoneNumber, @"\D", "");
+                Console.WriteLine($"Cleaned input: '{cleanedInput}'");
+
+                if (cleanedInput.Length < 10)
+                {
+                    Console.WriteLine($"ERROR: Cleaned input length {cleanedInput.Length} < 10 - returning available: false");
+                    return Json(new { available = false });
+                }
+
+                string formattedInput = FormatPhoneNumber(phoneNumber);
+                Console.WriteLine($"Formatted input: '{formattedInput}'");
+
+                // Get ALL users from database
+                var allUsers = _dbContext.Users.ToList();
+                Console.WriteLine($"\n[DATABASE CHECK] Found {allUsers.Count} total users in database");
+                
+                if (allUsers.Count == 0)
+                {
+                    Console.WriteLine($"WARNING: No users in database!");
+                    return Json(new { available = true });
+                }
+
+                // Log each user
+                Console.WriteLine($"\nAll users in database:");
+                for (int i = 0; i < allUsers.Count; i++)
+                {
+                    var user = allUsers[i];
+                    Console.WriteLine($"  [{i}] UserId: {user.UserId}, Phone: '{user.Phone}' (Length: {user.Phone?.Length ?? 0})");
+                    if (!string.IsNullOrEmpty(user.Phone))
+                    {
+                        string cleanedDbPhone = System.Text.RegularExpressions.Regex.Replace(user.Phone, @"\D", "");
+                        Console.WriteLine($"       Cleaned DB phone: '{cleanedDbPhone}'");
+                    }
+                }
+
+                // Check direct match
+                Console.WriteLine($"\n[DIRECT MATCH] Checking if any user.Phone == '{formattedInput}'");
+                bool directMatch = allUsers.Any(u => u.Phone == formattedInput);
+                Console.WriteLine($"Direct match result: {directMatch}");
+
+                if (directMatch)
+                {
+                    Console.WriteLine($"✓ MATCH FOUND! Returning available: false");
+                    Console.WriteLine($"{'='*60}\n");
+                    return Json(new { available = false });
+                }
+
+                // Check cleaned match
+                Console.WriteLine($"\n[CLEANED MATCH] Checking cleaned versions...");
+                bool cleanedMatch = false;
+                foreach (var user in allUsers)
+                {
+                    if (!string.IsNullOrEmpty(user.Phone))
+                    {
+                        string cleanedDbPhone = System.Text.RegularExpressions.Regex.Replace(user.Phone, @"\D", "");
+                        bool matches = (cleanedDbPhone == cleanedInput);
+                        Console.WriteLine($"  Compare: '{cleanedInput}' == '{cleanedDbPhone}' ? {matches}");
+                        if (matches)
+                        {
+                            cleanedMatch = true;
+                            Console.WriteLine($"  ✓ MATCH!");
+                            break;
+                        }
+                    }
+                }
+
+                Console.WriteLine($"\nCleaned match result: {cleanedMatch}");
+                Console.WriteLine($"Final available result: {!cleanedMatch}");
+                Console.WriteLine($"{'='*60}\n");
+
+                return Json(new { available = !cleanedMatch });
             }
-
-            // Check if phone number exists in database
-            bool phoneExists = _dbContext.Users.Any(u => u.Phone == phoneNumber);
-
-            return Json(new { available = !phoneExists });
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EXCEPTION] {ex.Message}");
+                Console.WriteLine($"[EXCEPTION] {ex.StackTrace}");
+                Console.WriteLine($"{'='*60}\n");
+                return Json(new { available = false, error = ex.Message });
+            }
         }
 
-        public IActionResult Logout()
-        {
-            // Store the referrer URL before clearing session
-            string returnUrl = Request.Headers["Referer"].ToString();
-
-            HttpContext.Session.Clear();
-
-            // Set success message in TempData
-            TempData["LogoutMessage"] = "Logout successfully";
-
-            // If there's a valid return URL, redirect back to it; otherwise go to home
-            if (!string.IsNullOrEmpty(returnUrl) && returnUrl.Contains(Request.Host.ToString()))
-            {
-                return Redirect(returnUrl);
-            }
-
-            return RedirectToAction("Index", "Home");
-        }
-
-        private (int attempts, DateTime lockoutUntil, bool isLocked) GetLockoutInfo(string phoneNumber)
-        {
-            if (string.IsNullOrEmpty(phoneNumber) || !loginAttempts.TryGetValue(phoneNumber, out var info))
-            {
-                return (0, DateTime.UtcNow, false);
-            }
-
-            bool isLocked = DateTime.UtcNow < info.lockoutUntil;
-            return (info.attempts, info.lockoutUntil, isLocked);
-        }
-
-        private void IncrementFailedAttempts(string phoneNumber)
-        {
-            if (!loginAttempts.TryGetValue(phoneNumber, out var info))
-            {
-                info = (0, DateTime.UtcNow);
-            }
-
-            int newAttempts = info.attempts + 1;
-            DateTime lockoutUntil = info.lockoutUntil;
-
-            if (newAttempts >= LOCKOUT_THRESHOLD)
-            {
-                int lockoutSeconds = CalculateLockoutSeconds(newAttempts - LOCKOUT_THRESHOLD);
-                lockoutUntil = DateTime.UtcNow.AddSeconds(lockoutSeconds);
-            }
-
-            loginAttempts[phoneNumber] = (newAttempts, lockoutUntil);
-        }
-
-        private void ResetFailedAttempts(string phoneNumber)
-        {
-            if (!string.IsNullOrEmpty(phoneNumber))
-            {
-                loginAttempts.Remove(phoneNumber);
-            }
-        }
-
+        /// <summary>
+        /// Clears expired lockout entries from the login attempts dictionary
+        /// </summary>
         private void ClearExpiredLockouts(string phoneNumber)
         {
-            if (!string.IsNullOrEmpty(phoneNumber) && loginAttempts.TryGetValue(phoneNumber, out var info))
+            if (loginAttempts.ContainsKey(phoneNumber))
             {
-                if (DateTime.UtcNow >= info.lockoutUntil && info.attempts >= LOCKOUT_THRESHOLD)
+                var lockoutInfo = loginAttempts[phoneNumber];
+                if (DateTime.UtcNow > lockoutInfo.lockoutUntil)
                 {
                     loginAttempts.Remove(phoneNumber);
                 }
             }
         }
 
-        private int CalculateLockoutSeconds(int lockoutCount)
+        /// <summary>
+        /// Gets the current lockout information for a phone number
+        /// </summary>
+        private (bool isLocked, int attempts, DateTime lockoutUntil) GetLockoutInfo(string phoneNumber)
         {
-            return 15 * (int)Math.Pow(2, lockoutCount);
+            if (!loginAttempts.ContainsKey(phoneNumber))
+            {
+                return (false, 0, DateTime.UtcNow);
+            }
+
+            var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
+            bool isLocked = attempts >= LOCKOUT_THRESHOLD && DateTime.UtcNow < lockoutUntil;
+
+            return (isLocked, attempts, lockoutUntil);
         }
 
+        /// <summary>
+        /// Increments failed login attempts for a phone number
+        /// </summary>
+        private void IncrementFailedAttempts(string phoneNumber)
+        {
+            if (!loginAttempts.ContainsKey(phoneNumber))
+            {
+                loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddMinutes(15));
+            }
+            else
+            {
+                var (attempts, _) = loginAttempts[phoneNumber];
+                attempts++;
+
+                if (attempts >= LOCKOUT_THRESHOLD)
+                {
+                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddMinutes(15));
+                }
+                else
+                {
+                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddMinutes(15));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resets failed login attempts for a phone number after successful login
+        /// </summary>
+        private void ResetFailedAttempts(string phoneNumber)
+        {
+            if (loginAttempts.ContainsKey(phoneNumber))
+            {
+                loginAttempts.Remove(phoneNumber);
+            }
+        }
+
+        /// <summary>
+        /// Generates a random 6-digit verification code
+        /// </summary>
         private string GenerateVerificationCode()
         {
             Random random = new Random();

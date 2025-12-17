@@ -16,15 +16,6 @@ builder.Services.AddSqlServer<DB>($@"
     MultipleActiveResultSets=true;
 ");
 
-// -----------------------------
-// If AddSqlServer<T> is not available in your environment, use this alternative:
-// builder.Services.AddDbContext<DB>(options =>
-//     options.UseSqlServer($@"
-//         Data Source=(LocalDB)\MSSQLLocalDB;
-//         AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
-//         Integrated Security=True;
-//     "));
-// -----------------------------
 
 // Add Admin Email Service (explicit namespace to avoid ambiguity)
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();

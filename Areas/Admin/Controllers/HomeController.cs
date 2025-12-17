@@ -531,11 +531,352 @@ public class HomeController : Controller
     }
 
     // ========== CUSTOMER ==========
-    public IActionResult Customer()
+    // ========== CUSTOMER MANAGEMENT ==========
+    // GET: List all customers with filter
+    public async Task<IActionResult> Customer(string searchName, string searchEmail, string searchStatus)
     {
         ViewData["ActivePage"] = "Customer";
-        return View();
+
+        var query = _db.Customers.AsQueryable();
+
+        if (!string.IsNullOrEmpty(searchName))
+        {
+            query = query.Where(c => c.Name.Contains(searchName));
+        }
+
+        if (!string.IsNullOrEmpty(searchEmail))
+        {
+            query = query.Where(c => c.Email.Contains(searchEmail));
+        }
+
+        if (!string.IsNullOrEmpty(searchStatus))
+        {
+            query = query.Where(c => c.Status == searchStatus);
+        }
+
+        var customers = await query
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+
+        // ✅ Manually load all pets for each customer
+        var allPets = await _db.Pets.ToListAsync();
+        foreach (var customer in customers)
+        {
+            customer.Pets = allPets
+                .Where(p => p.CustomerId == customer.UserId)
+                .ToList();
+        }
+
+        return View(customers);
     }
+
+    // GET: Customer Profile Page
+    public async Task<IActionResult> CustomerProfile(string customerId)
+    {
+        var customer = await _db.Customers.FirstOrDefaultAsync(c => c.UserId == customerId);
+
+        if (customer == null)
+            return NotFound();
+
+        // Load related data
+        var pets = await _db.Pets
+            .Where(p => p.CustomerId == customerId)
+            .ToListAsync();
+
+        var redeems = await _db.CustomerRedeemGifts
+            .Where(r => r.CustomerId == customerId)
+            .Include(r => r.Gift)
+            .ToListAsync();
+
+        customer.Pets = pets;
+        customer.Redeems = redeems;
+
+        return View(customer);
+    }
+
+    // POST: Create Customer
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateCustomer(Models.Customer customer, IFormFile PhotoUpload)
+    {
+        // ✅ Smart ID Generation - Check ALL customers (including those from registration)
+        var allCustomerIds = await _db.Customers
+            .Select(c => c.UserId)
+            .OrderBy(id => id)
+            .ToListAsync();
+
+        string newCustomerId;
+
+        if (!allCustomerIds.Any())
+        {
+            newCustomerId = "C001";
+        }
+        else
+        {
+            // Extract numeric parts and find gaps
+            var usedNumbers = allCustomerIds
+                .Select(id => int.Parse(id.Substring(1)))
+                .OrderBy(n => n)
+                .ToList();
+
+            // Check for gaps starting from 1
+            int nextNumber = 1;
+            bool foundGap = false;
+
+            foreach (var num in usedNumbers)
+            {
+                if (num != nextNumber)
+                {
+                    // Found a gap! Use this number
+                    foundGap = true;
+                    break;
+                }
+                nextNumber++;
+            }
+
+            // If no gap found, use max + 1
+            if (!foundGap)
+            {
+                nextNumber = usedNumbers.Max() + 1;
+            }
+
+            newCustomerId = "C" + nextNumber.ToString("D3");
+        }
+
+        customer.UserId = newCustomerId;
+        customer.Role = "customer";
+        customer.CreatedAt = DateTime.Now;
+        customer.RegisteredDate = DateTime.Now;
+        customer.Status = "active";
+        customer.LoyaltyPoint = 0;
+
+        // Handle photo upload
+        if (PhotoUpload != null && PhotoUpload.Length > 0)
+        {
+            var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
+            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+
+            if (!Directory.Exists(uploadPath))
+                Directory.CreateDirectory(uploadPath);
+
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await PhotoUpload.CopyToAsync(stream);
+            }
+
+            customer.Photo = "/uploads/" + fileName;
+        }
+        else
+        {
+            customer.Photo = "/uploads/placeholder.png";
+        }
+
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Customer));
+    }
+
+    // POST: Edit Customer
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditCustomer(string customerId, Models.Customer customer, IFormFile PhotoUpload)
+    {
+        var dbCustomer = await _db.Customers.FindAsync(customerId);
+
+        if (dbCustomer == null)
+            return NotFound();
+
+        dbCustomer.Name = customer.Name;
+        dbCustomer.Email = customer.Email;
+        dbCustomer.Phone = customer.Phone;
+        dbCustomer.IC = customer.IC;
+        dbCustomer.Status = customer.Status;
+
+        if (PhotoUpload != null && PhotoUpload.Length > 0)
+        {
+            var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
+            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+
+            if (!Directory.Exists(uploadPath))
+                Directory.CreateDirectory(uploadPath);
+
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await PhotoUpload.CopyToAsync(stream);
+            }
+
+            dbCustomer.Photo = "/uploads/" + fileName;
+        }
+
+        await _db.SaveChangesAsync();
+
+        return RedirectToAction(nameof(CustomerProfile), new { customerId = customerId });
+    }
+
+    // POST: Delete Customer
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteCustomer(string customerId)
+    {
+        var dbCustomer = await _db.Customers.FindAsync(customerId);
+
+        if (dbCustomer == null)
+            return NotFound();
+
+        _db.Customers.Remove(dbCustomer);
+        await _db.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Customer));
+    }
+    // ========== ADD PET TO CUSTOMER ==========
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddPetToCustomer(string customerId, string petName, string petType, string petBreed, int? petAge, string petRemark)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(customerId) || string.IsNullOrEmpty(petName))
+            {
+                return Json(new { success = false, message = "Customer ID and Pet Name are required" });
+            }
+
+            // Generate sequential PetId (P001, P002, etc.) - same as Customer side
+            int nextNumber = 1;
+
+            var existingPetIds = await _db.Pets
+                .Where(p => p.PetId.StartsWith("P"))
+                .Select(p => p.PetId)
+                .ToListAsync();
+
+            if (existingPetIds.Any())
+            {
+                // Extract numeric part and find the maximum
+                nextNumber = existingPetIds
+                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
+                    .Max() + 1;
+            }
+
+            var pet = new Pet
+            {
+                PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
+                Name = petName,
+                Type = petType,
+                Breed = petBreed,
+                Age = petAge,
+                Remark = petRemark,
+                CustomerId = customerId,
+                Photo = "/images/pet-placeholder.png"
+            };
+
+            _db.Pets.Add(pet);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Pet added successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // ========== DELETE PET ==========
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePet(string petId)
+    {
+        try
+        {
+            var pet = await _db.Pets.FindAsync(petId);
+            if (pet == null)
+            {
+                return Json(new { success = false, message = "Pet not found" });
+            }
+
+            _db.Pets.Remove(pet);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Pet deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // ========== ADJUST LOYALTY POINTS ==========
+    [HttpPost]
+    public async Task<IActionResult> AdjustLoyaltyPoints(string customerId, string adjustmentType, int amount)
+    {
+        try
+        {
+            var customer = await _db.Customers.FindAsync(customerId);
+            if (customer == null)
+            {
+                return Json(new { success = false, message = "Customer not found" });
+            }
+
+            int oldBalance = customer.LoyaltyPoint;
+            int newBalance = oldBalance;
+
+            if (adjustmentType == "add")
+            {
+                newBalance = oldBalance + amount;
+            }
+            else if (adjustmentType == "subtract")
+            {
+                newBalance = Math.Max(0, oldBalance - amount);
+            }
+
+            customer.LoyaltyPoint = newBalance;
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Points updated from {oldBalance} to {newBalance}", newBalance = newBalance });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+    // ========== UPDATE PET ==========
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdatePet(string petId, string petName, string petType, string petBreed, int? petAge, string petRemark)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(petId) || string.IsNullOrEmpty(petName))
+            {
+                return Json(new { success = false, message = "Pet ID and Pet Name are required" });
+            }
+
+            var pet = await _db.Pets.FindAsync(petId);
+            if (pet == null)
+            {
+                return Json(new { success = false, message = "Pet not found" });
+            }
+
+            pet.Name = petName;
+            pet.Type = petType;
+            pet.Breed = petBreed;
+            pet.Age = petAge;
+            pet.Remark = petRemark;
+
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Pet updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+
 
     // ========== APPOINTMENT ==========
     public async Task<IActionResult> Appointment(string status, string groomerid, string date, string editId)

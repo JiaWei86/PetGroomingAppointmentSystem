@@ -58,9 +58,7 @@
                                 <select id="apptStatusFilter" class="select-filter">
                                     <option value="all">All statuses</option>
                                     <option value="confirmed">✓ Confirmed</option>
-                                    <option value="visited">✓ Visited</option>
-                                    <option value="pending">⏳ Pending</option>
-                                    <option value="noshow">✗ No Show</option>
+                                    <option value="complete">✓ Complete</option>
                                     <option value="cancelled">✗ Cancelled</option>
                                 </select>
                             </div>
@@ -88,7 +86,7 @@
                                     <th>Groomer</th>
                                     <th>Service</th>
                                     <th class="text-center">Status</th>
-                                    <th class="text-center">Action</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody><!-- injected --></tbody>
@@ -127,8 +125,6 @@
                                 <select id="redeemStatusFilter" class="select-filter">
                                     <option value="all">All statuses</option>
                                     <option value="used">✓ Used</option>
-                                    <option value="available">◯ Available</option>
-                                    <option value="expired">✗ Expired</option>
                                 </select>
                             </div>
                         </div>
@@ -192,7 +188,183 @@
     </div>
 </div>
 
+<!-- Modal for Reschedule -->
+<div id="rescheduleModal" class="modal" style="display:none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <button class="modal-close" onclick="CloseRescheduleModal()">&times;</button>
+        <div class="modal-header">
+            <h2>📅 Reschedule Appointment</h2>
+        </div>
+        <form id="rescheduleForm">
+            <div class="form-group">
+                <label for="newDate">New Date</label>
+                <input type="date" id="newDate" required style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%;"/>
+            </div>
+            <div class="form-group">
+                <label for="newTime">New Time</label>
+                <input type="time" id="newTime" required style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%;"/>
+            </div>
+            <div class="form-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn-secondary" onclick="CloseRescheduleModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="SubmitReschedule()">Reschedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Confirmation -->
+<div id="confirmModal" class="modal confirm-modal" style="display:none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content confirm-modal">
+        <div class="modal-header">
+            <h2 id="confirmTitle">⚠️ Confirm Action</h2>
+        </div>
+        <div class="modal-body" id="confirmMessage" style="padding:20px;text-align:center;font-size:16px;color:#333;">
+            Are you sure?
+        </div>
+        <div class="modal-actions confirm-actions" style="display:flex;gap:10px;justify-content:center;padding:20px;border-top:1px solid #eee;">
+            <button class="btn btn-secondary" onclick="CloseConfirmModal()">No, Keep It</button>
+            <button class="btn btn-danger" onclick="ConfirmAction()">Yes, Cancel It</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.view-btn, .cancel-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.view-btn {
+    color: #2196F3;
+    border-color: #2196F3;
+}
+
+.view-btn:hover {
+    background: #2196F3;
+    color: white;
+}
+
+.cancel-btn {
+    color: #f44336;
+    border-color: #f44336;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: #f44336;
+    color: white;
+}
+
+.cancel-btn:disabled {
+    color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+.cancel-btn[title] {
+    cursor: help;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1976D2;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.btn-danger {
+    background: #f44336;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+}
+
+.confirm-modal {
+    max-width: 450px;
+    width: 90%;
+}
+
+.confirm-actions {
+    flex-direction: row;
+    gap: 15px;
+}
+
+.confirm-actions .btn {
+    flex: 1;
+    padding: 12px 20px;
+}
+</style>
+
 <script>
+let currentRescheduleId = null;
+let pendingCancelId = null;
+
+// ===== PAGINATION & DATA MANAGEMENT =====
+const appointmentState = {
+    allData: [],
+    filteredData: [],
+    currentPage: 1,
+    pageSize: 5,
+    searchTerm: '',
+    statusFilter: 'all'
+};
+
+const redeemState = {
+    allData: [],
+    filteredData: [],
+    currentPage: 1,
+    pageSize: 5,
+    searchTerm: '',
+    statusFilter: 'all'
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     LoadHistorySummary();
     LoadAppointmentHistory();
@@ -208,6 +380,78 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Appointment Search & Filter
+    document.getElementById('apptSearch').addEventListener('input', (e) => {
+        appointmentState.searchTerm = e.target.value.toLowerCase();
+        appointmentState.currentPage = 1;
+        FilterAndDisplayAppointments();
+    });
+
+    document.getElementById('apptStatusFilter').addEventListener('change', (e) => {
+        appointmentState.statusFilter = e.target.value;
+        appointmentState.currentPage = 1;
+        FilterAndDisplayAppointments();
+    });
+
+    document.getElementById('apptClearSearch').addEventListener('click', () => {
+        document.getElementById('apptSearch').value = '';
+        appointmentState.searchTerm = '';
+        appointmentState.currentPage = 1;
+        FilterAndDisplayAppointments();
+    });
+
+    // Appointment Pagination
+    document.getElementById('apptPrev').addEventListener('click', () => {
+        if (appointmentState.currentPage > 1) {
+            appointmentState.currentPage--;
+            DisplayAppointmentPage();
+        }
+    });
+
+    document.getElementById('apptNext').addEventListener('click', () => {
+        const totalPages = Math.ceil(appointmentState.filteredData.length / appointmentState.pageSize);
+        if (appointmentState.currentPage < totalPages) {
+            appointmentState.currentPage++;
+            DisplayAppointmentPage();
+        }
+    });
+
+    // Redeem Search & Filter
+    document.getElementById('redeemSearch').addEventListener('input', (e) => {
+        redeemState.searchTerm = e.target.value.toLowerCase();
+        redeemState.currentPage = 1;
+        FilterAndDisplayRedeem();
+    });
+
+    document.getElementById('redeemStatusFilter').addEventListener('change', (e) => {
+        redeemState.statusFilter = e.target.value;
+        redeemState.currentPage = 1;
+        FilterAndDisplayRedeem();
+    });
+
+    document.getElementById('redeemClearSearch').addEventListener('click', () => {
+        document.getElementById('redeemSearch').value = '';
+        redeemState.searchTerm = '';
+        redeemState.currentPage = 1;
+        FilterAndDisplayRedeem();
+    });
+
+    // Redeem Pagination
+    document.getElementById('redeemPrev').addEventListener('click', () => {
+        if (redeemState.currentPage > 1) {
+            redeemState.currentPage--;
+            DisplayRedeemPage();
+        }
+    });
+
+    document.getElementById('redeemNext').addEventListener('click', () => {
+        const totalPages = Math.ceil(redeemState.filteredData.length / redeemState.pageSize);
+        if (redeemState.currentPage < totalPages) {
+            redeemState.currentPage++;
+            DisplayRedeemPage();
+        }
+    });
+
     // Modal close handlers
     const modal = document.getElementById('detailModal');
     const closeBtn = document.querySelector('.modal-close');
@@ -215,6 +459,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
     if (overlay) overlay.addEventListener('click', () => modal.style.display = 'none');
+
+    // Reschedule modal handlers
+    const rescheduleModal = document.getElementById('rescheduleModal');
+    const rescheduleOverlay = rescheduleModal.querySelector('.modal-overlay');
+    if (rescheduleOverlay) rescheduleOverlay.addEventListener('click', CloseRescheduleModal);
+
+    // Confirmation modal handlers
+    const confirmModal = document.getElementById('confirmModal');
+    if (confirmModal) {
+        const confirmOverlay = confirmModal.querySelector('.modal-overlay');
+        if (confirmOverlay) {
+            confirmOverlay.addEventListener('click', CloseConfirmModal);
+        }
+    }
 });
 
 function LoadHistorySummary() {
@@ -236,21 +494,13 @@ function LoadAppointmentHistory() {
         .then(r => r.json())
         .then(data => {
             if (data.success && data.data.length > 0) {
-                const tbody = document.querySelector('#apptTable tbody');
-                tbody.innerHTML = data.data.map(a => `
-                    <tr>
-                        <td>${a.date}</td>
-                        <td><span class="time-icon">🕐</span> ${a.time}</td>
-                        <td>${a.petName || 'N/A'}</td>
-                        <td>${a.groomerName}</td>
-                        <td>${a.serviceName}</td>
-                        <td class="text-center"><span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span></td>
-                        <td class="text-center"><button class="view-btn" onclick="ViewAppointment('${a.appointmentId}')">View</button></td>
-                    </tr>
-                `).join('');
-                document.getElementById('apptEmptyState').style.display = 'none';
+                appointmentState.allData = data.data;
+                appointmentState.currentPage = 1;
+                FilterAndDisplayAppointments();
             } else {
+                appointmentState.allData = [];
                 document.getElementById('apptEmptyState').style.display = 'block';
+                document.querySelector('#apptTable tbody').innerHTML = '';
             }
         })
         .catch(e => console.error('Error loading appointments:', e));
@@ -261,25 +511,183 @@ function LoadRedeemHistory() {
         .then(r => r.json())
         .then(data => {
             if (data.success && data.data.length > 0) {
-                const tbody = document.querySelector('#redeemTable tbody');
-                tbody.innerHTML = data.data.map(r => `
-                    <tr>
-                        <td>${r.date}</td>
-                        <td><strong>${r.itemName}</strong></td>
-                        <td><span class="points-badge">⭐ ${r.pointsUsed}</span></td>
-                        <td>${r.redeemedBy}</td>
-                        <td class="text-center"><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
-                        <td class="text-center"><button class="view-btn" onclick="ViewRedeem('${r.crgId}')">View</button></td>
-                    </tr>
-                `).join('');
-                document.getElementById('redeemEmptyState').style.display = 'none';
+                redeemState.allData = data.data;
+                redeemState.currentPage = 1;
+                FilterAndDisplayRedeem();
             } else {
+                redeemState.allData = [];
                 document.getElementById('redeemEmptyState').style.display = 'block';
+                document.querySelector('#redeemTable tbody').innerHTML = '';
             }
         })
         .catch(e => console.error('Error loading redeem history:', e));
 }
 
+// ===== APPOINTMENT FILTERING & DISPLAY =====
+function FilterAndDisplayAppointments() {
+    appointmentState.filteredData = appointmentState.allData.filter(a => {
+        const matchesSearch = 
+            a.petName.toLowerCase().includes(appointmentState.searchTerm) ||
+            a.groomerName.toLowerCase().includes(appointmentState.searchTerm) ||
+            a.serviceName.toLowerCase().includes(appointmentState.searchTerm) ||
+            a.date.toLowerCase().includes(appointmentState.searchTerm);
+        
+        const matchesStatus = appointmentState.statusFilter === 'all' || 
+            a.status.toLowerCase() === appointmentState.statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
+
+    UpdateAppointmentFilterInfo();
+    DisplayAppointmentPage();
+}
+
+function UpdateAppointmentFilterInfo() {
+    const info = document.getElementById('apptFilterInfo');
+    const activeFilters = [];
+    
+    if (appointmentState.searchTerm) {
+        activeFilters.push(`Search: "${appointmentState.searchTerm}"`);
+    }
+    if (appointmentState.statusFilter !== 'all') {
+        activeFilters.push(`Status: ${appointmentState.statusFilter}`);
+    }
+    
+    if (activeFilters.length > 0) {
+        info.innerHTML = `<span>Active filters: ${activeFilters.join(' • ')}</span>`;
+        info.style.display = 'block';
+    } else {
+        info.style.display = 'none';
+    }
+}
+
+function DisplayAppointmentPage() {
+    const start = (appointmentState.currentPage - 1) * appointmentState.pageSize;
+    const end = start + appointmentState.pageSize;
+    const pageData = appointmentState.filteredData.slice(start, end);
+    
+    const tbody = document.querySelector('#apptTable tbody');
+    
+    if (pageData.length === 0) {
+        tbody.innerHTML = '';
+        document.getElementById('apptEmptyState').style.display = 'block';
+        document.getElementById('apptPageInfo').textContent = 'Page 1 of 1';
+        document.getElementById('apptResultsInfo').textContent = '';
+        return;
+    }
+    
+    document.getElementById('apptEmptyState').style.display = 'none';
+    
+    tbody.innerHTML = pageData.map(a => {
+        // Check if appointment can be cancelled (more than 24 hours away and confirmed status)
+        const appointmentDate = new Date(a.date + ' ' + a.time);
+        const now = new Date();
+        const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
+        const canCancel = a.status.toLowerCase() === 'confirmed' && hoursUntilAppointment >= 24;
+        const cancelTooltip = hoursUntilAppointment < 24 ? 'Cannot cancel within 24 hours' : 'Cancel this appointment';
+        
+        return `
+            <tr>
+                <td>${a.date}</td>
+                <td><span class="time-icon">🕐</span> ${a.time}</td>
+                <td>${a.petName || 'N/A'}</td>
+                <td>${a.groomerName}</td>
+                <td>${a.serviceName}</td>
+                <td class="text-center"><span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span></td>
+                <td class="text-center">
+                    <div class="action-buttons">
+                        <button class="view-btn" onclick="ViewAppointment('${a.appointmentId}')">View</button>
+                        <button class="cancel-btn" onclick="QuickCancelAppointment('${a.appointmentId}')" 
+                                ${!canCancel ? 'disabled' : ''} title="${cancelTooltip}">Cancel</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    const totalPages = Math.ceil(appointmentState.filteredData.length / appointmentState.pageSize);
+    document.getElementById('apptPageInfo').textContent = `Page ${appointmentState.currentPage} of ${totalPages}`;
+    document.getElementById('apptResultsInfo').textContent = `Showing ${start + 1}-${Math.min(end, appointmentState.filteredData.length)} of ${appointmentState.filteredData.length}`;
+    
+    // Update pagination buttons
+    document.getElementById('apptPrev').disabled = appointmentState.currentPage === 1;
+    document.getElementById('apptNext').disabled = appointmentState.currentPage === totalPages;
+}
+
+// ===== REDEEM FILTERING & DISPLAY =====
+function FilterAndDisplayRedeem() {
+    redeemState.filteredData = redeemState.allData.filter(r => {
+        const matchesSearch = 
+            r.itemName.toLowerCase().includes(redeemState.searchTerm) ||
+            r.redeemedBy.toLowerCase().includes(redeemState.searchTerm);
+        
+        const matchesStatus = redeemState.statusFilter === 'all' || 
+            r.status.toLowerCase() === redeemState.statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
+
+    UpdateRedeemFilterInfo();
+    DisplayRedeemPage();
+}
+
+function UpdateRedeemFilterInfo() {
+    const info = document.getElementById('redeemFilterInfo');
+    const activeFilters = [];
+    
+    if (redeemState.searchTerm) {
+        activeFilters.push(`Search: "${redeemState.searchTerm}"`);
+    }
+    if (redeemState.statusFilter !== 'all') {
+        activeFilters.push(`Status: ${redeemState.statusFilter}`);
+    }
+    
+    if (activeFilters.length > 0) {
+        info.innerHTML = `<span>Active filters: ${activeFilters.join(' • ')}</span>`;
+        info.style.display = 'block';
+    } else {
+        info.style.display = 'none';
+    }
+}
+
+function DisplayRedeemPage() {
+    const start = (redeemState.currentPage - 1) * redeemState.pageSize;
+    const end = start + redeemState.pageSize;
+    const pageData = redeemState.filteredData.slice(start, end);
+    
+    const tbody = document.querySelector('#redeemTable tbody');
+    
+    if (pageData.length === 0) {
+        tbody.innerHTML = '';
+        document.getElementById('redeemEmptyState').style.display = 'block';
+        document.getElementById('redeemPageInfo').textContent = 'Page 1 of 1';
+        document.getElementById('redeemResultsInfo').textContent = '';
+        return;
+    }
+    
+    document.getElementById('redeemEmptyState').style.display = 'none';
+    
+    tbody.innerHTML = pageData.map(r => `
+        <tr>
+            <td>${r.date}</td>
+            <td><strong>${r.itemName}</strong></td>
+            <td><span class="points-badge">⭐ ${r.pointsUsed}</span></td>
+            <td>${r.redeemedBy}</td>
+            <td class="text-center"><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
+            <td class="text-center"><button class="view-btn" onclick="ViewRedeem('${r.crgId}')">View</button></td>
+        </tr>
+    `).join('');
+    
+    const totalPages = Math.ceil(redeemState.filteredData.length / redeemState.pageSize);
+    document.getElementById('redeemPageInfo').textContent = `Page ${redeemState.currentPage} of ${totalPages}`;
+    document.getElementById('redeemResultsInfo').textContent = `Showing ${start + 1}-${Math.min(end, redeemState.filteredData.length)} of ${redeemState.filteredData.length}`;
+    
+    // Update pagination buttons
+    document.getElementById('redeemPrev').disabled = redeemState.currentPage === 1;
+    document.getElementById('redeemNext').disabled = redeemState.currentPage === totalPages;
+}
+
+// ===== VIEW & ACTION FUNCTIONS =====
 function ViewAppointment(appointmentId) {
     fetch(`/Customer/Home/GetAppointmentDetails?appointmentId=${appointmentId}`)
         .then(r => r.json())
@@ -288,6 +696,19 @@ function ViewAppointment(appointmentId) {
                 const a = data.data;
                 const modal = document.getElementById('detailModal');
                 const modalBody = document.getElementById('modalBody');
+                
+                // Determine available actions based on status
+                let actionButtons = '';
+                if (a.status.toLowerCase() === 'confirmed') {
+                    actionButtons = `
+                        <button class="btn btn-primary" onclick="OpenRescheduleModal('${a.appointmentId}')">
+                            <span>📅</span> Reschedule
+                        </button>
+                        <button class="btn btn-danger" onclick="CancelAppointment('${a.appointmentId}')">
+                            <span>✕</span> Cancel
+                        </button>
+                    `;
+                }
                 
                 modalBody.innerHTML = `
                     <div class="modal-header">
@@ -320,18 +741,14 @@ function ViewAppointment(appointmentId) {
                                 <p>${a.serviceName}</p>
                             </div>
                             <div class="detail-col">
-                                <label>AMOUNT</label>
-                                <p>$${parseFloat(a.amount).toFixed(2)}</p>
+                                <label>DURATION</label>
+                                <p>${a.durationTime} mins</p>
                             </div>
                         </div>
                         <div class="details-row">
                             <div class="detail-col">
                                 <label>STATUS</label>
                                 <p><span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span></p>
-                            </div>
-                            <div class="detail-col">
-                                <label>DURATION</label>
-                                <p>${a.durationTime} mins</p>
                             </div>
                         </div>
                         ${a.notes ? `<div class="details-row">
@@ -342,9 +759,7 @@ function ViewAppointment(appointmentId) {
                         </div>` : ''}
                     </div>
                     <div class="modal-actions">
-                        <button class="btn btn-primary" onclick="RescheduleAppointment('${a.appointmentId}')">
-                            <span>📅</span> Reschedule
-                        </button>
+                        ${actionButtons}
                         <div class="download-group">
                             <button class="btn btn-secondary" onclick="DownloadReceipt('${a.appointmentId}', 'txt')">
                                 📄 TXT
@@ -362,23 +777,169 @@ function ViewAppointment(appointmentId) {
         .catch(e => console.error('Error:', e));
 }
 
-function RescheduleAppointment(appointmentId) {
-    fetch(`/Customer/Home/RescheduleAppointment`, {
+// Quick Cancel from Table
+function QuickCancelAppointment(appointmentId) {
+    pendingCancelId = appointmentId;
+    ShowConfirmModal(
+        '❌ Cancel Appointment?',
+        'Are you sure you want to cancel this appointment? This action cannot be undone.',
+        'Yes, Cancel It',
+        ConfirmCancelAppointment
+    );
+}
+
+// Cancel from Modal
+function CancelAppointment(appointmentId) {
+    pendingCancelId = appointmentId;
+    ShowConfirmModal(
+        '❌ Cancel Appointment?',
+        'Are you sure you want to cancel this appointment? This action cannot be undone.',
+        'Yes, Cancel It',
+        ConfirmCancelAppointment
+    );
+}
+
+// Show Confirmation Modal
+function ShowConfirmModal(title, message, confirmBtnText, callback) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.querySelector('.confirm-actions .btn-danger').textContent = confirmBtnText;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+// Close Confirmation Modal
+function CloseConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    pendingCancelId = null;
+}
+
+// Confirm Cancel Action
+function ConfirmCancelAppointment() {
+    if (!pendingCancelId) return;
+
+    fetch('/Customer/Home/CancelAppointment', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ appointmentId: appointmentId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: pendingCancelId })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            window.location.href = data.redirectUrl;
+            showSuccessToast(data.message);
+            CloseConfirmModal();
+            setTimeout(() => {
+                // Close detail modal if open
+                const detailModal = document.getElementById('detailModal');
+                if (detailModal.style.display !== 'none') {
+                    detailModal.style.display = 'none';
+                }
+                LoadAppointmentHistory();
+            }, 1500);
         } else {
-            alert('Error: ' + data.message);
+            showErrorToast(data.message);
         }
     })
-    .catch(e => console.error('Error:', e));
+    .catch(e => {
+        console.error('Error:', e);
+        showErrorToast('Failed to cancel appointment');
+    });
+}
+
+// Reschedule Modal Functions
+function OpenRescheduleModal(appointmentId) {
+    currentRescheduleId = appointmentId;
+    document.getElementById('newDate').value = '';
+    document.getElementById('newTime').value = '';
+    document.getElementById('rescheduleModal').style.display = 'flex';
+}
+
+function CloseRescheduleModal() {
+    document.getElementById('rescheduleModal').style.display = 'none';
+    currentRescheduleId = null;
+}
+
+function SubmitReschedule() {
+    const newDate = document.getElementById('newDate').value;
+    const newTime = document.getElementById('newTime').value;
+
+    if (!newDate || !newTime) {
+        showErrorToast('Please fill in both date and time');
+        return;
+    }
+
+    fetch('/Customer/Home/RescheduleAppointment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            appointmentId: currentRescheduleId,
+            request: { newDate: newDate, newTime: newTime }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessToast(data.message);
+            CloseRescheduleModal();
+            setTimeout(() => {
+                document.getElementById('detailModal').style.display = 'none';
+                LoadAppointmentHistory();
+            }, 1500);
+        } else {
+            showErrorToast(data.message);
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        showErrorToast('Failed to reschedule appointment');
+    });
+}
+
+function ViewRedeem(crgId) {
+    const redeem = redeemState.allData.find(r => r.crgId === crgId);
+    if (!redeem) return;
+
+    const modal = document.getElementById('detailModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    modalBody.innerHTML = `
+        <div class="modal-header">
+            <h2>Redeem Details</h2>
+        </div>
+        <div class="modal-details">
+            <div class="details-row">
+                <div class="detail-col">
+                    <label>DATE</label>
+                    <p>${redeem.date}</p>
+                </div>
+                <div class="detail-col">
+                    <label>ITEM</label>
+                    <p>${redeem.itemName}</p>
+                </div>
+            </div>
+            <div class="details-row">
+                <div class="detail-col">
+                    <label>POINTS USED</label>
+                    <p>⭐ ${redeem.pointsUsed}</p>
+                </div>
+                <div class="detail-col">
+                    <label>QUANTITY</label>
+                    <p>${redeem.quantity}</p>
+                </div>
+            </div>
+            <div class="details-row">
+                <div class="detail-col">
+                    <label>REDEEMED BY</label>
+                    <p>${redeem.redeemedBy}</p>
+                </div>
+                <div class="detail-col">
+                    <label>STATUS</label>
+                    <p><span class="status-badge status-${redeem.status.toLowerCase()}">${redeem.status}</span></p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
 }
 
 function DownloadReceipt(appointmentId, format) {
@@ -391,8 +952,22 @@ function DownloadReceipt(appointmentId, format) {
     link.click();
 }
 
-function ViewRedeem(crgId) {
-    // Implement redeem details view similar to ViewAppointment
-    console.log('View redeem:', crgId);
+// Helper toast functions
+function showSuccessToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success';
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#4CAF50;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger';
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#f44336;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>

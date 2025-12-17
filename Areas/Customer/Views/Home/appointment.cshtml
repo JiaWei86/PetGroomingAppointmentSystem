@@ -17,7 +17,6 @@
     </div>
 </div>
 
-
         <div class="appt-bg">
             <div class="appt-row">
                 <!-- Calendar card -->
@@ -86,51 +85,6 @@
                                 <label class="form-label">Choose Pet(s) <span class="required">*</span></label>
                                 <div id="petCards" class="pet-cards" aria-live="polite"></div>
                                 <div class="form-hint">Select one or more pets for the appointment</div>
-
-                                <div class="pet-actions">
-                                    <button type="button" id="showAddNewBtn" class="btn btn-secondary btn-sm">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                                        </svg>
-                                        Add New Pet
-                                    </button>
-                                </div>
-
-                                <div id="newPetBlock" class="new-pet-block">
-                                    <h4>Add New Pet</h4>
-                                    <div class="form-group">
-                                        <label for="newPetName" class="form-label">Pet Name <span class="required">*</span></label>
-                                        <input id="newPetName" type="text" placeholder="e.g., Buddy" class="form-control" required />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="newPetType" class="form-label">Pet Type</label>
-                                        <input id="newPetType" type="text" readonly class="form-control" disabled />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="newPetPhoto" class="form-label">Photo (Optional)</label>
-                                        <div class="file-upload">
-                                            <input id="newPetPhoto" type="file" accept="image/*" class="file-input" />
-                                            <label for="newPetPhoto" class="file-label">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                                    <polyline points="21 15 16 10 5 21"></polyline>
-                                                </svg>
-                                                Choose photo
-                                            </label>
-                                        </div>
-                                        <div class="newpet-preview" id="newPetPreview">
-                                            <img id="newPetPreviewImg" src="" alt="Preview" />
-                                        </div>
-                                        <small class="form-hint">JPG, PNG up to 5MB</small>
-                                    </div>
-
-                                    <div class="form-actions">
-                                        <button type="button" id="savePetBtn" class="btn btn-primary btn-sm">Save Pet</button>
-                                        <button type="button" id="cancelNewPetBtn" class="btn btn-outline btn-sm">Cancel</button>
-                                    </div>
-                                </div>
                             </div>
                         </fieldset>
 
@@ -154,10 +108,7 @@
                             <div class="form-group">
                                 <label for="groomerSelect" class="form-label">Preferred Groomer</label>
                                 <select id="groomerSelect" class="form-control">
-                                    <option value="any">Any Available</option>
-                                    <option value="alice">👩‍💼 Alice</option>
-                                    <option value="ben">👨‍💼 Ben</option>
-                                    <option value="cara">👩‍💼 Cara</option>
+                                    <option value="">Any Available</option>
                                 </select>
                                 <small class="form-hint">Leave blank for automatic assignment</small>
                             </div>
@@ -211,11 +162,13 @@
                 <div class="toast-body">
                     <div class="toast-title">Error</div>
                     <div class="toast-message" id="errorToastMsg">Please fill in all required fields</div>
+                    <div id="loginPrompt" style="margin-top: 10px; display:none;">
+                        <a href="/Auth/Login" class="btn btn-sm btn-primary" style="text-decoration: none; display: inline-block;">Go to Login</a>
+                    </div>
                 </div>
                 <button class="toast-close" id="apptErrorClose" aria-label="Close notification">&times;</button>
             </div>
         </div>
-    </div>
 </section>
 
 <script>
@@ -226,7 +179,7 @@
             TIME_START: 9,
             TIME_END: 16,
             TIME_INTERVAL: 30,
-            TOAST_DURATION: 3500,
+            TOAST_DURATION: 5000,
             MAX_NOTES_LENGTH: 500,
             CLOSED_DAYS: [1] // Monday
         };
@@ -235,10 +188,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const initialPetType = urlParams.get('petType');
         const selectedServiceId = urlParams.get('serviceId');
-        const selectedServiceName = urlParams.get('serviceName') ? decodeURIComponent(urlParams.get('serviceName')) : null;
-        const selectedServiceDescription = urlParams.get('description') ? decodeURIComponent(urlParams.get('description')) : null;
-        const selectedServicePrice = urlParams.get('price');
-        const selectedServiceDuration = urlParams.get('duration');
 
         // Initial user pets - will be loaded from database
         let userPets = [];
@@ -261,15 +210,6 @@
             selectedDateText: document.getElementById('selectedDateText'),
             categorySelect: document.getElementById('categorySelect'),
             petCards: document.getElementById('petCards'),
-            showAddNewBtn: document.getElementById('showAddNewBtn'),
-            newPetBlock: document.getElementById('newPetBlock'),
-            newPetName: document.getElementById('newPetName'),
-            newPetType: document.getElementById('newPetType'),
-            newPetPhoto: document.getElementById('newPetPhoto'),
-            newPetPreview: document.getElementById('newPetPreview'),
-            newPetPreviewImg: document.getElementById('newPetPreviewImg'),
-            savePetBtn: document.getElementById('savePetBtn'),
-            cancelNewPetBtn: document.getElementById('cancelNewPetBtn'),
             timeSelect: document.getElementById('timeSelect'),
             groomerSelect: document.getElementById('groomerSelect'),
             notes: document.getElementById('notes'),
@@ -319,7 +259,7 @@
             });
         }
 
-        // Services Display - Shows services from database
+        // Services Display - Shows services from database (Remove price, only show duration)
         function renderServiceDetails() {
             const category = elements.categorySelect.value;
             const serviceDetailsSection = document.getElementById('serviceDetailsSection');
@@ -335,7 +275,7 @@
                 return;
             }
 
-            const services = servicesByCategory[category] || [];
+            const services = servicesByCategory[category.toLowerCase()] || [];
             serviceDetailsList.innerHTML = '';
 
             if (services.length === 0) {
@@ -346,36 +286,53 @@
             services.forEach(service => {
                 const label = document.createElement('label');
                 label.className = 'service-item';
+                label.style.display = 'block';
+                label.style.cursor = 'pointer';
+                label.style.padding = '10px';
+                label.style.border = '1px solid #ddd';
+                label.style.borderRadius = '4px';
+                label.style.marginBottom = '8px';
 
                 const input = document.createElement('input');
                 input.type = 'radio';
                 input.name = 'service';
                 input.value = service.id;
                 input.className = 'service-radio';
+                input.style.marginRight = '10px';
+                input.style.cursor = 'pointer';
                 
-                // Auto-select if this was the service clicked from index page
                 if (selectedServiceId && service.id === selectedServiceId) {
                     input.checked = true;
                 }
 
                 const details = document.createElement('div');
                 details.className = 'service-details';
+                details.style.display = 'inline-block';
 
                 const name = document.createElement('div');
                 name.className = 'service-name';
+                name.style.fontWeight = 'bold';
                 name.textContent = service.name;
 
                 const meta = document.createElement('div');
                 meta.className = 'service-meta';
-                const price = service.price || 'N/A';
+                meta.style.fontSize = '0.9em';
+                meta.style.color = '#666';
                 const duration = service.duration || 'N/A';
-                meta.textContent = `${price} • ${duration}`;
+                meta.textContent = `${duration}`;
 
                 details.appendChild(name);
                 details.appendChild(meta);
 
                 label.appendChild(input);
                 label.appendChild(details);
+                
+                label.addEventListener('click', (e) => {
+                    if (e.target !== input) {
+                        input.checked = true;
+                    }
+                });
+
                 serviceDetailsList.appendChild(label);
             });
 
@@ -505,9 +462,9 @@
             if (selected) selected.classList.remove('day--selected');
         }
 
-        // Pet Cards Rendering
+        // Pet Cards Rendering - Filter by selected service category
         function renderPetCards() {
-            const category = elements.categorySelect.value;
+            const category = elements.categorySelect.value.toLowerCase();
             elements.petCards.innerHTML = '';
 
             if (!category) {
@@ -515,9 +472,11 @@
                 return;
             }
 
+            // Filter pets by the selected service category (dog/cat)
             const filteredPets = userPets.filter(p => p.category === category);
+            
             if (filteredPets.length === 0) {
-                elements.petCards.innerHTML = '<div class="form-hint">No pets in this category. Add a new pet to get started.</div>';
+                elements.petCards.innerHTML = `<div class="form-hint">No ${category} pets available. Please add a ${category} to your profile first.</div>`;
                 return;
             }
 
@@ -569,84 +528,6 @@
             });
         }
 
-        // Add New Pet Flow
-        function startAddNewPet() {
-            if (!elements.categorySelect.value) {
-                showErrorToast('Please select a pet category first');
-                return;
-            }
-            elements.categorySelect.disabled = true;
-            elements.newPetType.value = elements.categorySelect.value === 'dog' ? 'Dog' : 'Cat';
-            elements.newPetBlock.style.display = 'block';
-            elements.newPetPreview.style.display = 'none';
-            elements.newPetName.focus();
-        }
-
-        function cancelAddNewPet() {
-            elements.newPetBlock.style.display = 'none';
-            elements.newPetName.value = '';
-            elements.newPetType.value = '';
-            elements.newPetPhoto.value = '';
-            elements.newPetPreviewImg.src = '';
-            elements.newPetPreview.style.display = 'none';
-            elements.categorySelect.disabled = false;
-            renderPetCards();
-        }
-
-        elements.newPetPhoto.addEventListener('change', function() {
-            const file = this.files?.[0];
-            if (!file) {
-                elements.newPetPreviewImg.src = '';
-                elements.newPetPreview.style.display = 'none';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                elements.newPetPreviewImg.src = e.target.result;
-                elements.newPetPreview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        function saveNewPet() {
-            const category = elements.categorySelect.value;
-            const name = elements.newPetName.value.trim();
-
-            if (!name) {
-                showErrorToast('Please enter a pet name');
-                elements.newPetName.focus();
-                return;
-            }
-
-            const file = elements.newPetPhoto.files?.[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => pushNewPet(name, category, e.target.result);
-                reader.readAsDataURL(file);
-            } else {
-                pushNewPet(name, category, CONFIG.PLACEHOLDER_IMG);
-            }
-        }
-
-        function pushNewPet(name, category, imgSrc) {
-            const id = 'p' + Date.now();
-            userPets.push({ id, name, category, photo: imgSrc });
-            elements.categorySelect.disabled = false;
-            elements.newPetBlock.style.display = 'none';
-            elements.newPetName.value = '';
-            elements.newPetType.value = '';
-            elements.newPetPhoto.value = '';
-            elements.newPetPreviewImg.src = '';
-            elements.newPetPreview.style.display = 'none';
-            renderPetCards();
-
-            setTimeout(() => {
-                const checkbox = elements.petCards.querySelector(`input[value="${id}"]`);
-                if (checkbox) checkbox.checked = true;
-            }, 50);
-        }
-
         function getSelectedPets() {
             const checkboxes = Array.from(elements.petCards.querySelectorAll('input[type="checkbox"]:checked'));
             return checkboxes
@@ -675,9 +556,19 @@
             showToast(elements.successToast);
         }
 
-        function showErrorToast(message) {
+        function showErrorToast(message, isLoginError = false) {
             elements.errorMsg.textContent = message;
-            showToast(elements.errorToast);
+            const loginPrompt = document.getElementById('loginPrompt');
+            
+            if (isLoginError) {
+                loginPrompt.style.display = 'block';
+                CONFIG.TOAST_DURATION = 6000;
+            } else {
+                loginPrompt.style.display = 'none';
+                CONFIG.TOAST_DURATION = 3500;
+            }
+            
+            showToast(elements.errorToast, isLoginError ? 6000 : 3500);
         }
 
         elements.successClose.addEventListener('click', () => hideToast(elements.successToast));
@@ -741,13 +632,10 @@
         });
 
         elements.categorySelect.addEventListener('change', () => {
-            renderPetCards();
-            renderServiceDetails();
+            console.log('Category changed to:', elements.categorySelect.value);
+            renderPetCards();  // Re-render pets with new category filter
+            renderServiceDetails();  // Show services for this category
         });
-
-        elements.showAddNewBtn.addEventListener('click', startAddNewPet);
-        elements.cancelNewPetBtn.addEventListener('click', cancelAddNewPet);
-        elements.savePetBtn.addEventListener('click', saveNewPet);
 
         elements.submitBtn.addEventListener('click', async () => {
             if (!validateForm()) return;
@@ -765,7 +653,6 @@
             };
 
             try {
-                // Disable submit button to prevent double submission
                 elements.submitBtn.disabled = true;
                 const originalText = elements.submitBtn.innerHTML;
                 elements.submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Submitting...';
@@ -783,17 +670,9 @@
                 if (result.success) {
                     showSuccessToast();
                     
-                    // Clear form after successful submission
                     setTimeout(() => {
-                        hideForm();
-                        elements.apptForm.reset();
-                        elements.notes.dispatchEvent(new Event('input'));
-                        renderCalendar();
-                        renderPetCards();
-                        
-                        // Reset button state
-                        elements.submitBtn.disabled = false;
-                        elements.submitBtn.innerHTML = originalText;
+                        // ✅ REDIRECT TO HISTORY PAGE AFTER SUCCESSFUL BOOKING
+                        window.location.href = '@Url.Action("History", "Home", new { area = "Customer" })';
                     }, 1500);
                 } else {
                     showErrorToast(result.message || 'Failed to save appointment');
@@ -808,58 +687,155 @@
             }
         });
 
-        // Fetch services and pets from backend
+        // Load available groomers
+        async function loadGroomers() {
+            try {
+                const response = await fetch('/Customer/Home/GetAvailableGroomers');
+                if (!response.ok) {
+                    console.error('Failed to fetch groomers');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success && data.groomers && data.groomers.length > 0) {
+                    const groomerSelect = document.getElementById('groomerSelect');
+                    
+                    data.groomers.forEach(groomer => {
+                        const option = document.createElement('option');
+                        option.value = groomer.id;  // S001, S002, etc.
+                        option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
+                        groomerSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading groomers:', error);
+            }
+        }
+
+        // Call this function when the page loads or when the form initializes
+        // Add to your initialization code:
+        loadGroomers();
+
+        // ✅ LOAD SERVICES FROM BACKEND - FILTER BY SELECTED SERVICE IF PROVIDED
         async function loadServices() {
             try {
+                console.log('Loading services...');
                 const response = await fetch('/Customer/Home/GetServices');
                 const data = await response.json();
                 
-                if (data && data.dogServices) {
-                    servicesByCategory['dog'] = data.dogServices.map(s => ({
-                        id: s.serviceId,
-                        name: s.name,
-                        price: s.price ? `$${s.price}` : 'N/A',
-                        duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
-                    }));
+                console.log('Services response:', data);
+                
+                if (data.success) {
+                    if (data.dogServices) {
+                        let dogServices = data.dogServices.map(s => ({
+                            id: s.serviceId,
+                            name: s.name,
+                            duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
+                        }));
+                        
+                        // ✅ FILTER: If a specific service was selected from index, show only that service
+                        if (selectedServiceId) {
+                            dogServices = dogServices.filter(s => s.id === selectedServiceId);
+                        }
+                        
+                        servicesByCategory['dog'] = dogServices;
+                        console.log('Dog services loaded:', servicesByCategory['dog']);
+                    }
+                    
+                    if (data.catServices) {
+                        let catServices = data.catServices.map(s => ({
+                            id: s.serviceId,
+                            name: s.name,
+                            duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
+                        }));
+                        
+                        // ✅ FILTER: If a specific service was selected from index, show only that service
+                        if (selectedServiceId) {
+                            catServices = catServices.filter(s => s.id === selectedServiceId);
+                        }
+                        
+                        servicesByCategory['cat'] = catServices;
+                        console.log('Cat services loaded:', servicesByCategory['cat']);
+                    }
                 }
                 
-                if (data && data.catServices) {
-                    servicesByCategory['cat'] = data.catServices.map(s => ({
-                        id: s.serviceId,
-                        name: s.name,
-                        price: s.price ? `$${s.price}` : 'N/A',
-                        duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
-                    }));
-                }
-                
-                // After services are loaded, initialize
+                // Initialize form AFTER services are loaded
                 initializeForm();
             } catch (error) {
                 console.error('Error loading services:', error);
-                // Fallback to empty services
                 initializeForm();
             }
         }
 
+        // ✅ START: Load services on page load
+        console.log('Appointment page loaded');
+        console.log('URL params - petType:', initialPetType, 'serviceId:', selectedServiceId);
+        loadServices();
+        
+        // ✅ UPDATED: Set category FIRST, then load pets
         function initializeForm() {
-            // Initialize - set pet type from URL parameter
+            // Set category FIRST, then load pets
             if (initialPetType && (initialPetType === 'dog' || initialPetType === 'cat')) {
-                elements.categorySelect.value = initialPetType === 'dog' ? 'Dog' : 'Cat';
+                // Set the category value BEFORE loading pets
+                const categoryValue = initialPetType === 'dog' ? 'Dog' : 'Cat';
+                elements.categorySelect.value = categoryValue;
                 document.getElementById('categoryValue').value = initialPetType;
-                elements.categorySelect.disabled = true; // Make it read-only
-                renderPetCards();
+                elements.categorySelect.disabled = true;
+                
+                console.log('Initial pet type set to:', categoryValue);
+                
+                // NOW load pets (they will be filtered by the category above)
+                loadPetsFromDatabase();
+                
+                // Then render services
                 renderServiceDetails();
             } else {
-                // Fallback: enable category selection if no petType parameter
                 elements.categorySelect.disabled = false;
-                renderPetCards();
+                loadPetsFromDatabase();
             }
 
             populateTimeSlots();
             renderCalendar();
         }
 
-        // Load services on page load
-        loadServices();
+        // ✅ UPDATED: Ensure pets are loaded AND rendered correctly
+        function loadPetsFromDatabase() {
+            console.log('Starting to load pets...');
+            console.log('Current category:', elements.categorySelect.value);
+            
+            fetch('/Customer/Home/GetCustomerPets')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Pets data received:', data);
+                    
+                    if (data.success && data.pets && data.pets.length > 0) {
+                        userPets = data.pets.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            category: p.type.toLowerCase(),  // 'dog' or 'cat'
+                            photo: p.photo
+                        }));
+                        
+                        console.log('Pets loaded successfully:', userPets);
+                        console.log('Current category filter:', elements.categorySelect.value.toLowerCase());
+                        
+                        // Filter and display pets
+                        renderPetCards();
+                    } else {
+                        console.warn('No pets found for this user or response not successful');
+                        userPets = [];
+                        renderPetCards();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading pets:', error);
+                    userPets = [];
+                    renderPetCards();
+                });
+        }
     })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

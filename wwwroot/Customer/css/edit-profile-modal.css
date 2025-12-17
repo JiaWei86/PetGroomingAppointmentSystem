@@ -297,6 +297,8 @@
     font-size: 0.95rem;
     transition: all 0.3s ease;
     color: #333;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .edit-pet-input:focus {
@@ -310,8 +312,43 @@
     color: #bbb;
 }
 
-.edit-pet-input option {
+/* FIX FOR SELECT DROPDOWN */
+.edit-pet-input[type="select"],
+.edit-pet-input select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1.2em;
+    padding-right: 2.5rem;
+    white-space: normal;
+    overflow: visible;
+}
+
+.edit-pet-input select {
+    line-height: 1.5;
+    height: auto;
+    min-height: 44px;
+}
+
+.edit-pet-input select option {
+    padding: 8px;
+    background: #ffffff;
     color: #333;
+    line-height: 1.5;
+}
+
+.edit-pet-input select option:hover {
+    background: #ff9500;
+    color: white;
+}
+
+.edit-pet-input select option:checked {
+    background: linear-gradient(#ff8c42, #ff8c42);
+    background-color: #ff8c42 !important;
+    color: white;
 }
 
 /* Pet Textarea */
