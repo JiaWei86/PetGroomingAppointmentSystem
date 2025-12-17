@@ -4,6 +4,58 @@
     ViewData["Title"] = "Home";
 }
 
+<!-- Login Required Modal with Better Styling -->
+<div class="modal fade" id="loginRequiredModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true" style="z-index: 9999;">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="z-index: 10000;">
+        <div class="modal-content" style="border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); z-index: 10001;">
+            <div class="modal-header border-0" style="background: #f8f9fa; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" id="loginModalLabel" style="font-weight: 700; color: #333;">Login Required</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="cursor: pointer;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center py-5" style="padding: 40px 30px !important;">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="1.5" style="margin-bottom: 20px;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <h4 class="mb-3" style="font-weight: 700; color: #333; font-size: 20px;">Login Required</h4>
+                <p class="text-muted mb-4" style="font-size: 15px; line-height: 1.6;">Please login first to book an appointment for your pet.</p>
+            </div>
+            <div class="modal-footer border-0" style="background: #f8f9fa; border-radius: 0 0 12px 12px; gap: 10px;">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" style="padding: 10px 25px; cursor: pointer; font-weight: 500;">Cancel</button>
+                <a href="/Customer/Auth/Login" class="btn btn-primary" style="padding: 10px 25px; background-color: #ff6b35; border-color: #ff6b35; cursor: pointer; font-weight: 500;">Go to Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Backdrop Fix -->
+<style>
+    .modal-backdrop {
+        z-index: 9998 !important;
+    }
+    
+    .modal.fade.show {
+        z-index: 9999 !important;
+    }
+    
+    .modal.fade.show .modal-dialog {
+        z-index: 10000 !important;
+    }
+    
+    .modal.fade.show .modal-content {
+        z-index: 10001 !important;
+    }
+    
+    /* Ensure buttons are clickable */
+    .modal-footer .btn {
+        position: relative;
+        z-index: 10002 !important;
+        pointer-events: auto !important;
+    }
+</style>
+
 <!-- slider_area_start -->
 <div class="slider_area">
     <div class="single_slider slider_bg_1 d-flex align-items-center">
@@ -59,16 +111,17 @@
                     <div class="service_content text-center">
                         <h3>@s.Name</h3>
                         <p>@s.Description</p>
-                        <a asp-controller="Home" asp-action="Appointment" 
-                           asp-route-petType="dog" 
-                           asp-route-serviceId="@s.ServiceId"
-                           asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
-                           asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
-                           asp-route-price="@s.Price"
-                           asp-route-duration="@s.DurationTime"
-                           class="boxed-btn4">
+                        <button type="button" class="boxed-btn4 book-now-btn"
+                           data-pet-type="dog" 
+                           data-service-id="@s.ServiceId"
+                           data-service-name="@s.Name"
+                           data-description="@(s.Description ?? "")"
+                           data-price="@s.Price"
+                           data-duration="@s.DurationTime"
+                           onclick="handleBookNow(event, this)"
+                           style="border: none; cursor: pointer;">
                             Book Now
-                        </a>
+                        </button>
                     </div>
                 </div>
             }
@@ -97,16 +150,17 @@
                         <div class="service_content text-center">
                             <h3>@s.Name</h3>
                             <p>@s.Description</p>
-                            <a asp-controller="Home" asp-action="Appointment" 
-                               asp-route-petType="cat"
-                               asp-route-serviceId="@s.ServiceId"
-                               asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
-                               asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
-                               asp-route-price="@s.Price"
-                               asp-route-duration="@s.DurationTime"
-                               class="boxed-btn4">
+                            <button type="button" class="boxed-btn4 book-now-btn"
+                               data-pet-type="cat"
+                               data-service-id="@s.ServiceId"
+                               data-service-name="@s.Name"
+                               data-description="@(s.Description ?? "")"
+                               data-price="@s.Price"
+                               data-duration="@s.DurationTime"
+                               onclick="handleBookNow(event, this)"
+                               style="border: none; cursor: pointer;">
                                 Book Now
-                            </a>
+                            </button>
                         </div>
                     </div>
                 }
@@ -197,7 +251,7 @@
 <!-- contact_anipat_end -->
 @section Scripts {
     <script>
-               $(document).ready(function () {
+        $(document).ready(function () {
             new WOW().init();
 
             // ✔ read counts from model (rendered as numbers)
@@ -242,6 +296,58 @@
             setCarouselHeights();
             $(window).on('resize', setCarouselHeights);
         });
+
+        // ============ BOOK NOW LOGIN CHECK ============
+        function handleBookNow(event, element) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Show loading state
+            $(element).prop('disabled', true);
+            const originalText = $(element).text();
+            $(element).text('Checking...');
+            
+            // Fetch user login status from server
+            fetch('/Customer/Home/CheckUserStatus')
+                .then(response => response.json())
+                .then(data => {
+                    $(element).prop('disabled', false);
+                    $(element).text(originalText);
+                    
+                    if (!data.isLoggedIn) {
+                        // User is NOT logged in - show modal
+                        const modal = new bootstrap.Modal(document.getElementById('loginRequiredModal'));
+                        modal.show();
+                    } else {
+                        // User IS logged in - proceed to appointment booking
+                        proceedToBooking(element);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking login status:', error);
+                    $(element).prop('disabled', false);
+                    $(element).text(originalText);
+                    // On error, show login modal to be safe
+                    const modal = new bootstrap.Modal(document.getElementById('loginRequiredModal'));
+                    modal.show();
+                });
+            
+            return false;
+        }
+
+        function proceedToBooking(element) {
+            const petType = element.getAttribute('data-pet-type');
+            const serviceId = element.getAttribute('data-service-id');
+            const serviceName = element.getAttribute('data-service-name');
+            const description = element.getAttribute('data-description');
+            const price = element.getAttribute('data-price');
+            const duration = element.getAttribute('data-duration');
+            
+            // Build the URL with all parameters
+            const url = `/Customer/Home/Appointment?petType=${petType}&serviceId=${serviceId}&serviceName=${encodeURIComponent(serviceName)}&description=${encodeURIComponent(description)}&price=${price}&duration=${duration}`;
+            
+            window.location.href = url;
+        }
 
         // Popup / Redeem Logic
         let redeemData = { giftId: null, giftName: "", cost: 0, maxQty: 0, userPoints: 0 };
@@ -313,5 +419,4 @@
             }
         });
     </script>
-
 }

@@ -20,7 +20,6 @@
                                 <ul id="navigation">
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="About">About Us</a></li>
-                                    <li><a asp-area="Customer" asp-controller="Home" asp-action="Appointment">Appointment</a></li>
                                     <li>
                                         @if (!string.IsNullOrEmpty(customerName))
                                         {
@@ -33,11 +32,6 @@
                                                     <li style="border-bottom: 1px solid #eee;">
                                                         <a asp-area="Customer" asp-controller="Home" asp-action="Profile" style="display: block; padding: 10px 16px; color: #102955; text-decoration: none; font-weight: 500; white-space: nowrap;">
                                                             <i class="bi bi-person" style="margin-right: 8px;"></i>Profile
-                                                        </a>
-                                                    </li>
-                                                    <li style="border-bottom: 1px solid #eee;">
-                                                        <a asp-area="Customer" asp-controller="Home" asp-action="Appointment" style="display: block; padding: 10px 16px; color: #102955; text-decoration: none; font-weight: 500; white-space: nowrap;">
-                                                            <i class="bi bi-calendar" style="margin-right: 8px;"></i>Appointments
                                                         </a>
                                                     </li>
                                                     <li>
