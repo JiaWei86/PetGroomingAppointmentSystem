@@ -16,6 +16,11 @@ builder.Services.AddSqlServer<DB>($@"
     MultipleActiveResultSets=true;
 ");
 
+// -----------------------------
+// Register AWS S3 Storage Service
+// -----------------------------
+builder.Services.Configure<AWSSettings>(builder.Configuration.GetSection("AWS"));
+builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 
 // Add Admin Email Service (explicit namespace to avoid ambiguity)
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();

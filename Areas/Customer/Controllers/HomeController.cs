@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PetGroomingAppointmentSystem.Models;
-using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
-using System.Security.Claims;
-using System.Text;
-using System.IO;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
+using PetGroomingAppointmentSystem.Models;
+using PetGroomingAppointmentSystem.Services;
+using System.IO;
+using System.Security.Claims;
+using System.Text;
 
 namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers;
 
@@ -15,12 +16,15 @@ public class HomeController : Controller
 {
     private readonly DB _db;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IS3StorageService _s3Service;
 
-    public HomeController(DB db, IWebHostEnvironment webHostEnvironment)
+    public HomeController(DB db, IWebHostEnvironment webHostEnvironment, IS3StorageService s3Service)
     {
         _db = db;
         _webHostEnvironment = webHostEnvironment;
+        _s3Service = s3Service;
     }
+
 
     // ========== STATUS CHECK HELPER METHODS (Profile Only) ==========
     private Models.Customer? GetCurrentCustomerFromSession()
@@ -226,7 +230,7 @@ public class HomeController : Controller
                 return BlockedResponse("add pet");
 
             // Generate sequential PetId (P001, P002, etc.)
-            int nextNumber =1;
+            int nextNumber = 1;
 
             var existingPetIds = _db.Pets
                 .Where(p => p.PetId.StartsWith("P"))
@@ -235,16 +239,16 @@ public class HomeController : Controller
 
             if (existingPetIds.Any())
             {
-                // Extract numeric part and find the maximum
                 nextNumber = existingPetIds
-                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num :0)
-                    .Max() +1;
+                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
+                    .Max() + 1;
             }
 
+            var petId = $"P{nextNumber:D3}";
 
             var pet = new Pet
             {
-                PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
+                PetId = petId,
                 Name = name,
                 Type = type,
                 Breed = breed,
@@ -253,29 +257,38 @@ public class HomeController : Controller
                 CustomerId = customer.UserId
             };
 
-            if (Request.Form.Files.Count >0)
+            // ✅ Upload photo to S3 instead of local storage
+            if (Request.Form.Files.Count > 0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length >0)
+                if (photoFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
-                    if (!Directory.Exists(uploadsFolder))
-                        Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    try
                     {
-                        await photoFile.CopyToAsync(fileStream);
-                    }
+                        // Convert file to base64 and upload to S3
+                        using var memoryStream = new MemoryStream();
+                        await photoFile.CopyToAsync(memoryStream);
+                        var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                        var contentType = photoFile.ContentType ?? "image/jpeg";
+                        var base64Image = $"data:{contentType};base64,{base64String}";
 
-                    pet.Photo = "/uploads/pets/" + uniqueFileName;
+                        // Upload to S3 and get CloudFront URL
+                        var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                            base64Image,
+                            $"pets/{petId}"
+                        );
+                        pet.Photo = cloudFrontUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error uploading pet photo to S3: {ex.Message}");
+                        // Fallback: leave photo as null if S3 upload fails
+                    }
                 }
             }
 
             _db.Pets.Add(pet);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             var result = new
             {
@@ -319,29 +332,38 @@ public class HomeController : Controller
             pet.Age = age;
             pet.Remark = remark;
 
-            if (Request.Form.Files.Count >0)
+            // ✅ Upload new photo to S3 if provided
+            if (Request.Form.Files.Count > 0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length >0)
+                if (photoFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
-                    if (!Directory.Exists(uploadsFolder))
-                        Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    try
                     {
-                        await photoFile.CopyToAsync(fileStream);
-                    }
+                        // Convert file to base64 and upload to S3
+                        using var memoryStream = new MemoryStream();
+                        await photoFile.CopyToAsync(memoryStream);
+                        var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                        var contentType = photoFile.ContentType ?? "image/jpeg";
+                        var base64Image = $"data:{contentType};base64,{base64String}";
 
-                    pet.Photo = "/uploads/pets/" + uniqueFileName;
+                        // Upload to S3 and get CloudFront URL
+                        var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                            base64Image,
+                            $"pets/{petId}"
+                        );
+                        pet.Photo = cloudFrontUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error uploading pet photo to S3: {ex.Message}");
+                        // Keep existing photo if S3 upload fails
+                    }
                 }
             }
 
             _db.Pets.Update(pet);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             var result = new
             {
@@ -490,28 +512,24 @@ public class HomeController : Controller
                             {
                                 try
                                 {
-                                    var base64Data = photoData.Substring(photoData.IndexOf(",") +1);
-                                    var imageBytes = Convert.FromBase64String(base64Data);
-
-                                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
-                                    if (!Directory.Exists(uploadsFolder))
-                                        Directory.CreateDirectory(uploadsFolder);
-
-                                    var uniqueFileName = $"{customer.UserId}_photo{i}_{Guid.NewGuid():N}.jpg";
-                                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
-                                    photoPaths.Add($"/uploads/customers/{uniqueFileName}");
+                                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                                        photoData,
+                                        $"customers/{customer.UserId}"
+                                    );
+                                    photoPaths.Add(cloudFrontUrl);
                                 }
+
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine($"Error saving photo {i}: {ex.Message}");
+                                    Console.WriteLine($"Error uploading photo {i} to S3: {ex.Message}");
                                 }
                             }
-                            else if (photoData.StartsWith("/"))
+                            // Keep existing CloudFront URLs
+                            else if (photoData.StartsWith("https://"))
                             {
                                 photoPaths.Add(photoData);
                             }
+
                         }
                     }
                 }
@@ -1282,49 +1300,44 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(customerId))
                 return Json(new { success = false, message = "User not authenticated" });
 
-            // ✅ UPDATED: Generate sequential pet ID (P001, P002, P003, etc.)
+            // Generate sequential pet ID (P001, P002, P003, etc.)
             var lastPet = _db.Pets
                 .OrderByDescending(p => p.PetId)
                 .FirstOrDefault();
 
-            int nextNumber =1;
+            int nextNumber = 1;
             if (lastPet != null && lastPet.PetId.StartsWith("P"))
             {
-                // Extract the numeric part from the last pet ID (e.g., "P001" -> 1)
                 string numericPart = lastPet.PetId.Substring(1);
                 if (int.TryParse(numericPart, out int lastNumber))
                 {
-                    nextNumber = lastNumber +1;
+                    nextNumber = lastNumber + 1;
                 }
             }
 
-            // Format as P001, P002, P003, etc.
             var petId = $"P{nextNumber:D3}";
+            string? photoPath = null;
 
-            var photoPath = "/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png";
-
-            // Handle base64 photo
+            // ✅ Upload base64 photo to S3
             if (!string.IsNullOrEmpty(petDto.Photo) && petDto.Photo.StartsWith("data:image"))
             {
                 try
                 {
-                    var base64Data = petDto.Photo.Substring(petDto.Photo.IndexOf(",") +1);
-                    var imageBytes = Convert.FromBase64String(base64Data);
-
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
-                    if (!Directory.Exists(uploadsFolder))
-                        Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = $"{petId}_{Guid.NewGuid():N}.jpg";
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
-                    photoPath = $"/uploads/pets/{uniqueFileName}";
+                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                        petDto.Photo,
+                        $"pets/{petId}"
+                    );
+                    photoPath = cloudFrontUrl;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error saving pet photo: {ex.Message}");
+                    Console.WriteLine($"Error uploading pet photo to S3: {ex.Message}");
                 }
+            }
+            // Keep existing CloudFront URL if provided
+            else if (!string.IsNullOrEmpty(petDto.Photo) && petDto.Photo.StartsWith("https://"))
+            {
+                photoPath = petDto.Photo;
             }
 
             var pet = new Pet
@@ -1340,7 +1353,7 @@ public class HomeController : Controller
             };
 
             _db.Pets.Add(pet);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
 
             return Json(new
             {

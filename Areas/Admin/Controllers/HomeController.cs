@@ -3,14 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
 using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
-using PetGroomingAppointmentSystem.Areas.Admin.Services;
+using PetGroomingAppointmentSystem.Services; 
+using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Rendering; // Add this using directive
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 
@@ -19,24 +20,26 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 public class HomeController : Controller
 {
     private readonly DB _db;
-    private readonly IEmailService _emailService;
-    private readonly IPasswordService _passwordService;
-    private readonly IPhoneService _phoneService;
-    private readonly IValidationService _validationService;
+    private readonly AdminServices.IEmailService _emailService;  // Use alias
+    private readonly AdminServices.IPasswordService _passwordService;  // Use alias
+    private readonly AdminServices.IPhoneService _phoneService;  // Use alias
+    private readonly AdminServices.IValidationService _validationService;  // Use alias
+    private readonly IS3StorageService _s3Service;
 
     public HomeController(
-    DB context,
-    IEmailService emailService,
-    IPasswordService passwordService,
-    IPhoneService phoneService,
-    IValidationService validationService)
+        DB context,
+        AdminServices.IEmailService emailService,  // Use alias
+        AdminServices.IPasswordService passwordService,  // Use alias
+        AdminServices.IPhoneService phoneService,  // Use alias
+        AdminServices.IValidationService validationService,  // Use alias
+        IS3StorageService s3Service) 
     {
         _db = context;
         _emailService = emailService;
         _passwordService = passwordService;
         _phoneService = phoneService;
         _validationService = validationService;
-
+        _s3Service = s3Service; 
     }
     public class FieldValidationRequest
     {
@@ -650,23 +653,28 @@ public class HomeController : Controller
         customer.Status = "active";
         customer.LoyaltyPoint = 0;
 
-        // Handle photo upload
+        // ✅ Upload photo to S3 instead of local storage
         if (PhotoUpload != null && PhotoUpload.Length > 0)
         {
-            var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
-
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var filePath = Path.Combine(uploadPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                await PhotoUpload.CopyToAsync(stream);
-            }
+                using var memoryStream = new MemoryStream();
+                await PhotoUpload.CopyToAsync(memoryStream);
+                var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                var contentType = PhotoUpload.ContentType ?? "image/jpeg";
+                var base64Image = $"data:{contentType};base64,{base64String}";
 
-            customer.Photo = "/uploads/" + fileName;
+                var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                    base64Image,
+                    $"customers/{newCustomerId}"
+                );
+                customer.Photo = cloudFrontUrl;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
+                customer.Photo = "/uploads/placeholder.png";
+            }
         }
         else
         {
@@ -695,22 +703,28 @@ public class HomeController : Controller
         dbCustomer.IC = customer.IC;
         dbCustomer.Status = customer.Status;
 
+        // ✅ Upload new photo to S3 if provided
         if (PhotoUpload != null && PhotoUpload.Length > 0)
         {
-            var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
-
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var filePath = Path.Combine(uploadPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                await PhotoUpload.CopyToAsync(stream);
-            }
+                using var memoryStream = new MemoryStream();
+                await PhotoUpload.CopyToAsync(memoryStream);
+                var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                var contentType = PhotoUpload.ContentType ?? "image/jpeg";
+                var base64Image = $"data:{contentType};base64,{base64String}";
 
-            dbCustomer.Photo = "/uploads/" + fileName;
+                var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                    base64Image,
+                    $"customers/{customerId}"
+                );
+                dbCustomer.Photo = cloudFrontUrl;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
+                // Keep existing photo if S3 upload fails
+            }
         }
 
         await _db.SaveChangesAsync();
@@ -736,7 +750,14 @@ public class HomeController : Controller
     // ========== ADD PET TO CUSTOMER ==========
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddPetToCustomer(string customerId, string petName, string petType, string petBreed, int? petAge, string petRemark)
+    public async Task<IActionResult> AddPetToCustomer(
+        string customerId, 
+        string petName, 
+        string petType, 
+        string petBreed, 
+        int? petAge, 
+        string petRemark,
+        IFormFile petPhotoUpload) // ✅ Add photo parameter
     {
         try
         {
@@ -745,7 +766,7 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Customer ID and Pet Name are required" });
             }
 
-            // Generate sequential PetId (P001, P002, etc.) - same as Customer side
+            // Generate sequential PetId (P001, P002, etc.)
             int nextNumber = 1;
 
             var existingPetIds = await _db.Pets
@@ -761,22 +782,48 @@ public class HomeController : Controller
                     .Max() + 1;
             }
 
+            var petId = $"P{nextNumber:D3}";
+            string? photoPath = null;
+
+            // ✅ Upload photo to S3 if provided
+            if (petPhotoUpload != null && petPhotoUpload.Length > 0)
+            {
+                try
+                {
+                    using var memoryStream = new MemoryStream();
+                    await petPhotoUpload.CopyToAsync(memoryStream);
+                    var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                    var contentType = petPhotoUpload.ContentType ?? "image/jpeg";
+                    var base64Image = $"data:{contentType};base64,{base64String}";
+
+                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                        base64Image,
+                        $"pets/{petId}"
+                    );
+                    photoPath = cloudFrontUrl;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error uploading pet photo to S3: {ex.Message}");
+                }
+            }
+
             var pet = new Pet
             {
-                PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
+                PetId = petId,
                 Name = petName,
                 Type = petType,
                 Breed = petBreed,
                 Age = petAge,
                 Remark = petRemark,
                 CustomerId = customerId,
-                Photo = "/images/pet-placeholder.png"
+                Photo = photoPath ?? "/images/pet-placeholder.png"
             };
 
             _db.Pets.Add(pet);
             await _db.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Pet added successfully" });
+            return Json(new { success = true, message = "Pet added successfully", petId = petId, photo = pet.Photo });
         }
         catch (Exception ex)
         {
@@ -845,7 +892,14 @@ public class HomeController : Controller
     // ========== UPDATE PET ==========
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdatePet(string petId, string petName, string petType, string petBreed, int? petAge, string petRemark)
+    public async Task<IActionResult> UpdatePet(
+        string petId, 
+        string petName, 
+        string petType, 
+        string petBreed, 
+        int? petAge, 
+        string petRemark,
+        IFormFile petPhotoUpload) // ✅ Add photo parameter
     {
         try
         {
@@ -866,9 +920,33 @@ public class HomeController : Controller
             pet.Age = petAge;
             pet.Remark = petRemark;
 
+            // ✅ Upload new photo to S3 if provided
+            if (petPhotoUpload != null && petPhotoUpload.Length > 0)
+            {
+                try
+                {
+                    using var memoryStream = new MemoryStream();
+                    await petPhotoUpload.CopyToAsync(memoryStream);
+                    var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                    var contentType = petPhotoUpload.ContentType ?? "image/jpeg";
+                    var base64Image = $"data:{contentType};base64,{base64String}";
+
+                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                        base64Image,
+                        $"pets/{petId}"
+                    );
+                    pet.Photo = cloudFrontUrl;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error uploading pet photo to S3: {ex.Message}");
+                    // Keep existing photo if S3 upload fails
+                }
+            }
+
             await _db.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Pet updated successfully" });
+            return Json(new { success = true, message = "Pet updated successfully", photo = pet.Photo });
         }
         catch (Exception ex)
         {
@@ -961,7 +1039,7 @@ public class HomeController : Controller
                 TempData["ErrorMessage"] = "An error occurred. The number of selected pets must match the number of selected services. Please try again.";
                 return RedirectToAction(nameof(Appointment));
             }
-    
+
             try
             {
                 var newAppointments = new List<Appointment>();
@@ -1102,10 +1180,10 @@ public class HomeController : Controller
                                 TempData["ErrorMessage"] = "The selected service is invalid or has no duration.";
                                 return RedirectToAction(nameof(Appointment));
                             }
-    
+
                             var appointmentEndTime = appointmentStartTime.AddMinutes(service.DurationTime.Value);
                             string assignedGroomerId = null;
-    
+
                             // Case 1: A specific groomer is selected
                             if (!string.IsNullOrEmpty(model.StaffId) && model.StaffId != "any")
                             {
@@ -1113,7 +1191,7 @@ public class HomeController : Controller
                                     a.StaffId == model.StaffId &&
                                     a.AppointmentDateTime < appointmentEndTime &&
                                     a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-    
+
                                 if (isBusy)
                                 {
                                     var groomer = await _db.Staffs.FindAsync(model.StaffId);
@@ -1127,39 +1205,39 @@ public class HomeController : Controller
                                 var availableGroomers = await _db.Staffs
                                     .Where(s => s.Position.Contains("Groomer"))
                                     .ToListAsync();
-    
+
                                 foreach (var groomer in availableGroomers)
                                 {
                                     bool isBusy = await _db.Appointments.AnyAsync(a =>
                                         a.StaffId == groomer.UserId &&
                                         a.AppointmentDateTime < appointmentEndTime &&
                                         a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-    
+
                                     if (!isBusy)
                                     {
                                         assignedGroomerId = groomer.UserId;
                                         break; // Found an available groomer
                                     }
                                 }
-    
+
                                 if (assignedGroomerId == null)
                                 {
                                     TempData["ErrorMessage"] = $"No groomers are available for the appointment at {appointmentStartTime:MMM dd, hh:mm tt}. Please choose another time.";
                                     return RedirectToAction(nameof(Appointment));
                                 }
                             }
-    
+
                             // Create the single appointment
                             while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
                             var newAppointmentId = "AP" + nextIdNum.ToString("D3");
-                            
+
                             string currentAdminId = HttpContext.Session.GetString("AdminId");
                             if (string.IsNullOrEmpty(currentAdminId))
                             {
                                 TempData["ErrorMessage"] = "Your session has expired. Please log in again.";
                                 return RedirectToAction(nameof(Appointment));
                             }
-    
+
                             newAppointments.Add(new Appointment
                             {
                                 AppointmentId = newAppointmentId,
@@ -1174,7 +1252,7 @@ public class HomeController : Controller
                                 DurationTime = service.DurationTime.Value,
                                 CreatedAt = DateTime.Now
                             });
-    
+
                             // Since we've handled the single pet case completely, we can skip the rest of the logic.
                             // The final save logic is outside this 'else' block.
                         }
@@ -1185,106 +1263,106 @@ public class HomeController : Controller
                         }
                     }
                     // This 'else' now correctly handles only the "Any" mode for multiple pets
-                    else 
+                    else
                     {
-                    var sequentialStartTimeForAny = appointmentStartTime;
+                        var sequentialStartTimeForAny = appointmentStartTime;
 
-                    // 1. 获取所有美容师及其当天的预约
-                    var groomers = await _db.Staffs
-                        .Where(s => s.Position.Contains("Groomer"))
-                        .Include(s => s.Appointments.Where(a => a.AppointmentDateTime.Value.Date == appointmentStartTime.Date))
-                        .ThenInclude(a => a.Service)
-                        .ToListAsync();
+                        // 1. 获取所有美容师及其当天的预约
+                        var groomers = await _db.Staffs
+                            .Where(s => s.Position.Contains("Groomer"))
+                            .Include(s => s.Appointments.Where(a => a.AppointmentDateTime.Value.Date == appointmentStartTime.Date))
+                            .ThenInclude(a => a.Service)
+                            .ToListAsync();
 
-                    if (!groomers.Any())
-                    {
-                        TempData["ErrorMessage"] = "No groomers are configured in the system.";
-                        return RedirectToAction(nameof(Appointment));
-                    }
-
-                    // 2. 模拟分配过程
-                    foreach (var petId in model.PetId)
-                    {
-                        if (!model.PetServiceMap.TryGetValue(petId, out var serviceId)) continue;
-
-                        var service = await _db.Services.FindAsync(serviceId);
-                        if (service == null || !service.DurationTime.HasValue) continue;
-
-                        var appointmentEndTime = sequentialStartTimeForAny.AddMinutes(service.DurationTime.Value);
-                        string assignedGroomerId = null;
-
-                        // 寻找一个能接这个单的美容师
-                        foreach (var groomer in groomers.OrderBy(g => g.Appointments.Count)) // 优先分配给预约较少的美容师
+                        if (!groomers.Any())
                         {
-                            // 检查该美容师的现有预约 + 已临时分配的预约
-                            var existingBookings = groomer.Appointments.Select(a => (
-                                Start: a.AppointmentDateTime.Value,
-                                End: a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) // Use DurationTime from Appointment
-                            ))
-                                .ToList();
+                            TempData["ErrorMessage"] = "No groomers are configured in the system.";
+                            return RedirectToAction(nameof(Appointment));
+                        }
 
-                            bool isAvailable = !existingBookings.Any(b =>
-                                sequentialStartTimeForAny < b.End && appointmentEndTime > b.Start
-                            );
+                        // 2. 模拟分配过程
+                        foreach (var petId in model.PetId)
+                        {
+                            if (!model.PetServiceMap.TryGetValue(petId, out var serviceId)) continue;
 
-                            if (isAvailable)
+                            var service = await _db.Services.FindAsync(serviceId);
+                            if (service == null || !service.DurationTime.HasValue) continue;
+
+                            var appointmentEndTime = sequentialStartTimeForAny.AddMinutes(service.DurationTime.Value);
+                            string assignedGroomerId = null;
+
+                            // 寻找一个能接这个单的美容师
+                            foreach (var groomer in groomers.OrderBy(g => g.Appointments.Count)) // 优先分配给预约较少的美容师
                             {
-                                assignedGroomerId = groomer.UserId;
-                                break; // 找到美容师，跳出循环
+                                // 检查该美容师的现有预约 + 已临时分配的预约
+                                var existingBookings = groomer.Appointments.Select(a => (
+                                    Start: a.AppointmentDateTime.Value,
+                                    End: a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) // Use DurationTime from Appointment
+                                ))
+                                    .ToList();
+
+                                bool isAvailable = !existingBookings.Any(b =>
+                                    sequentialStartTimeForAny < b.End && appointmentEndTime > b.Start
+                                );
+
+                                if (isAvailable)
+                                {
+                                    assignedGroomerId = groomer.UserId;
+                                    break; // 找到美容师，跳出循环
+                                }
                             }
+
+                            if (assignedGroomerId == null)
+                            {
+                                TempData["ErrorMessage"] = $"No groomers are available for one of the services starting at {sequentialStartTimeForAny:MMM dd, hh:mm tt}. Please choose another time or assign manually.";
+                                return RedirectToAction(nameof(Appointment));
+                            }
+
+                            // 为这个宠物创建预约
+                            while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
+                            var newAppointmentId = "AP" + nextIdNum.ToString("D3");
+                            usedNumbers.Add(nextIdNum);
+
+                            // Get Admin ID from session
+                            string currentAdminId = HttpContext.Session.GetString("AdminId");
+                            if (string.IsNullOrEmpty(currentAdminId))
+                            {
+                                TempData["ErrorMessage"] = "Your session has expired. Please log in again to create appointments.";
+                                return RedirectToAction(nameof(Appointment));
+                            }
+
+                            var newAppt = new Appointment
+                            {
+                                AppointmentId = newAppointmentId,
+                                CustomerId = model.CustomerId,
+                                PetId = petId,
+                                ServiceId = serviceId,
+                                StaffId = assignedGroomerId,
+                                AppointmentDateTime = sequentialStartTimeForAny,
+                                SpecialRequest = model.SpecialRequest,
+                                Status = "Confirmed",
+                                AdminId = currentAdminId,
+                                CreatedAt = DateTime.Now,
+                                DurationTime = service.DurationTime.Value
+                            };
+                            newAppointments.Add(newAppt);
+                            // 手动将新预约添加到美容师的预约列表中，以便下一次循环检查
+                            // This is safe because we are adding the DurationTime to newAppt
+                            groomers.First(g => g.UserId == assignedGroomerId).Appointments.Add(newAppt);
+
                         }
-
-                        if (assignedGroomerId == null)
-                        {
-                            TempData["ErrorMessage"] = $"No groomers are available for one of the services starting at {sequentialStartTimeForAny:MMM dd, hh:mm tt}. Please choose another time or assign manually.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-
-                        // 为这个宠物创建预约
-                        while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
-                        var newAppointmentId = "AP" + nextIdNum.ToString("D3");
-                        usedNumbers.Add(nextIdNum);
-
-                        // Get Admin ID from session
-                        string currentAdminId = HttpContext.Session.GetString("AdminId");
-                        if (string.IsNullOrEmpty(currentAdminId))
-                        {
-                            TempData["ErrorMessage"] = "Your session has expired. Please log in again to create appointments.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-
-                        var newAppt = new Appointment
-                        {
-                            AppointmentId = newAppointmentId,
-                            CustomerId = model.CustomerId,
-                            PetId = petId,
-                            ServiceId = serviceId,
-                            StaffId = assignedGroomerId,
-                            AppointmentDateTime = sequentialStartTimeForAny,
-                            SpecialRequest = model.SpecialRequest,
-                            Status = "Confirmed",
-                            AdminId = currentAdminId,
-                            CreatedAt = DateTime.Now,
-                            DurationTime = service.DurationTime.Value
-                        };
-                        newAppointments.Add(newAppt);
-                        // 手动将新预约添加到美容师的预约列表中，以便下一次循环检查
-                        // This is safe because we are adding the DurationTime to newAppt
-                        groomers.First(g => g.UserId == assignedGroomerId).Appointments.Add(newAppt);
 
                     }
-
-                }
-                }
-                if (newAppointments.Any())
-                {
-                    _db.Appointments.AddRange(newAppointments);
-                    await _db.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
-                }
-                else
-                {
-                    TempData["WarningMessage"] = "No appointments were created. Please check the service details.";
+                    if (newAppointments.Any())
+                    {
+                        _db.Appointments.AddRange(newAppointments);
+                        await _db.SaveChangesAsync();
+                        TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
+                    }
+                    else
+                    {
+                        TempData["WarningMessage"] = "No appointments were created. Please check the service details.";
+                    }
                 }
             }
             catch (Exception ex)
@@ -2132,8 +2210,8 @@ public class HomeController : Controller
             // ========== SMART ID GENERATION ==========
             var allStaffIds = await _db.Staffs
        .Select(s => s.UserId)
-                 .OrderBy(id => id)
-                 .ToListAsync();
+     .OrderBy(id => id)
+          .ToListAsync();
 
             string newStaffId;
 
@@ -2219,15 +2297,24 @@ public class HomeController : Controller
             try
             {
                 var loginUrl = $"{Request.Scheme}://{Request.Host}/Admin/Auth/Login";
+
+                // Defensive check: if another staff (different id) already has this email, skip sending credentials.
+                bool duplicateAfterSave = await _db.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != newStaffId);
+                if (duplicateAfterSave)
+                {
+                    Console.WriteLine($"[WARN] CreateGroomerAjax: skipping credentials email for {staff.Email} because duplicate exists after save.");
+                    return Json(new { success = true, message = $" Staff {staff.Name} created successfully! (credentials email skipped - duplicate email)", staffId = newStaffId });
+                }
+
                 await _emailService.SendStaffCredentialsEmailAsync(
-      toEmail: staff.Email,
-           staffName: staff.Name,
-           staffId: newStaffId,
-      temporaryPassword: temporaryPassword,
-     email: staff.Email,
-           phone: staff.Phone,
-       loginUrl: loginUrl
-           );
+                    toEmail: staff.Email,
+                    staffName: staff.Name,
+                    staffId: newStaffId,
+                    temporaryPassword: temporaryPassword,
+                    email: staff.Email,
+                    phone: staff.Phone,
+                    loginUrl: loginUrl
+                );
             }
             catch (Exception ex)
             {
@@ -2335,6 +2422,7 @@ public class HomeController : Controller
                         }
                         catch (Exception ex)
                         {
+                            // Log error but don't fail the operation
                             Console.WriteLine($"[WARNING] Failed to delete old photo: {ex.Message}");
                         }
                     }
