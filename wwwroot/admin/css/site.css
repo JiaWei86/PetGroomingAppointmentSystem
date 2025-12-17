@@ -131,6 +131,9 @@ body {
     display: flex;
     flex-direction: column;
     background-color: var(--background-color);
+    overflow-x: hidden; /* ADD THIS */
+    max-width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
+    width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
 }
 
 /* --- 4. Top Bar --- */
@@ -222,10 +225,12 @@ body {
 /* --- 6. Stats Grid (generic cards) --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 24px;
     padding: 0 35px;
     margin-bottom: 35px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .stat-card {
@@ -235,6 +240,8 @@ body {
     box-shadow: var(--shadow-md);
     border-left: 5px solid;
     transition: all 0.3s ease;
+    min-width: 0; /* Prevents grid items from overflowing */
+    overflow: hidden;
 }
 
     .stat-card:hover {
@@ -383,7 +390,7 @@ body {
     padding: 28px;
     border-radius: 12px;
     box-shadow: var(--shadow-md);
-    margin:  35px 35px;
+    margin: 35px 35px;
 }
 
 .panel-header {
@@ -406,7 +413,7 @@ body {
     margin-top: 4px;
 }
 
-/* --- 10. Modal --- */
+/* --- 10. Modal (Confirmation Modal) --- */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -417,21 +424,65 @@ body {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 10000;
 }
 
     .modal-backdrop.show {
         display: flex;
     }
 
-.modal-content {
-    background-color: var(--card-background);
-    padding: 35px;
-    border-radius: 12px;
-    max-width: 550px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    /* Confirmation Modal Content - DO NOT use flex column or height:100% */
+    .modal-backdrop > .modal-content {
+        background-color: var(--card-background);
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 420px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        position: relative;
+        /* Reset any conflicting styles */
+        display: block;
+        height: auto;
+        flex-direction: unset;
+    }
+
+    /* Close button for confirmation modal */
+    .modal-backdrop .close-btn {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #6b7280;
+        cursor: pointer;
+        background: none;
+        border: none;
+        line-height: 1;
+        padding: 0;
+        z-index: 1;
+    }
+
+        .modal-backdrop .close-btn:hover {
+            color: #1f2937;
+        }
+
+/* Confirmation Modal Buttons - Center text in both buttons */
+#confirmModal .btn {
+    justify-content: center;
 }
 
+/* Cancel button specific styling */
+#confirmModal .btn-action {
+    background-color: #e5e7eb;
+    color: #374151;
+    border: none;
+    justify-content: center;
+}
+
+    #confirmModal .btn-action:hover {
+        background-color: #d1d5db;
+    }
 /* --- 11. Generic Form styles --- */
 .form-control {
     width: 100%;
@@ -566,44 +617,81 @@ body {
 }
 
 /* ===== Admin custom styles for panels and add buttons ===== */
-.panel-header-wrapper { display: flex; justify-content: space-between; align-items: center; }
-.btn-add {
- background: #ef8a24;
- color: #fff;
- border: none;
- padding:10px 16px;
- border-radius:8px;
- display: inline-flex;
- align-items: center;
- gap:8px;
- box-shadow: 02px 6px rgba(0, 0, 0, 0.08);
- cursor: pointer;
+.panel-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
-.btn-add i { font-size:20px; }
+
+.btn-add {
+    background: #ef8a24;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 02px 6px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+}
+
+    .btn-add i {
+        font-size: 20px;
+    }
 
 /* Checkbox tile styles to mimic radio-like selectable pills */
-.checkbox-tiles { display: flex; flex-wrap: wrap; gap: 12px; }
-.checkbox-tile {
- display: inline-flex;
- align-items: center;
- padding: 14px 18px; /* larger clickable area */
- border-radius: 10px;
- background: #f3f4f6;
- cursor: pointer;
- border: 1px solid transparent;
- min-width: 120px; /* make tile bigger since only 2 categories */
- min-height: 48px;
- font-size: 16px;
+.checkbox-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
 }
-.checkbox-tile input { width: 18px; height: 18px; margin-right: 12px; flex: 0 0 auto; }
-.checkbox-tile span { flex: 1 1 auto; }
-.checkbox-tile.selected { background: #ef8a24; color: #fff; border-color: #ef8a24; }
-.checkbox-tile:hover { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06); }
-.checkbox-tile:focus-within { outline: 2px solid rgba(239, 138, 36, 0.18); }
+
+.checkbox-tile {
+    display: inline-flex;
+    align-items: center;
+    padding: 14px 18px; /* larger clickable area */
+    border-radius: 10px;
+    background: #f3f4f6;
+    cursor: pointer;
+    border: 1px solid transparent;
+    min-width: 120px; /* make tile bigger since only 2 categories */
+    min-height: 48px;
+    font-size: 16px;
+}
+
+    .checkbox-tile input {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        flex: 0 0 auto;
+    }
+
+    .checkbox-tile span {
+        flex: 1 1 auto;
+    }
+
+    .checkbox-tile.selected {
+        background: #ef8a24;
+        color: #fff;
+        border-color: #ef8a24;
+    }
+
+    .checkbox-tile:hover {
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    }
+
+    .checkbox-tile:focus-within {
+        outline: 2px solid rgba(239, 138, 36, 0.18);
+    }
 
 /* Small responsive tweak */
 @media (max-width: 480px) {
- .checkbox-tile { min-width: 100px; padding: 10px 12px; font-size: 14px; }
+    .checkbox-tile {
+        min-width: 100px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
 }
 
 /* ====== CUSTOMER MANAGEMENT & PROFILE PAGES ====== */
@@ -767,66 +855,12 @@ body {
     margin: auto;
 }
 
-.modal-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px;
-    border-bottom: 1px solid #e5e7eb;
-    flex-shrink: 0;
-}
-
-.modal-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-color);
-}
-
-.modal-close-btn {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    color: #6b7280;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-}
-
-    .modal-close-btn:hover {
-        color: var(--text-color);
-        background-color: #f3f4f6;
-        border-radius: 6px;
+    /* Only apply flex layout to modal-content INSIDE modal-dialog */
+    .modal-dialog > .modal-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
-
-.modal-body {
-    flex: 1;
-    padding: 24px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    min-height: 0;
-}
-
-.modal-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #e5e7eb;
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    flex-shrink: 0;
-}
 
 /* --- 33. Modal Tabs --- */
 .modal-tabs {
