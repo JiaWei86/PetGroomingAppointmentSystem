@@ -615,5 +615,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             Random random = new Random();
             return random.Next(100000, 999999).ToString();
         }
+
+        public IActionResult Logout()
+        {
+            // Clear all session data
+            HttpContext.Session.Clear();
+            
+            // Redirect to Login page
+            return RedirectToAction("Index", "Home", new { area = "Customer" });
+        }
     }
 }
