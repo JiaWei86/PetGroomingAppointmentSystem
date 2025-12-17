@@ -25,5 +25,10 @@ namespace PetGroomingAppointmentSystem.Services
         /// Send generic email
         /// </summary>
         Task SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true);
+
+        /// <summary>
+        /// Send verification code email (used for Forgot Password)
+        /// </summary>
+        Task SendVerificationCodeEmailAsync(string toEmail, string toName, string code);
     }
 }

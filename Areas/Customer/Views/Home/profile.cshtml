@@ -53,6 +53,12 @@
     </div>
 }
 
+@* Add a hidden form to generate the Anti-Forgery Token for AJAX requests *@
+<form id="antiForgeryForm" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+
 <div class="bradcam_area breadcam_bg">
     <div class="container">
         <div class="row">
@@ -613,6 +619,7 @@
 
 <canvas id="webcamCanvas" style="display:none;"></canvas>
 
+@section Scripts {
 <script>
     // ========== STATUS CONTROL VARIABLES ==========
     const customerStatus = '@customerStatus';
@@ -1169,13 +1176,30 @@
 
     function deletePet(petId, petName) {
         if (!checkStatusBeforeAction('delete pet')) return;
-        
         if (!confirm(`Delete ${petName}?`)) return;
         const formData = new FormData();
         formData.append('petId', petId);
+        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
         fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => { if (data.success) location.reload(); });
+        .then(async response => {
+            const text = await response.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error('DeletePet error response:', data);
+                    alert(data.message || 'Delete failed');
+                }
+            } catch (err) {
+                console.error('Failed to parse DeletePet response as JSON:', text, err);
+                alert('Server error while deleting pet. See console for details.');
+            }
+        })
+        .catch(err => {
+            console.error('DeletePet request failed:', err);
+            alert('Request failed. See console for details.');
+        });
     }
 
     function previewPetPhoto(event) {
@@ -1212,5 +1236,4 @@
         });
     });
 </script>
-
-
+}

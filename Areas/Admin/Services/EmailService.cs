@@ -118,6 +118,24 @@ public class EmailService : IEmailService
         await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
     }
 
+    public async Task SendVerificationCodeEmailAsync(string toEmail, string toName, string code)
+ {
+ var subject = "Your Verification Code";
+ var htmlBody = $@"
+ <html>
+ <body style='font-family: Arial, sans-serif;'>
+ <h2 style='color: #ff9500;'>Verification Code</h2>
+ <p>Hello {toName},</p>
+ <p>Your verification code is: <strong style='font-size:18px;'>{code}</strong></p>
+ <p>This code will expire shortly. If you did not request this, please ignore this email.</p>
+ <hr />
+ <p style='color:#999; font-size:12px;'>Pet Grooming Appointment System</p>
+ </body>
+ </html>";
+
+ await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
+ }
+
     public async Task SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true)
     {
         try

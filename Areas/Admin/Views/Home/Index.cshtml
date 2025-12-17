@@ -389,4 +389,21 @@
         DashboardChart.init(window.dashboardChartData);
         DashboardCalendar.init(appointmentData);
     });
+
+    // ========== ADD LOGOUT CONFIRMATION ==========
+    // This script finds logout links for both Admin and Staff and adds a confirmation dialog.
+    // It is best placed in a shared layout file, but adding it to the dashboard ensures it's loaded on login.
+    document.addEventListener('DOMContentLoaded', function () {
+        // Find links pointing to AdminLogout or StaffLogout
+        const logoutLinks = document.querySelectorAll('a[href*="/Admin/Auth/AdminLogout"], a[href*="/Admin/Auth/StaffLogout"]');
+
+        logoutLinks.forEach(link => {
+            link.addEventListener('click', function (event) {
+                if (!confirm('Are you sure you want to log out?')) {
+                    event.preventDefault(); // Stop the navigation if the user clicks "Cancel"
+                }
+            });
+        });
+    });
+
 </script>

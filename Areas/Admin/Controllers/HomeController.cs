@@ -18,7 +18,7 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 [AdminOnly]
 public class HomeController : Controller
 {
-    private readonly DB _context;
+    private readonly DB _db;
     private readonly IEmailService _emailService;
     private readonly IPasswordService _passwordService;
     private readonly IPhoneService _phoneService;
@@ -31,7 +31,7 @@ public class HomeController : Controller
     IPhoneService phoneService,
     IValidationService validationService)
     {
-        _context = context;
+        _db = context;
         _emailService = emailService;
         _passwordService = passwordService;
         _phoneService = phoneService;
@@ -61,10 +61,10 @@ public class HomeController : Controller
  var firstDayOfLastMonth = firstDayOfCurrentMonth.AddMonths(-1);
  var lastDayOfLastMonth = firstDayOfCurrentMonth.AddDays(-1);
 
- int currentMonthAppointments = await _context.Appointments
+ int currentMonthAppointments = await _db.Appointments
  .CountAsync(a => a.AppointmentDateTime >= firstDayOfCurrentMonth && a.AppointmentDateTime < firstDayOfCurrentMonth.AddMonths(1));
 
- int lastMonthAppointments = await _context.Appointments
+ int lastMonthAppointments = await _db.Appointments
  .CountAsync(a => a.AppointmentDateTime >= firstDayOfLastMonth && a.AppointmentDateTime < firstDayOfCurrentMonth);
 
  viewModel.TotalAppointments.Count = currentMonthAppointments;
@@ -78,10 +78,10 @@ public class HomeController : Controller
  }
 
  // 活跃美容师数量
- viewModel.ActiveGroomers.Count = await _context.Staffs.CountAsync(s => s.Role == "staff");
+ viewModel.ActiveGroomers.Count = await _db.Staffs.CountAsync(s => s.Role == "staff");
 
  // 总顾客数量 (替换了原来的"待处理预约")
- viewModel.PendingAppointments.Count = await _context.Customers.CountAsync();
+ viewModel.PendingAppointments.Count = await _db.Customers.CountAsync();
 
 
  // --- 2. 填充忠诚度积分 (Loyalty Points) ---
@@ -90,11 +90,11 @@ public class HomeController : Controller
  var endOfWeek = startOfWeek.AddDays(7);
 
  // 假设每次完成的预约都奖励10个积分
- viewModel.LoyaltyPoints.AwardedThisWeek = await _context.Appointments
+ viewModel.LoyaltyPoints.AwardedThisWeek = await _db.Appointments
  .CountAsync(a => a.Status == "Completed" && a.AppointmentDateTime >= startOfWeek && a.AppointmentDateTime < endOfWeek) * 10;
 
  // 活跃会员数 (假设为总顾客数)
- viewModel.LoyaltyPoints.ActiveMembers = await _context.Customers.CountAsync();
+ viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers.CountAsync();
 
  // 假设每次使用礼品兑换都消耗500积分
  viewModel.LoyaltyPoints.RedeemedThisWeek = 0; // 您需要一个礼品兑换记录表来计算这个值
@@ -104,7 +104,7 @@ public class HomeController : Controller
 
  // 周视图 (过去7天)
  var last7Days = Enumerable.Range(0, 7).Select(i => now.AddDays(-i).Date).Reverse().ToList();
- var weeklyData = await _context.Appointments
+ var weeklyData = await _db.Appointments
  .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
  .GroupBy(a => a.AppointmentDateTime.Value.Date)
  .Select(g => new { Date = g.Key, Count = g.Count() })
@@ -126,7 +126,7 @@ public class HomeController : Controller
  {
  var weekStart = firstDayOfCurrentMonth.AddDays(i * 7);
  var weekEnd = weekStart.AddDays(7);
- int weekCount = await _context.Appointments
+ int weekCount = await _db.Appointments
  .CountAsync(a => a.AppointmentDateTime >= weekStart && a.AppointmentDateTime < weekEnd);
  monthData.Add(weekCount);
  }
@@ -135,7 +135,7 @@ public class HomeController : Controller
  // 日视图 (今天按小时)
  var todayStart = now.Date.AddHours(9); // 9 AM
  var todayEnd = now.Date.AddHours(17); // 5 PM
- var hourlyData = await _context.Appointments
+ var hourlyData = await _db.Appointments
  .Where(a => a.AppointmentDateTime >= todayStart && a.AppointmentDateTime < todayEnd)
  .GroupBy(a => a.AppointmentDateTime.Value.Hour)
  .Select(g => new { Hour = g.Key, Count = g.Count() })
@@ -156,7 +156,7 @@ public class HomeController : Controller
  var calendarStartDate = firstDayOfCurrentMonth.AddMonths(-1);
  var calendarEndDate = firstDayOfCurrentMonth.AddMonths(2);
 
- viewModel.AppointmentsForCalendar = await _context.Appointments
+ viewModel.AppointmentsForCalendar = await _db.Appointments
  .Where(a => a.AppointmentDateTime >= calendarStartDate && a.AppointmentDateTime < calendarEndDate)
  .Include(a => a.Pet)
  .Include(a => a.Staff)
@@ -211,8 +211,8 @@ public class HomeController : Controller
                     }
                     // If StaffId is provided (edit mode), exclude it from the check.
                     isDuplicate = string.IsNullOrEmpty(request.StaffId)
-                        ? await _context.Staffs.AnyAsync(s => s.IC == valueToCheck)
-                        : await _context.Staffs.AnyAsync(s => s.IC == valueToCheck && s.UserId != request.StaffId);
+                        ? await _db.Staffs.AnyAsync(s => s.IC == valueToCheck)
+                        : await _db.Staffs.AnyAsync(s => s.IC == valueToCheck && s.UserId != request.StaffId);
 
                     if (isDuplicate)
                     {
@@ -227,8 +227,8 @@ public class HomeController : Controller
                     }
                     // If StaffId is provided (edit mode), exclude it from the check.
                     isDuplicate = string.IsNullOrEmpty(request.StaffId)
-                        ? await _context.Staffs.AnyAsync(s => s.Email.ToLower() == valueToCheck.ToLower())
-                        : await _context.Staffs.AnyAsync(s => s.Email.ToLower() == valueToCheck.ToLower() && s.UserId != request.StaffId);
+                        ? await _db.Staffs.AnyAsync(s => s.Email.ToLower() == valueToCheck.ToLower())
+                        : await _db.Staffs.AnyAsync(s => s.Email.ToLower() == valueToCheck.ToLower() && s.UserId != request.StaffId);
 
                     if (isDuplicate)
                     {
@@ -244,8 +244,8 @@ public class HomeController : Controller
                     }
                     // If StaffId is provided (edit mode), exclude it from the check.
                     isDuplicate = string.IsNullOrEmpty(request.StaffId)
-                        ? await _context.Staffs.AnyAsync(s => s.Phone == formattedPhone)
-                        : await _context.Staffs.AnyAsync(s => s.Phone == formattedPhone && s.UserId != request.StaffId);
+                        ? await _db.Staffs.AnyAsync(s => s.Phone == formattedPhone)
+                        : await _db.Staffs.AnyAsync(s => s.Phone == formattedPhone && s.UserId != request.StaffId);
 
                     if (isDuplicate)
                     {
@@ -278,7 +278,7 @@ public class HomeController : Controller
     public async Task<IActionResult> Groomer()
     {
         ViewData["ActivePage"] = "Groomer";
-        var groomers = await _context.Staffs
+        var groomers = await _db.Staffs
             .OrderByDescending(s => s.UserId)
     .ToListAsync();
         return View(groomers);
@@ -307,7 +307,7 @@ public class HomeController : Controller
             }
 
             // ========== SMART ID GENERATION ==========
-            var allStaffIds = await _context.Staffs
+            var allStaffIds = await _db.Staffs
   .Select(s => s.UserId)
      .OrderBy(id => id)
           .ToListAsync();
@@ -390,8 +390,8 @@ public class HomeController : Controller
             staff.Description = staff.Description ?? "";
 
             // Add to Staffs
-            _context.Staffs.Add(staff);
-            await _context.SaveChangesAsync();
+            _db.Staffs.Add(staff);
+            await _db.SaveChangesAsync();
 
             // ========== SEND EMAIL WITH CREDENTIALS USING EMAIL SERVICE ==========
             try
@@ -399,7 +399,7 @@ public class HomeController : Controller
                 var loginUrl = $"{Request.Scheme}://{Request.Host}/Admin/Auth/Login";
 
                 // Defensive check: if another staff (different id) already has this email, skip sending credentials.
-                bool duplicateAfterSave = await _context.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != newStaffId);
+                bool duplicateAfterSave = await _db.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != newStaffId);
                 if (duplicateAfterSave)
                 {
                     Console.WriteLine($"[WARN] CreateGroomerAjax: skipping credentials email for {staff.Email} because duplicate exists after save.");
@@ -430,7 +430,7 @@ public class HomeController : Controller
         {
             if (string.IsNullOrEmpty(editStaffId)) return NotFound();
 
-            var dbStaff = await _context.Staffs.FindAsync(editStaffId);
+            var dbStaff = await _db.Staffs.FindAsync(editStaffId);
             if (dbStaff == null) return NotFound();
 
             // ========== VALIDATE INPUTS USING VALIDATION SERVICE =========
@@ -505,7 +505,7 @@ public class HomeController : Controller
                 dbStaff.Photo = "/uploads/" + fileName;
             }
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $" Groomer '{staff.Name}' updated successfully!";
             return RedirectToAction(nameof(Groomer));
         }
@@ -515,18 +515,18 @@ public class HomeController : Controller
         {
             if (string.IsNullOrEmpty(deleteStaffId)) return NotFound();
 
-            var dbStaff = await _context.Staffs.FindAsync(deleteStaffId);
-            if (dbStaff == null) return NotFound();
+            var dbStaff = await _db.Staffs.FindAsync(deleteStaffId);
+            if (dbStaff == null) return NotFound();     
 
-            _context.Staffs.Remove(dbStaff);
-            await _context.SaveChangesAsync();
+            _db.Staffs.Remove(dbStaff);
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = " Staff deleted successfully!";
 
             return RedirectToAction(nameof(Groomer));
         }
 
         // Fallback
-        var allGroomers = await _context.Staffs.OrderByDescending(s => s.UserId).ToListAsync();
+        var allGroomers = await _db.Staffs.OrderByDescending(s => s.UserId).ToListAsync();
         return View(allGroomers);
     }
 
@@ -883,7 +883,7 @@ public class HomeController : Controller
  {
  ViewData["ActivePage"] = "Appointment";
  // Base query
- var query = _context.Appointments
+ var query = _db.Appointments
  .Include(a => a.Customer)
  .Include(a => a.Pet)
  .Include(a => a.Staff)
@@ -914,11 +914,11 @@ public class HomeController : Controller
  var appointments = await query.OrderByDescending(a => a.AppointmentDateTime).ToListAsync();
 
         // Load lookup data for the ViewModel
-        var staffList = await _context.Staffs
+        var staffList = await _db.Staffs
             .Select(s => new SelectListItem { Value = s.UserId, Text = s.Name })
             .ToListAsync();
 
-        var customerList = await _context.Customers
+        var customerList = await _db.Customers
             .OrderBy(c => c.Name)
             .Select(c => new SelectListItem { Value = c.UserId, Text = c.Name + " (" + c.Phone + ")" })
             .ToListAsync();
@@ -976,7 +976,7 @@ public class HomeController : Controller
                     {
                         if (model.PetServiceMap.TryGetValue(petId, out var serviceId))
                         {
-                            var service = await _context.Services.FindAsync(serviceId);
+                            var service = await _db.Services.FindAsync(serviceId);
                             if (service?.DurationTime.HasValue ?? false)
                             {
                                 totalDuration += service.DurationTime.Value;
@@ -1011,7 +1011,7 @@ public class HomeController : Controller
                         {
                             if (model.PetServiceMap.TryGetValue(petGroomerPair.Key, out var serviceId))
                             {
-                                var service = await _context.Services.FindAsync(serviceId);
+                                var service = await _db.Services.FindAsync(serviceId);
                                 if (service?.DurationTime.HasValue ?? false)
                                 {
                                     totalDurationForGroomer += service.DurationTime.Value;
@@ -1021,14 +1021,14 @@ public class HomeController : Controller
                         var finalEndTime = appointmentStartTime.AddMinutes(totalDurationForGroomer);
                         if (finalEndTime.TimeOfDay > new TimeSpan(16, 30, 0))
                         {
-                            var groomer = await _context.Staffs.FindAsync(groomerId);
+                            var groomer = await _db.Staffs.FindAsync(groomerId);
                             TempData["ErrorMessage"] = $"The total duration for services assigned to {groomer?.Name} exceeds the closing time of 4:30 PM.";
                             return RedirectToAction(nameof(Appointment));
                         }
                     }
                 }
                 // 优化ID生成：一次性获取所有ID
-                var allAppointmentIds = await _context.Appointments.Select(a => a.AppointmentId).ToListAsync();
+                var allAppointmentIds = await _db.Appointments.Select(a => a.AppointmentId).ToListAsync();
                 var usedNumbers = allAppointmentIds
                     .Where(id => !string.IsNullOrEmpty(id) && id.StartsWith("AP"))
                     .Select(id => int.TryParse(id.Substring(2), out var n) ? n : -1)
@@ -1044,19 +1044,19 @@ public class HomeController : Controller
                     {
                         if (!model.PetServiceMap.TryGetValue(petId, out var serviceId) || !model.PetGroomerMap.TryGetValue(petId, out var groomerId)) continue;
 
-                        var service = await _context.Services.FindAsync(serviceId);
+                        var service = await _db.Services.FindAsync(serviceId);
                         if (service == null || !service.DurationTime.HasValue) continue;
 
                         var appointmentEndTime = appointmentStartTime.AddMinutes(service.DurationTime.Value);
 
-                        bool isBusy = await _context.Appointments.AnyAsync(a =>
+                        bool isBusy = await _db.Appointments.AnyAsync(a =>
                             a.StaffId == groomerId &&
                             a.AppointmentDateTime < appointmentEndTime &&
                             a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
 
                         if (isBusy)
                         {
-                            var groomer = await _context.Staffs.FindAsync(groomerId);
+                            var groomer = await _db.Staffs.FindAsync(groomerId);
                             TempData["ErrorMessage"] = $"Groomer '{groomer?.Name}' is not available at the selected time for one of the pets. Please check availability.";
                             return RedirectToAction(nameof(Appointment));
                         }
@@ -1096,7 +1096,7 @@ public class HomeController : Controller
                         var petId = model.PetId.First();
                         if (model.PetServiceMap.TryGetValue(petId, out var serviceId) && !string.IsNullOrEmpty(serviceId))
                         {
-                            var service = await _context.Services.FindAsync(serviceId);
+                            var service = await _db.Services.FindAsync(serviceId);
                             if (service == null || !service.DurationTime.HasValue)
                             {
                                 TempData["ErrorMessage"] = "The selected service is invalid or has no duration.";
@@ -1109,14 +1109,14 @@ public class HomeController : Controller
                             // Case 1: A specific groomer is selected
                             if (!string.IsNullOrEmpty(model.StaffId) && model.StaffId != "any")
                             {
-                                bool isBusy = await _context.Appointments.AnyAsync(a =>
+                                bool isBusy = await _db.Appointments.AnyAsync(a =>
                                     a.StaffId == model.StaffId &&
                                     a.AppointmentDateTime < appointmentEndTime &&
                                     a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
     
                                 if (isBusy)
                                 {
-                                    var groomer = await _context.Staffs.FindAsync(model.StaffId);
+                                    var groomer = await _db.Staffs.FindAsync(model.StaffId);
                                     TempData["ErrorMessage"] = $"Groomer '{groomer?.Name}' is unavailable at the selected time.";
                                     return RedirectToAction(nameof(Appointment));
                                 }
@@ -1124,13 +1124,13 @@ public class HomeController : Controller
                             }
                             else // Case 2: "Any Available Groomer" is selected
                             {
-                                var availableGroomers = await _context.Staffs
+                                var availableGroomers = await _db.Staffs
                                     .Where(s => s.Position.Contains("Groomer"))
                                     .ToListAsync();
     
                                 foreach (var groomer in availableGroomers)
                                 {
-                                    bool isBusy = await _context.Appointments.AnyAsync(a =>
+                                    bool isBusy = await _db.Appointments.AnyAsync(a =>
                                         a.StaffId == groomer.UserId &&
                                         a.AppointmentDateTime < appointmentEndTime &&
                                         a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
@@ -1190,7 +1190,7 @@ public class HomeController : Controller
                     var sequentialStartTimeForAny = appointmentStartTime;
 
                     // 1. 获取所有美容师及其当天的预约
-                    var groomers = await _context.Staffs
+                    var groomers = await _db.Staffs
                         .Where(s => s.Position.Contains("Groomer"))
                         .Include(s => s.Appointments.Where(a => a.AppointmentDateTime.Value.Date == appointmentStartTime.Date))
                         .ThenInclude(a => a.Service)
@@ -1207,7 +1207,7 @@ public class HomeController : Controller
                     {
                         if (!model.PetServiceMap.TryGetValue(petId, out var serviceId)) continue;
 
-                        var service = await _context.Services.FindAsync(serviceId);
+                        var service = await _db.Services.FindAsync(serviceId);
                         if (service == null || !service.DurationTime.HasValue) continue;
 
                         var appointmentEndTime = sequentialStartTimeForAny.AddMinutes(service.DurationTime.Value);
@@ -1278,8 +1278,8 @@ public class HomeController : Controller
                 }
                 if (newAppointments.Any())
                 {
-                    _context.Appointments.AddRange(newAppointments);
-                    await _context.SaveChangesAsync();
+                    _db.Appointments.AddRange(newAppointments);
+                    await _db.SaveChangesAsync();
                     TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
                 }
                 else
@@ -1306,7 +1306,7 @@ public class HomeController : Controller
             }
 
             // 2. 查找预约并验证状态转换规则
-            var appointmentToUpdate = await _context.Appointments.FindAsync(model.EditAppointmentId);
+            var appointmentToUpdate = await _db.Appointments.FindAsync(model.EditAppointmentId);
 
             if (appointmentToUpdate == null)
             {
@@ -1324,7 +1324,7 @@ public class HomeController : Controller
             // 4. 更新预约信息
             appointmentToUpdate.Status = model.Status; // 允许更新状态
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $"Appointment {appointmentToUpdate.AppointmentId} has been successfully updated!";
         }
     
@@ -1350,7 +1350,7 @@ public class HomeController : Controller
             double totalDuration = 0;
             foreach (var petServicePair in model.PetServiceMap)
             {
-                var service = await _context.Services.FindAsync(petServicePair.Value);
+                var service = await _db.Services.FindAsync(petServicePair.Value);
                 if (service?.DurationTime.HasValue ?? false)
                 {
                     totalDuration += service.DurationTime.Value;
@@ -1366,7 +1366,7 @@ public class HomeController : Controller
             }
 
             // Check for conflicts with existing appointments
-            bool isBusy = await _context.Appointments.AnyAsync(a =>
+            bool isBusy = await _db.Appointments.AnyAsync(a =>
                 a.StaffId == model.StaffId &&
                 a.AppointmentDateTime < finalEndTime &&
                 a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
@@ -1385,7 +1385,7 @@ public class HomeController : Controller
             {
                 if (model.PetGroomerMap.TryGetValue(petServicePair.Key, out var groomerId) && !string.IsNullOrEmpty(groomerId))
                 {
-                    var service = await _context.Services.FindAsync(petServicePair.Value);
+                    var service = await _db.Services.FindAsync(petServicePair.Value);
                     if (service?.DurationTime.HasValue ?? false)
                     {
                         if (!groomerChecks.ContainsKey(groomerId))
@@ -1408,14 +1408,14 @@ public class HomeController : Controller
                     return Json(new { isValid = false, field = "StaffId", message = $"Services for one groomer exceed closing time." });
                 }
 
-                bool isBusy = await _context.Appointments.AnyAsync(a =>
+                bool isBusy = await _db.Appointments.AnyAsync(a =>
                     a.StaffId == groomerId &&
                     a.AppointmentDateTime < finalEndTime &&
                     a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
 
                 if (isBusy)
                 {
-                    var groomer = await _context.Staffs.FindAsync(groomerId);
+                    var groomer = await _db.Staffs.FindAsync(groomerId);
                     return Json(new { isValid = false, field = "StaffId", message = $"Groomer '{groomer?.Name}' is unavailable at this time." });
                 }
             }
@@ -1437,7 +1437,7 @@ public class HomeController : Controller
     public async Task<IActionResult> RedeemGift()
     {
         ViewData["ActivePage"] = "RedeemGift";
-        var gifts = await _context.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
+        var gifts = await _db.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
         return View(gifts);
     }
 
@@ -1455,7 +1455,7 @@ public class HomeController : Controller
         if (actionType == "add")
         {
             // ========== SMART ID GENERATION ==========
-            var allGiftIds = await _context.RedeemGifts
+            var allGiftIds = await _db.RedeemGifts
                 .Select(g => g.GiftId)
                 .OrderBy(id => id)
                 .ToListAsync();
@@ -1500,7 +1500,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(gift.AdminId))
             {
                 ViewData["Error"] = "? Unable to save: Admin is not logged in. Please login again.";
-                var list = await _context.RedeemGifts
+                var list = await _db.RedeemGifts
                     .OrderByDescending(g => g.GiftId)
                     .ToListAsync();
                 return View(list);
@@ -1522,8 +1522,8 @@ public class HomeController : Controller
                 gift.Photo = "/uploads/placeholder.png";
             }
 
-            _context.RedeemGifts.Add(gift);
-            await _context.SaveChangesAsync();
+            _db.RedeemGifts.Add(gift);
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $" Gift '{gift.Name}' created successfully!";
             return RedirectToAction(nameof(RedeemGift));
         }
@@ -1532,7 +1532,7 @@ public class HomeController : Controller
         else if (actionType == "edit")
         {
             if (editGiftId == null) return NotFound();
-            var dbGift = await _context.RedeemGifts.FindAsync(editGiftId);
+            var dbGift = await _db.RedeemGifts.FindAsync(editGiftId);
             if (dbGift == null) return NotFound();
 
             dbGift.Name = gift.Name;
@@ -1553,7 +1553,7 @@ public class HomeController : Controller
                 dbGift.Photo = "/uploads/" + fileName;
             }
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $" Gift '{gift.Name}' updated successfully!";
             return RedirectToAction(nameof(RedeemGift));
         }
@@ -1562,16 +1562,16 @@ public class HomeController : Controller
         else if (actionType == "delete")
         {
             if (deleteGiftId == null) return NotFound();
-            var dbGift = await _context.RedeemGifts.FindAsync(deleteGiftId);
+            var dbGift = await _db.RedeemGifts.FindAsync(deleteGiftId);
             if (dbGift == null) return NotFound();
-            _context.RedeemGifts.Remove(dbGift);
-            await _context.SaveChangesAsync();
+            _db.RedeemGifts.Remove(dbGift);
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = " Gift deleted successfully!";
             return RedirectToAction(nameof(RedeemGift));
         }
 
         // --- FALLBACK ---
-        var gifts = await _context.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
+        var gifts = await _db.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
         return View(gifts);
     }
 
@@ -1580,7 +1580,7 @@ public class HomeController : Controller
     public async Task<IActionResult> Service(string ServiceName, string Category, string Status, string editId)
     {
         ViewData["ActivePage"] = "Service";
-        var query = _context.Services
+        var query = _db.Services
             .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
             .AsQueryable();
 
@@ -1596,7 +1596,7 @@ public class HomeController : Controller
         var services = await query.OrderByDescending(s => s.ServiceId).ToListAsync();
 
         // Load categories for dropdowns in the view
-        var categories = await _context.ServiceCategories.OrderBy(c => c.CategoryId).ToListAsync();
+        var categories = await _db.ServiceCategories.OrderBy(c => c.CategoryId).ToListAsync();
         ViewBag.ServiceCategories = categories;
 
         // Pass editId to view
@@ -1627,7 +1627,7 @@ public class HomeController : Controller
             }
 
             // Generate ServiceId
-            var allServiceIds = await _context.Services
+            var allServiceIds = await _db.Services
                 .Select(s => s.ServiceId)
                 .ToListAsync();
 
@@ -1668,7 +1668,7 @@ public class HomeController : Controller
             service.ServiceId = newServiceId;
             service.AdminId = adminId;
             service.Status = service.Status ?? "Active";
-            _context.Services.Add(service);
+            _db.Services.Add(service);
 
             // ===== CREATE SSC =====
             var selectedCats = SelectedCategories?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).Distinct().ToList() ?? new List<string>();
@@ -1678,7 +1678,7 @@ public class HomeController : Controller
             if (!selectedCats.Any())
             {
                 // No categories selected, just save the service
-                await _context.SaveChangesAsync();
+                await _db.SaveChangesAsync();
                 return RedirectToAction(nameof(Service));
             }
 
@@ -1701,8 +1701,8 @@ public class HomeController : Controller
                 sscEntries.Add(ssc);
             }
 
-            _context.ServiceServiceCategories.AddRange(sscEntries);
-            await _context.SaveChangesAsync();
+            _db.ServiceServiceCategories.AddRange(sscEntries);
+            await _db.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"Service '{service.Name}' created successfully!";
 
@@ -1714,7 +1714,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(editServiceId))
                 return NotFound();
 
-            var dbService = await _context.Services
+            var dbService = await _db.Services
                 .Include(s => s.ServiceServiceCategories)
                 .FirstOrDefaultAsync(s => s.ServiceId == editServiceId);
 
@@ -1729,8 +1729,8 @@ public class HomeController : Controller
             // Remove old SSC
             if (dbService.ServiceServiceCategories.Any())
             {
-                _context.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
-                await _context.SaveChangesAsync();
+                _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
+                await _db.SaveChangesAsync();
             }
 
             // Add new SSC
@@ -1755,10 +1755,10 @@ public class HomeController : Controller
                     TempData[$"Debug_SSC_Edit_{catId}"] = $"catId: {catId}, newSscId: {newSscId}"; sscEntries.Add(ssc);
                 }
 
-                _context.ServiceServiceCategories.AddRange(sscEntries);
+                _db.ServiceServiceCategories.AddRange(sscEntries);
             }
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
             TempData["SuccessMessage"] = $"Service '{service.Name}' updated successfully!";
             return RedirectToAction(nameof(Service));
@@ -1770,7 +1770,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(deleteServiceId))
                 return NotFound();
 
-            var dbService = await _context.Services
+            var dbService = await _db.Services
  .Include(s => s.ServiceServiceCategories)
  .FirstOrDefaultAsync(s => s.ServiceId == deleteServiceId);
             if (dbService == null)
@@ -1779,11 +1779,11 @@ public class HomeController : Controller
             // Remove related junction rows first to avoid FK constraint errors
             if (dbService.ServiceServiceCategories != null && dbService.ServiceServiceCategories.Any())
             {
-                _context.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
+                _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
             }
 
-            _context.Services.Remove(dbService);
-            await _context.SaveChangesAsync();
+            _db.Services.Remove(dbService);
+            await _db.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Service deleted successfully!";
             return RedirectToAction(nameof(Service));
@@ -1809,15 +1809,15 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Invalid appointment id." });
             }
 
-            var dbAppointment = await _context.Appointments.FindAsync(appointmentId);
+            var dbAppointment = await _db.Appointments.FindAsync(appointmentId);
 
             if (dbAppointment == null)
             {
                 return Json(new { success = false, message = "Appointment not found." });
             }
 
-            _context.Appointments.Remove(dbAppointment);
-            await _context.SaveChangesAsync();
+            _db.Appointments.Remove(dbAppointment);
+            await _db.SaveChangesAsync();
 
             return Json(new { success = true, message = "Appointment deleted successfully." });
         }
@@ -1837,7 +1837,7 @@ public class HomeController : Controller
 
         if (string.IsNullOrWhiteSpace(term))
         {
-            customers = await _context.Customers
+            customers = await _db.Customers
                 .Where(c => c.Status == "Active")
                 .OrderBy(c => c.Name)
                 .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
@@ -1846,7 +1846,7 @@ public class HomeController : Controller
         }
         else
         {
-            customers = await _context.Customers
+            customers = await _db.Customers
                 .Where(c => c.Name.Contains(term) || c.Phone.Contains(term) || c.Email.Contains(term))
                 .OrderBy(c => c.Name)
                 .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
@@ -1873,7 +1873,7 @@ public class HomeController : Controller
             var startDate = new DateTime(year, month, 1);
             var endDate = startDate.AddMonths(1);
 
-            var bookingCounts = await _context.Appointments
+            var bookingCounts = await _db.Appointments
                 .Where(a => a.AppointmentDateTime >= startDate && a.AppointmentDateTime < endDate && a.Status != "Cancelled")
                 .GroupBy(a => a.AppointmentDateTime.Value.Date)
                 .Select(g => new {
@@ -1903,7 +1903,7 @@ public class HomeController : Controller
             // Adjust endDate to include the whole day
             var adjustedEndDate = endDate.AddDays(1);
 
-            var appointments = await _context.Appointments
+            var appointments = await _db.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.Staff)
                 .Include(a => a.Service)
@@ -2018,7 +2018,7 @@ public class HomeController : Controller
         {
             var adjustedEndDate = endDate.AddDays(1);
 
-            var appointments = await _context.Appointments
+            var appointments = await _db.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.Staff)
                 .Include(a => a.Service)
@@ -2100,7 +2100,7 @@ public class HomeController : Controller
         return Json(new List<object>());
     }
 
-    var services = _context.Services
+    var services = _db.Services
         .Where(s => s.Status == "Active" && s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == petType))
         .Select(s => new { id = s.ServiceId, text = s.Name })
         .ToList();
@@ -2130,7 +2130,7 @@ public class HomeController : Controller
             }
 
             // ========== SMART ID GENERATION ==========
-            var allStaffIds = await _context.Staffs
+            var allStaffIds = await _db.Staffs
        .Select(s => s.UserId)
                  .OrderBy(id => id)
                  .ToListAsync();
@@ -2212,8 +2212,8 @@ public class HomeController : Controller
             staff.Description = staff.Description ?? "";
 
             // Add to Staffs
-            _context.Staffs.Add(staff);
-            await _context.SaveChangesAsync();
+            _db.Staffs.Add(staff);
+            await _db.SaveChangesAsync();
 
             // ========== SEND EMAIL WITH CREDENTIALS USING EMAIL SERVICE ==========
             try
@@ -2268,7 +2268,7 @@ public class HomeController : Controller
                 return Json(new { success = false, errors = new Dictionary<string, string> { { "General", "Staff ID is required." } } });
             }
 
-            var dbStaff = await _context.Staffs.FindAsync(editStaffId);
+            var dbStaff = await _db.Staffs.FindAsync(editStaffId);
             if (dbStaff == null)
             {
                 return Json(new { success = false, errors = new Dictionary<string, string> { { "General", "Staff not found." } } });
@@ -2343,7 +2343,7 @@ public class HomeController : Controller
                 dbStaff.Photo = "/uploads/" + fileName;
             }
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
             return Json(new
             {
@@ -2381,17 +2381,17 @@ public class HomeController : Controller
             switch (field.ToLower())
             {
                 case "ic":
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.IC == value);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.IC == value);
                     break;
 
                 case "email":
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.Email == value);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.Email == value);
                     break;
 
                 case "phone":
                     // Format phone number before checking using PhoneService
                     string formattedPhone = _phoneService.FormatPhoneNumber(value);
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.Phone == formattedPhone);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.Phone == formattedPhone);
                     break;
 
                 default:
@@ -2426,17 +2426,17 @@ public class HomeController : Controller
             switch (field.ToLower())
             {
                 case "ic":
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.IC == value && s.UserId != excludeUserId);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.IC == value && s.UserId != excludeUserId);
                     break;
 
                 case "email":
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.Email == value && s.UserId != excludeUserId);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.Email == value && s.UserId != excludeUserId);
                     break;
 
                 case "phone":
                     // Format phone number before checking using PhoneService
                     string formattedPhone = _phoneService.FormatPhoneNumber(value);
-                    isDuplicate = await _context.Staffs.AnyAsync(s => s.Phone == formattedPhone && s.UserId != excludeUserId);
+                    isDuplicate = await _db.Staffs.AnyAsync(s => s.Phone == formattedPhone && s.UserId != excludeUserId);
                     break;
 
                 default:
@@ -2462,20 +2462,20 @@ public class HomeController : Controller
         try
         {
             // Remove junction rows first
-            var allJunctions = _context.ServiceServiceCategories.ToList();
+            var allJunctions = _db.ServiceServiceCategories.ToList();
             if (allJunctions.Any())
             {
-                _context.ServiceServiceCategories.RemoveRange(allJunctions);
+                _db.ServiceServiceCategories.RemoveRange(allJunctions);
             }
 
             // Then remove services
-            var allServices = _context.Services.ToList();
+            var allServices = _db.Services.ToList();
             if (allServices.Any())
             {
-                _context.Services.RemoveRange(allServices);
+                _db.Services.RemoveRange(allServices);
             }
 
-            await _context.SaveChangesAsync();
+            await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = "All services and service-category links cleared.";
         }
         catch (Exception ex)
@@ -2498,7 +2498,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(serviceId))
                 return Json(new { success = false, message = "Invalid service id." });
 
-            var dbService = await _context.Services
+            var dbService = await _db.Services
             .Include(s => s.ServiceServiceCategories)
             .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
@@ -2508,11 +2508,11 @@ public class HomeController : Controller
             // Remove junction rows first
             if (dbService.ServiceServiceCategories != null && dbService.ServiceServiceCategories.Any())
             {
-                _context.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
+                _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
             }
 
-            _context.Services.Remove(dbService);
-            await _context.SaveChangesAsync();
+            _db.Services.Remove(dbService);
+            await _db.SaveChangesAsync();
 
             return Json(new { success = true, message = "Service deleted successfully.", serviceId = serviceId });
         }
@@ -2544,7 +2544,7 @@ public class HomeController : Controller
             errors["IC"] = "IC number cannot be empty.";
         else if (!_validationService.ValidateICFormat(staff.IC))
             errors["IC"] = "IC number must be in format xxxxxx-xx-xxxx (e.g., 123456-78-9012).";
-        else if (await _context.Staffs.AnyAsync(s => s.IC == staff.IC && s.UserId != staffIdToExclude))
+        else if (await _db.Staffs.AnyAsync(s => s.IC == staff.IC && s.UserId != staffIdToExclude))
             errors["IC"] = "This IC number is already registered.";
 
         // Validate Email using ValidationService
@@ -2552,7 +2552,7 @@ public class HomeController : Controller
             errors["Email"] = "Email cannot be empty.";
         else if (!_validationService.ValidateEmail(staff.Email))
             errors["Email"] = "Please enter a valid email address.";
-        else if (await _context.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != staffIdToExclude))
+        else if (await _db.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != staffIdToExclude))
             errors["Email"] = "This email address is already registered.";
 
         // Format and validate Phone using PhoneService
@@ -2562,7 +2562,7 @@ public class HomeController : Controller
             errors["Phone"] = "Phone number cannot be empty.";
         else if (!_phoneService.ValidatePhoneFormat(formattedPhoneNumber))
             errors["Phone"] = "Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX (e.g., 012-1234567).";
-        else if (await _context.Staffs.AnyAsync(s => s.Phone == formattedPhoneNumber && s.UserId != staffIdToExclude))
+        else if (await _db.Staffs.AnyAsync(s => s.Phone == formattedPhoneNumber && s.UserId != staffIdToExclude))
             errors["Phone"] = "This phone number is already registered.";
         else
             staff.Phone = formattedPhoneNumber; // Update staff object with formatted phone if valid
@@ -2584,7 +2584,7 @@ public class HomeController : Controller
 
         {
 
-            var allExistingIds = await _context.ServiceServiceCategories
+            var allExistingIds = await _db.ServiceServiceCategories
 
                 .Where(x => x.SscId != null && x.SscId.StartsWith(prefix))
 
@@ -2656,7 +2656,7 @@ public class HomeController : Controller
             }
 
             // Order in the database by Name and Type, then project on client to avoid EF translation of string.Format
-            var petsFromDb = await _context.Pets
+            var petsFromDb = await _db.Pets
                 .Where(p => p.CustomerId == customerId)
                 .OrderBy(p => p.Name)
                 .ThenBy(p => p.Type)
