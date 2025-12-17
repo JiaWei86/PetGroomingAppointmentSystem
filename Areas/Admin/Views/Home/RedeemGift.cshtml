@@ -262,7 +262,78 @@
                 if (alertMessage && alertMessage.parentNode) {
                     alertMessage.parentNode.removeChild(alertMessage);
                 }
-            }, 500);
-        }, 5000);
+            },500);
+        },5000);
+    })();
+
+    // Page-local fallbacks if admin.js didn't load or expose helpers
+    (function() {
+     if (typeof window.showConfirmModal === 'function') return; // global available
+
+     window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
+     var modal = document.getElementById('confirmModal');
+     var confirmBtn = document.getElementById('confirmBtn');
+     var confirmIcon = document.getElementById('confirmIcon');
+     var confirmTitle = document.getElementById('confirmTitle');
+     var confirmMessage = document.getElementById('confirmMessage');
+     if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+     // fallback to native confirm
+     if (confirm(message)) { confirmCallback && confirmCallback(); }
+     return;
+     }
+     confirmTitle.textContent = title || 'Confirm';
+     confirmMessage.textContent = message || '';
+     confirmIcon.textContent = icon || 'help_outline';
+     confirmIcon.style.color = iconColor || '#000';
+     modal.classList.add('show');
+     var newBtn = confirmBtn.cloneNode(true);
+     confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+     newBtn.addEventListener('click', function(e) {
+     e.preventDefault();
+     confirmCallback && confirmCallback();
+     modal.classList.remove('show');
+     });
+     };
+
+     window.closeConfirmModal = function() {
+     var modal = document.getElementById('confirmModal');
+     if (modal) modal.classList.remove('show');
+     };
+
+     window.openConfirmModal = function(title, message, cb) {
+     window.showConfirmModal(title, message, 'delete', '#ef4444', cb);
+     };
+
+     window.confirmDelete = function(event, name) {
+     if (event && event.preventDefault) event.preventDefault();
+     var form = (event && event.target) ? event.target : null;
+     window.openConfirmModal('Confirm Delete', 'Are you sure you want to delete "' + name + '"?', function() {
+     if (form) form.submit();
+     });
+     return false;
+     };
+
+     window.confirmAdd = function(event) {
+     if (event && event.preventDefault) event.preventDefault();
+     var form = (event && event.target) ? event.target : null;
+     var name = form && form.querySelector('[name="Name"]') ? form.querySelector('[name="Name"]').value : 'item';
+     window.openConfirmModal('Confirm Add', 'Are you sure you want to add "' + name + '"?', function() {
+     if (form) form.submit();
+     });
+     return false;
+     };
+
+     window.showDynamicAlert = function(message, type) {
+     var existing = document.getElementById('alertMessage');
+     if (existing) existing.remove();
+     var alertDiv = document.createElement('div');
+     alertDiv.id = 'alertMessage';
+     alertDiv.className = 'alert ' + (type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger'));
+     if (type === 'success') alertDiv.innerHTML = '<strong>✔️ Success:</strong> ' + message;
+     else if (type === 'warning') alertDiv.innerHTML = message;
+     else alertDiv.innerHTML = '<strong>❌ Error:</strong> ' + message;
+     document.body.appendChild(alertDiv);
+     setTimeout(function() { alertDiv.classList.add('fade-out'); setTimeout(function(){ if (alertDiv && alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv); },500); },5000);
+     };
     })();
 </script>

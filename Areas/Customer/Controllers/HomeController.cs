@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
@@ -40,12 +40,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             {
                 DogServices = _db.Services
                     .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Dog"))
+                    .Where(s => s.Status == "Active")
+                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == "Dog"))
                     .ToList(),
 
                 CatServices = _db.Services
                     .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Cat"))
+                    .Where(s => s.Status == "Active")
+                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == "Cat"))
                     .ToList(),
 
                 RedeemGifts = _db.RedeemGifts.ToList(),
@@ -195,28 +197,28 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             var dogServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "dog"))
-                .Select(s => new 
+                .Where(s => s.Status == "Active")
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "dog"))
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
-                    price = s.Price,
                     durationTime = s.DurationTime
                 })
                 .ToList();
- 
+
             var catServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "cat"))
-                .Select(s => new 
+                .Where(s => s.Status == "Active")
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "cat"))
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
-                    price = s.Price,
                     durationTime = s.DurationTime
                 })
                 .ToList();
- 
+
             return Json(new { dogServices, catServices });
         }
 
@@ -249,7 +251,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 // Save appointment for each selected pet
                 var appointmentIds = new List<string>();
-                
+
                 foreach (var petId in request.PetIds)
                 {
                     // Verify pet belongs to customer (use userId as CustomerId)
@@ -277,9 +279,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 _db.SaveChanges();
 
-                return Ok(new 
-                { 
-                    success = true, 
+                return Ok(new
+                {
+                    success = true,
                     message = "Appointment(s) booked successfully!",
                     appointmentIds = appointmentIds
                 });
@@ -316,7 +318,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     appointmentId = a.AppointmentId,
                     date = a.AppointmentDateTime?.ToString("MMM dd, yyyy"),
-                    time = a.AppointmentDateTime?.ToString("hh:mm tt"),                         
+                    time = a.AppointmentDateTime?.ToString("hh:mm tt"),
                     petName = a.Pet?.Name,
                     petImage = a.Pet?.Photo,
                     groomerName = a.Staff?.Name ?? "Not assigned",
@@ -440,7 +442,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     petNames = appointment.Pet?.Name,
                     groomerName = appointment.Staff?.Name ?? "Not assigned",
                     serviceName = appointment.Service?.Name,
-                    amount = appointment.Service?.Price ?? 0,
                     status = appointment.Status,
                     notes = appointment.SpecialRequest,
                     durationTime = appointment.DurationTime
@@ -512,7 +513,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 var txtContent = GenerateReceiptTxt(appointment, customer);
                 var fileName = $"Receipt_{appointmentId}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-                
+
                 return File(
                     Encoding.UTF8.GetBytes(txtContent),
                     "text/plain",
@@ -563,23 +564,23 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         private string GenerateReceiptTxt(Appointment appointment, User customer)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("╔════════════════════════════════════════╗");
-            sb.AppendLine("║      PET GROOMING APPOINTMENT RECEIPT   ║");
-            sb.AppendLine("╚════════════════════════════════════════╝");
+            sb.AppendLine("+----------------------------------------+");
+            sb.AppendLine("�      PET GROOMING APPOINTMENT RECEIPT   �");
+            sb.AppendLine("+----------------------------------------+");
             sb.AppendLine();
             sb.AppendLine($"Receipt #:        {appointment.AppointmentId}");
             sb.AppendLine($"Date Issued:      {DateTime.Now:MMM dd, yyyy HH:mm tt}");
             sb.AppendLine();
-            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine("CUSTOMER INFORMATION");
-            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine($"Name:             {customer.Name}");
             sb.AppendLine($"Email:            {customer.Email}");
             sb.AppendLine($"Phone:            {customer.Phone}");
             sb.AppendLine();
-            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine("APPOINTMENT DETAILS");
-            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine($"Date:             {appointment.AppointmentDateTime:MMM dd, yyyy}");
             sb.AppendLine($"Time:             {appointment.AppointmentDateTime:hh:mm tt}");
             sb.AppendLine($"Pet(s):           {appointment.Pet?.Name}");
@@ -590,21 +591,15 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             sb.AppendLine();
             if (!string.IsNullOrEmpty(appointment.SpecialRequest))
             {
-                sb.AppendLine("────────────────────────────────────────");
+                sb.AppendLine("----------------------------------------");
                 sb.AppendLine("SPECIAL REQUESTS");
-                sb.AppendLine("────────────────────────────────────────");
+                sb.AppendLine("----------------------------------------");
                 sb.AppendLine(appointment.SpecialRequest);
                 sb.AppendLine();
             }
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine("AMOUNT");
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine($"Service Cost:     ${appointment.Service?.Price:F2}");
-            sb.AppendLine($"Total Amount:     ${appointment.Service?.Price:F2}");
-            sb.AppendLine();
-            sb.AppendLine("════════════════════════════════════════");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine("Thank you for choosing our service!");
-            sb.AppendLine("════════════════════════════════════════");
+            sb.AppendLine("----------------------------------------");
             sb.AppendLine();
             sb.AppendLine($"Printed: {DateTime.Now:MMM dd, yyyy HH:mm:ss}");
 
@@ -646,7 +641,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 // Customer Section
                 var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
                 document.Add(customerHeader);
-                
+
                 var customerTable = new PdfPTable(2);
                 customerTable.SetWidths(new float[] { 30, 70 });
                 customerTable.AddCell(new PdfPCell(new Phrase("Name:", normalFont)) { Border = 0 });
@@ -693,20 +688,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 document.Add(space);
 
-                // Amount Section
-                var amountHeader = new Paragraph("AMOUNT", headerFont);
-                document.Add(amountHeader);
-
-                var amountTable = new PdfPTable(2);
-                amountTable.SetWidths(new float[] { 70, 30 });
-                amountTable.AddCell(new PdfPCell(new Phrase("Service Cost:", normalFont)) { Border = 0 });
-                amountTable.AddCell(new PdfPCell(new Phrase($"${appointment.Service?.Price:F2}", normalFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
-                amountTable.AddCell(new PdfPCell(new Phrase("Total Amount:", headerFont)) { Border = 0 });
-                amountTable.AddCell(new PdfPCell(new Phrase($"${appointment.Service?.Price:F2}", headerFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
-
-                document.Add(amountTable);
-                document.Add(space);
-
                 var footer = new Paragraph("Thank you for choosing our service!", smallFont);
                 footer.Alignment = Element.ALIGN_CENTER;
                 document.Add(footer);
@@ -720,16 +701,44 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             return "APT" + Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper();
         }
-    }
 
-    // Request model for appointment
-    public class AppointmentRequest
-    {
-        public string Date { get; set; }
-        public string Time { get; set; }
-        public string ServiceId { get; set; }
-        public List<string> PetIds { get; set; } = new();
-        public string Groomer { get; set; }
-        public string Notes { get; set; }
+
+        // This method should ideally be in your Admin area's controller.
+        // It provides customer data for the Select2 AJAX search.
+        [HttpGet]
+        public IActionResult SearchCustomers(string term)
+        {
+            var query = _db.Customers.AsQueryable();
+
+            if (!string.IsNullOrEmpty(term))
+            {
+                query = query.Where(c => c.Name.Contains(term) || c.Email.Contains(term));
+            }
+
+            var customers = query
+                .Select(c => new
+                {
+                    id = c.UserId,
+                    text = c.Name + " (" + c.Email + ")" // Format for Select2
+                })
+                .ToList();
+
+            return Json(new
+            {
+                results = customers
+            });
+
+        }
+
+        // Request model for appointment
+        public class AppointmentRequest
+        {
+            public string Date { get; set; }
+            public string Time { get; set; }
+            public string ServiceId { get; set; }
+            public List<string> PetIds { get; set; } = new();
+            public string Groomer { get; set; }
+            public string Notes { get; set; }
+        }
     }
 }

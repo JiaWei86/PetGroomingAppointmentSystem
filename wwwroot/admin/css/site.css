@@ -605,3 +605,32 @@ body {
 @media (max-width: 480px) {
  .checkbox-tile { min-width: 100px; padding: 10px 12px; font-size: 14px; }
 }
+
+/* Flatpickr dot styling for booking density */
+.flatpickr-day .dot {
+    height: 6px;
+    width: 6px;
+    background-color: #f7a900; /* Default orange if no specific status */
+    border-radius: 50%;
+    display: block;
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.flatpickr-day .dot-green {
+    background-color: #28a745; /* Green for low bookings */
+}
+
+.flatpickr-day .dot-orange {
+    background-color: #fd7e14; /* Orange for medium bookings */
+}
+
+.flatpickr-day .dot-red {
+    background-color: #dc3545; /* Red for high bookings */
+}
+
+.flatpickr-day .dot-black {
+    background-color: #343a40; /* Black for full bookings */
+}

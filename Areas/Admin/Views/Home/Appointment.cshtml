@@ -1,25 +1,332 @@
+﻿@model PetGroomingAppointmentSystem.Models.ViewModels.AppointmentViewModel
+@using PetGroomingAppointmentSystem.Models
 @{
     ViewData["Title"] = "Appointment Management";
     ViewData["ActivePage"] = "Appointment";
+}
+
+@{ string editingId = ViewBag.EditingId as string; }
+@section Styles {
+
+    <style>
+        /* Make Select2 visually match other .form-control inputs */
+        .select2-container--default .select2-selection--single {
+            height: 38px !important;
+            /* match .form-control height */
+            border: 1px solid #ced4da !important;
+            border-radius: 6px !important;
+            box-sizing: border-box !important;
+            padding: 0 12px !important;
+            /* keep horizontal padding only */
+            background-color: #fff !important;
+            position: relative;
+            /* for absolute clear button */
+            display: block;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            /* center text vertically using flex to ensure placeholder sits inside the box */
+            display: flex !important;
+            align-items: center !important;
+            height: 100% !important;
+            margin: 0;
+            padding: 0;
+            /* horizontal padding handled on parent */
+            color: #495057;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Hide the default dropdown arrow so it looks like a text input */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            display: none !important;
+        }
+
+        /* Position the clear (x) nicely inside the box when present */
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            position: absolute !important;
+            right: 10px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            color: #6c757d !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            z-index: 2 !important;
+            display: block !important;
+        }
+
+        /* Reserve space on the right so text doesn't overlap the clear button */
+        .select2-container--default .select2-selection--single.has-clear .select2-selection__rendered,
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-right: 36px !important;
+        }
+
+        /* Focus style to match other inputs */
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #80bdff !important;
+            box-shadow: 0 0.2rem rgba(0, 123, 255, .05) !important;
+        }
+
+        /* Ensure Select2 container takes full width within form-group */
+        .form-grid .form-group .select2-container {
+            width: 100% !important;
+        }
+
+        /* style placeholder appearance when no selection */
+        .select2-container--default .select2-selection--single.is-placeholder .select2-selection__rendered,
+        .select2-container--default .select2-selection--single .select2-selection__rendered.is-placeholder {
+            color: #adb5bd !important;
+        }
+
+        /* Simple styling for pet checkbox list */
+        .pet-list {
+            border: 1px solid #e3e6ea;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 160px;
+            overflow-y: auto;
+            background: #fff;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+            /* When pet list is empty, keep same height as other inputs and show light placeholder */
+            .pet-list.empty {
+                min-height: 38px;
+                /* match .form-control */
+                display: flex;
+                align-items: center;
+                padding-left: 12px;
+                color: #adb5bd;
+                border: 1px solid #ced4da;
+                /* match form-control border when empty */
+                background: #fff;
+            }
+
+            .pet-list .pet-placeholder {
+                color: #adb5bd;
+            }
+
+            .pet-list .pet-item {
+                padding: 4px6px;
+                display: flex;
+                align-items: center;
+            }
+
+                .pet-list .pet-item input[type=checkbox] {
+                    margin-right: 8px;
+                }
+
+        .pet-empty {
+            padding: 8px;
+            color: #6c757d;
+        }
+
+        /* flatpickr small customizations */
+        .flatpickr-input[readonly] {
+            background-color: #fff;
+        }
+
+        .closed-day {
+            color: #212529;
+            font-weight: 600;
+        }
+
+        /* Create a relative context for dot positioning */
+        .flatpickr-day {
+            position: relative;
+        }
+
+            /* Calendar day dots */
+            .flatpickr-day .calendar-dot {
+                position: absolute;
+                bottom: 4px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+            }
+
+        .calendar-dot.dot-green {
+            background: #28a745;
+        }
+
+        .calendar-dot.dot-orange {
+            background: #fd7e14;
+        }
+
+        .calendar-dot.dot-red {
+            background: #dc3545;
+        }
+
+        .calendar-dot.dot-black {
+            background: #212529;
+        }
+
+        /* Placeholder style for service container */
+        .service-placeholder {
+            padding: 8px 12px;
+            margin: 0;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        /* Position the server-rendered alert like RedeemGift (aligned with topbar/sidebar) */
+        #alertMessage {
+            position: fixed;
+            top: 85px; left: calc(var(--sidebar-width) + 35px);
+            right: 35px;
+            z-index: 9999;
+            padding: 24px 32px !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25) !important;
+            animation: slideDown 0.5s ease;
+            border-width: 3px !important;
+        }
+
+            #alertMessage.alert-success {
+                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+                color: #065f46 !important;
+                border-left: 6px solid #10b981 !important;
+            }
+
+            #alertMessage.alert-danger {
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+                color: #991b1b !important;
+                border-left: 6px solid #ef4444 !important;
+            }
+
+            #alertMessage.alert-warning {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+                color: #92400e !important;
+                border-left: 6px solid #f59e0b !important;
+            }
+
+            #alertMessage strong {
+                font-size: 20px !important;
+                margin-right: 8px;
+            }
+
+            #alertMessage.fade-out {
+                animation: fadeOut 0.5s ease forwards;
+            }
+
+        /* Style for Special Request column */
+        .special-request-cell {
+            max-width: 200px; /* Limit width */
+        }
+
+        /* Groomer Assignment Mode - Segmented Control Style */
+        .groomer-mode-selector .radio-group {
+            display: flex;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+            .groomer-mode-selector .radio-group input[type="radio"] {
+                display: none; /* Hide the actual radio button */
+            }
+
+            .groomer-mode-selector .radio-group label {
+                flex: 1;
+                text-align: center;
+                padding: 8px 12px;
+                margin: 0;
+                cursor: pointer;
+                background-color: #f8f9fa;
+                color: #495057;
+                transition: background-color 0.2s ease, color 0.2s ease;
+                border-right: 1px solid #ced4da;
+            }
+
+            .groomer-mode-selector .radio-group label:last-child {
+                border-right: none;
+            }
+
+            .groomer-mode-selector .radio-group input[type="radio"]:checked + label {
+                background-color: var(--primary-color);
+                color: white;
+                font-weight: 600;
+            }
+
+        /* Container for all groomer selection logic */
+        .groomer-selection-container {
+            grid-column: 1 / -1; /* Span full width */
+        }
+
+    </style>
 }
 
 <div class="content-header">
     <h1 class="page-title">Appointment Management</h1>
 </div>
 
+@* ========== Alerts ========== *@
+@if (ViewData["Error"] != null)
+{
+    <div class="alert alert-danger" id="alertMessage">
+        <strong>❌ Error:</strong> @ViewData["Error"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger" id="alertMessage">
+        <strong>❌ Error:</strong> @TempData["ErrorMessage"]
+    </div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" id="alertMessage">
+        <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning" id="alertMessage">
+        @TempData["WarningMessage"]
+    </div>
+}
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width:450px;">
+        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+        <div style="padding:20px0; text-align: center;">
+            <div style="font-size:48px; color: var(--primary-color); margin-bottom:20px;">
+                <i class="material-icons" id="confirmIcon" style="font-size:64px;">help_outline</i>
+            </div>
+            <h3 id="confirmTitle" style="margin-bottom:15px; color: var(--text-color);">Confirm Action</h3>
+            <p id="confirmMessage" style="color: var(--text-light); margin-bottom:30px; font-size:15px;"></p>
+            <div style="display: flex; gap:12px; justify-content: center;">
+                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width:100px;">
+                    Cancel
+                </button>
+                <button id="confirmBtn" class="btn btn-primary" style="min-width:100px;">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Filters Section -->
 <div class="panel">
     <h3 class="panel-title">Filter Appointments</h3>
-    
-    <form method="get" class="form-grid filter-form">
+
+    <form method="get" class="form-grid filter-form" id="filterForm">
         <div class="form-group">
             <label for="filterStatus">Status</label>
             <select id="filterStatus" name="status" class="form-control">
-                <option value="">All Statuses</option>
-                <option value="Confirmed">Confirmed</option>
-                <option value="Pending">Pending</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="" selected="@(string.IsNullOrEmpty(Model.FilterStatus))">All Statuses</option>
+                <option value="Confirmed" selected="@(Model.FilterStatus == "Confirmed")">Confirmed</option>
+                <option value="Completed" selected="@(Model.FilterStatus == "Completed")">Completed</option>
+                <option value="Cancelled" selected="@(Model.FilterStatus == "Cancelled")">Cancelled</option>
             </select>
         </div>
 
@@ -27,14 +334,20 @@
             <label for="filterGroomer">Groomer</label>
             <select id="filterGroomer" name="groomerid" class="form-control">
                 <option value="">All Groomers</option>
-                <option value="1">Anna Lee</option>
-                <option value="2">Mark Chen</option>
+                @if (Model.StaffList != null)
+                {
+                    foreach (var staff in Model.StaffList)
+                    {
+                        <option value="@staff.Value" selected="@(Model.FilterGroomerId == staff.Value)">@staff.Text</option>
+                    }
+                }
             </select>
         </div>
 
         <div class="form-group">
             <label for="filterDate">Date</label>
-            <input type="date" id="filterDate" name="date" class="form-control" />
+            <input type="date" id="filterDate" name="date" class="form-control"
+                   value="@(Model.FilterDate?.ToString("yyyy-MM-dd"))" />
         </div>
 
         <div class="form-group">
@@ -49,7 +362,7 @@
 <div class="panel">
     <div class="panel-header-wrapper">
         <h3 class="panel-title">All Appointments</h3>
-        <button class="btn btn-primary" onclick="showCreateForm()">+ New Appointment</button>
+        <button type="button" id="btnAddAppointment" class="btn btn-primary">+ New Appointment</button>
     </div>
 
     <table class="data-table">
@@ -58,151 +371,182 @@
                 <th>Appointment ID</th>
                 <th>Date & Time</th>
                 <th>Customer Name</th>
-                <th>Pet Name</th>
+                <th>Pet</th>
                 <th>Pet Type</th>
                 <th>Groomer</th>
                 <th>Service</th>
                 <th>Status</th>
+                <th class="special-request-cell">Special Request</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            <!-- Appointment 1 -->
-            <tr>
-                <td>#APT001</td>
-                <td>Dec 29, 2025 - 09:00 AM</td>
-                <td>John Doe</td>
-                <td>Buddy</td>
-                <td>Dog</td>
-                <td>Anna Lee</td>
-                <td>Full Groom</td>
-                <td><span class="status-tag active">Confirmed</span></td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(1)">Edit</button>
-                </td>
-            </tr>
+            @if (Model.Appointments != null && Model.Appointments.Any())
+            {
+                foreach (var appointment in Model.Appointments)
+                {
+                    if (false) // Disable server-side inline edit rendering, will be handled by JS
+                    {
+                        <!-- Inline Edit Row -->
+                        <tr class="inline-edit-row" style="background-color: #fffbeb;">
+                            <form asp-action="Appointment" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="actionType" value="edit" />
+                                <input type="hidden" name="EditAppointmentId" value="@appointment.AppointmentId" />
+                                <!-- Pass filter values back to maintain view state -->
+                                <input type="hidden" name="FilterStatus" value="@Model.FilterStatus" />
+                                <input type="hidden" name="FilterGroomerId" value="@Model.FilterGroomerId" />
+                                <input type="hidden" name="FilterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" />
 
-            <!-- Appointment 2 -->
-            <tr>
-                <td>#APT002</td>
-                <td>Dec 30, 2025 - 10:30 AM</td>
-                <td>Sarah Johnson</td>
-                <td>Whiskers</td>
-                <td>Cat</td>
-                <td>Mark Chen</td>
-                <td>Bath & Trim</td>
-                <td><span class="status-tag active">Confirmed</span></td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(2)">Edit</button>
-                </td>
-            </tr>
-
-            <!-- Appointment 3 -->
-            <tr>
-                <td>#APT003</td>
-                <td>Jan 02, 2026 - 02:00 PM</td>
-                <td>Michael Smith</td>
-                <td>Max</td>
-                <td>Dog</td>
-                <td>Anna Lee</td>
-                <td>Nail Trim</td>
-                <td><span class="status-tag inactive">Pending</span></td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(3)">Edit</button>
-                </td>
-            </tr>
-
-            <!-- Appointment 4 -->
-            <tr>
-                <td>#APT004</td>
-                <td>Dec 28, 2025 - 03:30 PM</td>
-                <td>Emily Davis</td>
-                <td>Mittens</td>
-                <td>Cat</td>
-                <td>Mark Chen</td>
-                <td>Full Groom</td>
-                <td><span class="status-tag active">Completed</span></td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(4)">Edit</button>
-                </td>
-            </tr>
-
-            <!-- Appointment 5 -->
-            <tr>
-                <td>#APT005</td>
-                <td>Dec 27, 2025 - 11:00 AM</td>
-                <td>Robert Wilson</td>
-                <td>Fluffy</td>
-                <td>Dog</td>
-                <td>Anna Lee</td>
-                <td>Bath Only</td>
-                <td><span class="status-tag inactive">Cancelled</span></td>
-                <td>
-                    <button class="btn btn-sm btn-action edit-btn" onclick="editAppointment(5)">Edit</button>
-                </td>
-            </tr>
+                                <td>@appointment.AppointmentId</td>
+                                <td>@appointment.AppointmentDateTime?.ToString("MMM dd, yyyy - hh:mm tt")</td>
+                                <td>@appointment.Customer?.Name</td>
+                                <td>@appointment.Pet?.Name</td>
+                                <td>@appointment.Pet?.Type</td>
+                                <td>@appointment.Staff?.Name</td>
+                                <td>@appointment.Service?.Name</td>
+                                <td>
+                                    @if (appointment.Status == "Confirmed")
+                                    {
+                                        <select name="Status" class="form-control" style="width: 120px;">
+                                            <option value="Confirmed" selected>Confirmed</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <!-- If status is not 'Confirmed', show as read-only text -->
+                                        <input type="hidden" name="Status" value="@appointment.Status" />
+                                        <span class="status-tag @(appointment.Status?.ToLower())">@appointment.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="confirmAppointmentUpdate(this, '@appointment.AppointmentId')">Save</button>
+                                    <a asp-action="Appointment" asp-all-route-data="@(new Dictionary<string, string> { { "status", Model.FilterStatus }, { "groomerid", Model.FilterGroomerId }, { "date", Model.FilterDate?.ToString("yyyy-MM-dd") } })" class="btn btn-sm btn-secondary">Cancel</a>
+                                </td>
+                            </form>
+                        </tr>
+                    }
+                    else
+                    {
+                        <!-- Normal View Row -->
+                        <tr data-appointment-id="@appointment.AppointmentId" data-special-request="@appointment.SpecialRequest">
+                            <td>@appointment.AppointmentId</td>
+                            <td>@appointment.AppointmentDateTime?.ToString("MMM dd, yyyy - hh:mm tt")</td>
+                            <td>@appointment.Customer?.Name</td>
+                            <td>@appointment.Pet?.Name</td>
+                            <td>@appointment.Pet?.Type</td>
+                            <td>@appointment.Staff?.Name</td>
+                            <td>@appointment.Service?.Name</td>
+                            <td><span class="status-tag @(appointment.Status?.ToLower())">@appointment.Status</span></td>
+                            <td class="special-request-cell">
+                                <div class="truncate-text" title="@appointment.SpecialRequest">@appointment.SpecialRequest</div>
+                            </td>
+                            <td>
+                                @if (appointment.Status == "Confirmed")
+                                {
+                                    <button onclick="enableInlineEdit(this)" class="btn btn-sm btn-action edit-btn">Edit</button>
+                                }
+                                <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(this, '@appointment.AppointmentId')">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="10" class="text-center">No appointments found.</td>
+                </tr>
+            }
         </tbody>
     </table>
 </div>
 
 <!-- Create/Edit Appointment Form -->
-<div class="panel create-form" id="createAppointmentForm">
-    <h3 class="panel-title">Create New Appointment</h3>
+<div class="panel create-form" id="createAppointmentForm" style="display: none;">
+    <h3 class="panel-title" id="formTitle">Create New Appointment</h3>
 
-    <form asp-controller="Home" asp-action="CreateAppointment" method="post" class="form-grid">
-        <div class="form-group">
-            <label for="customerName">Customer Name</label>
-            <input type="text" id="customerName" name="CustomerName" required />
-        </div>
+    <form asp-area="Admin" asp-controller="Home" asp-action="Appointment" method="post" class="form-grid">
+        <input type="hidden" id="actionType" name="actionType" value="create" />
+        <input type="hidden" id="editAppointmentId" name="EditAppointmentId" value="" />
 
-        <div class="form-group">
-            <label for="petName">Pet Name</label>
-            <input type="text" id="petName" name="PetName" required />
-        </div>
+        @Html.AntiForgeryToken()
 
         <div class="form-group">
-            <label for="petType">Pet Type</label>
-            <select id="petType" name="PetType" required>
-                <option value="">Select Pet Type</option>
-                <option value="Dog">Dog</option>
-                <option value="Cat">Cat</option>
+            <label for="customerSearch">Customer Name</label>
+            <select id="customerSearch" name="CustomerId" class="form-control" style="width:100%;" required>
+                <option value=""> Search by name or phone number</option>
+                @if (Model.CustomerList != null) @* Can be replaced with Model.CustomerList if not using AJAX for initial load *@
+                {
+                    foreach (var customer in Model.CustomerList)
+                    {
+                        <option value="@customer.Value">@customer.Text</option>
+                    }
+                }
             </select>
         </div>
 
         <div class="form-group">
-            <label for="appointmentDate">Appointment Date</label>
-            <input type="date" id="appointmentDate" name="AppointmentDate" required />
+            <label for="petId">Pet</label>
+            <div id="petContainer" style="background-color: #f8f9fa; border: 1px solid #ced4da; border-radius: 6px; padding: 8px;">
+                <div id="petList" class="pet-list"></div>
+                <div id="petEmpty" class="pet-empty" style="display:none;">This customer has no pets.</div>
+            </div>
         </div>
 
         <div class="form-group">
-            <label for="appointmentTime">Appointment Time</label>
-            <input type="time" id="appointmentTime" name="AppointmentTime" required />
+            <label for="appointmentDateTime">Appointment Date & Time</label>
+            <input type="text" id="appointmentDateTime" name="AppointmentDateTime" class="form-control"
+                   placeholder="Monday is closed. Available 9:00 AM -4:30 PM" required readonly />
+
+            <small class="error-message" id="error-AppointmentDateTime"></small>
         </div>
 
         <div class="form-group">
-            <label for="groomer">Select Groomer</label>
-            <select id="groomer" name="GroomerId" required>
-                <option value="">Select a Groomer</option>
-                <option value="1">Anna Lee - Dog Styling, Senior Care</option>
-                <option value="2">Mark Chen - Cat Grooming, Nail Trimming</option>
-            </select>
+            <label for="serviceId">Service</label>
+            <div id="serviceSelectContainer">
+                <p class="service-placeholder">Please select a customer and pet first</p>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="serviceType">Service Type</label>
-            <select id="serviceType" name="ServiceType" required>
-                <option value="">Select Service</option>
-                <option value="Full Groom">Full Groom</option>
-                <option value="Bath & Trim">Bath & Trim</option>
-                <option value="Nail Trim">Nail Trim</option>
-                <option value="Bath Only">Bath Only</option>
-                <option value="Styling">Styling</option>
-            </select>
+        <!-- Container for all groomer assignment logic -->
+        <div class="groomer-selection-container">
+            <!-- Groomer selection mode for multiple pets -->
+            <div class="form-group groomer-mode-selector" id="groomer-mode-selector" style="display: none;">
+                @* This will be populated by JS *@
+            </div>
+
+            <div class="form-group" id="single-groomer-select-container">
+                <label for="staffId">Select Groomer</label>
+                <select id="staffId" name="StaffId" class="form-control" required>
+                    <option value="any">Any Available Groomer</option>
+                    @if (Model.StaffList != null)
+                    {
+                        foreach (var staff in Model.StaffList)
+                        {
+                            <option value="@staff.Value">@staff.Text</option>
+                        }
+                    }
+                </select>
+                <small class="error-message" id="error-StaffId"></small>
+            </div>
+
+            <!-- Container for multiple groomer dropdowns -->
+            <div class="form-grid" id="multi-groomer-container" style="display: none;">
+                @* This will be populated by JS *@
+            </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group full-width">
+            <label for="specialRequest">Special Request</label>
+            <textarea id="specialRequest" name="SpecialRequest" class="form-control" rows="4"
+                        placeholder="Add any special notes or instructions..."></textarea>
+        </div>
+
+        <div class="form-group" id="status-group" style="display: none;">
             <label for="status">Status</label>
-            <select id="status" name="Status">
+            <select id="status" name="Status" class="form-control">
                 <option value="Pending">Pending</option>
                 <option value="Confirmed">Confirmed</option>
                 <option value="Completed">Completed</option>
@@ -210,52 +554,708 @@
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="contactEmail">Contact Email</label>
-            <input type="email" id="contactEmail" name="ContactEmail" required />
-        </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success" id="saveAppointmentBtn">Save Appointment</button>
+                <button type="button" class="btn btn-reset" id="btnCancelAddAppointment">Cancel</button>
 
-        <div class="form-group">
-            <label for="contactPhone">Contact Phone</label>
-            <input type="tel" id="contactPhone" name="ContactPhone" required />
-        </div>
-
-        <div class="form-group full-width">
-            <label for="notes">Notes</label>
-            <textarea id="notes" name="Notes" rows="4" placeholder="Add any special notes or instructions..."></textarea>
-        </div>
-
-        <div class="form-actions">
-            <button type="button" class="btn btn-reset" onclick="hideCreateForm()">Cancel</button>
-            <button type="submit" class="btn btn-success">Save Appointment</button>
-        </div>
+            </div>
     </form>
 </div>
 
 @section Scripts {
     <script>
-        function showCreateForm() {
-            document.getElementById('createAppointmentForm').classList.add('visible');
-            document.querySelector('html').style.overflow = 'hidden';
+        // Make the groomer list available to client-side script
+        const groomerList = @Html.Raw(Json.Serialize(Model.StaffList));
+
+        // Note: jQuery, select2 and admin.js are loaded in the shared layout. Do not re-include them here.
+
+        // Fallback/local modal helpers (similar to Groomer.cshtml and Service.cshtml)
+        // This block ensures the modal functions are available even if admin.js doesn't provide them
+        // or if they need to be overridden for specific view behavior.
+        if (typeof window.showConfirmModal !== 'function') {
+            window.showConfirmModal = function (title, message, icon, iconColor, confirmCallback) {
+                // Ensure modal HTML elements exist
+                const modal = document.getElementById('confirmModal');
+                const confirmBtn = document.getElementById('confirmBtn');
+                const confirmIcon = document.getElementById('confirmIcon');
+                const confirmTitle = document.getElementById('confirmTitle');
+                const confirmMessage = document.getElementById('confirmMessage');
+
+                if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+                    // Fallback to native confirm if modal elements are missing
+                    if (confirm(message)) { confirmCallback && confirmCallback(); }
+                    return;
+                }
+
+                confirmTitle.textContent = title;
+                confirmMessage.textContent = message;
+                confirmIcon.textContent = icon || 'help_outline'; // Default icon
+                confirmIcon.style.color = iconColor || '#000'; // Default color
+                modal.classList.add('show');
+
+                // Clone and replace button to remove old event listeners
+                const newConfirmBtn = confirmBtn.cloneNode(true);
+                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                newConfirmBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (typeof confirmCallback === 'function') confirmCallback();
+                    modal.classList.remove('show');
+                });
+            };
+
+            window.closeConfirmModal = function () {
+                const modal = document.getElementById('confirmModal');
+                if (modal) modal.classList.remove('show');
+            };
+
+            // openConfirmModal is a wrapper for showConfirmModal with default delete/warning styling
+            window.openConfirmModal = function (title, message, callback) {
+                window.showConfirmModal(title, message, 'help_outline', '#ef4444', callback); // Using help_outline as default for general confirmation
+            };
+
         }
 
-        function hideCreateForm() {
-            document.getElementById('createAppointmentForm').classList.remove('visible');
-            document.querySelector('html').style.overflow = 'auto';
+        // Function to handle deleting an appointment
+        function deleteAppointment(button, appointmentId) {
+            if (!appointmentId) return;
+
+            // Find the table row to get customer and pet names
+            const row = $(button).closest('tr');
+            const customerName = row.find('td:nth-child(3)').text().trim();
+            const petName = row.find('td:nth-child(4)').text().trim();
+
+            const message = `Are you sure you want to delete the appointment for ${customerName}'s pet (${petName})?`;
+            
+            // Use the global confirmation modal
+            window.showConfirmModal('Confirm Deletion', message, 'delete', '#ef4444', function () {
+                // User confirmed, proceed with AJAX deletion
+                const token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Action("DeleteAppointmentAjax", "Home")',
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: token,
+                        appointmentId: appointmentId
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // On success, remove the table row and show a success alert
+                            $('tr[data-appointment-id="' + appointmentId + '"]').fadeOut(500, function () {
+                                $(this).remove();
+                            });
+                            window.showDynamicAlert(response.message, 'success');
+                        } else {
+                            // On failure, show an error alert
+                            window.showDynamicAlert(response.message, 'danger');
+                        }
+                    },
+                    error: function () {
+                        window.showDynamicAlert('An unexpected error occurred while trying to delete the appointment.', 'danger');
+                    }
+                });
+            });
         }
 
-        function editAppointment(id) {
-            alert('Edit functionality for appointment #' + id + ' would go here');
-            showCreateForm();
+        // Function to confirm updating an appointment status
+        function confirmAppointmentUpdate(button, appointmentId) {
+            const form = $(button).closest('form')[0];
+            if (!form) return;
+
+            const statusSelect = form.querySelector('select[name="Status"]');
+            const newStatus = statusSelect ? statusSelect.value : 'Completed';
+
+            const message = `Are you sure you want to update appointment of ${petName} to "${newStatus}"?`;
+
+            // Use the global confirmation modal
+            window.showConfirmModal('Confirm Update', message, 'save', '#10b981', function () {
+                form.submit();
+            });
         }
 
+        // Function to enable inline editing on a row
+        function enableInlineEdit(button) {
+            var row = $(button).closest('tr');
+            var appointmentId = row.data('appointment-id');
 
+            // Get current data from the row
+            var cells = row.find('td');
+            var statusCell = $(cells[7]);
+            var actionsCell = $(cells[9]);
+            var originalStatusHTML = statusCell.html();
+            var originalActionsHTML = actionsCell.html();
 
-        document.addEventListener('click', function(event) {
-            const form = document.getElementById('createAppointmentForm');
-            if (event.target === form) {
-                hideCreateForm();
+            // Create the editable status dropdown
+            var statusDropdown = $('<select name="Status" class="form-control" style="width: 120px;"></select>')
+                .append('<option value="Confirmed" selected>Confirmed</option>')
+                .append('<option value="Completed">Completed</option>');
+
+            // Create Save and Cancel buttons
+            var saveButton = $('<button type="button" class="btn btn-sm btn-success">Save</button>');
+            var cancelButton = $('<button type="button" class="btn btn-sm btn-secondary">Cancel</button>');
+
+            // Replace cell content with editable controls
+            statusCell.html(statusDropdown);
+            actionsCell.empty().append(saveButton).append(' ').append(cancelButton);
+
+            // Add event listeners for the new buttons
+            saveButton.on('click', function () {
+                var form = $('<form style="display:none;"></form>');
+                form.attr('action', '@Url.Action("Appointment")');
+                form.attr('method', 'post');
+                form.append('@Html.AntiForgeryToken()');
+                form.append('<input type="hidden" name="actionType" value="edit" />');
+                form.append(`<input type="hidden" name="EditAppointmentId" value="${appointmentId}" />`);
+                form.append(`<input type="hidden" name="Status" value="${statusDropdown.val()}" />`);
+                // Append filter values to maintain state after reload
+                form.append(`<input type="hidden" name="FilterStatus" value="@Model.FilterStatus" />`);
+                form.append(`<input type="hidden" name="FilterGroomerId" value="@Model.FilterGroomerId" />`);
+                form.append(`<input type="hidden" name="FilterDate" value="@(Model.FilterDate?.ToString("yyyy-MM-dd"))" />`);
+
+                $('body').append(form);
+
+                // Use the confirmation modal
+                var newStatus = statusDropdown.val();
+                var message = `Are you sure you want to update appointment ${appointmentId} to "${newStatus}"?`;
+                window.showConfirmModal('Confirm Update', message, 'save', '#10b981', function () {
+                    form.submit();
+                });
+            });
+
+            cancelButton.on('click', function () {
+                // Restore original content
+                statusCell.html(originalStatusHTML);
+                actionsCell.html(originalActionsHTML);
+            });
+        }
+
+        $(document).ready(function () {
+            // Show the appointment creation form panel
+            function showAppointmentForm() {
+                const createForm = document.getElementById('createAppointmentForm');
+                const formTitle = document.getElementById('formTitle');
+                const actionType = document.getElementById('actionType');
+                const editIdInput = document.getElementById('editAppointmentId');
+                const customerSearch = $('#customerSearch');
+                const petContainer = $('#petContainer');
+                const statusGroup = $('#status-group');
+
+                if (createForm) {
+                    createForm.style.display = 'block';
+                    formTitle.textContent = 'Create New Appointment';
+                    actionType.value = 'create';
+                    editIdInput.value = '';
+
+                    customerSearch.prop('disabled', false);
+                    petContainer.css('pointer-events', 'auto').css('opacity', '1');
+                    statusGroup.hide();
+
+                    $('#createAppointmentForm form')[0].reset();
+                    customerSearch.val(null).trigger('change');
+                    $('html, body').animate({ scrollTop: $(createForm).offset().top - 80 }, 500);
+                }
+            };
+
+            // Hide the appointment creation form panel
+            function hideAppointmentForm() {
+                const createForm = document.getElementById('createAppointmentForm');
+                if (createForm) createForm.style.display = 'none';
+            };
+
+            var customerDefaultsLoaded = false;
+
+            // Helper: ensure petList shows placeholder box when empty so it matches other inputs
+            function ensurePetListPlaceholder() {
+                var petList = $('#petList');
+                if (!petList || petList.length === 0) return;
+                if (petList.children().length === 0) {
+                    petList.addClass('empty').empty().append('<div class="pet-placeholder">No pets available</div>');
+                } else {
+                    petList.removeClass('empty');
+                }
             }
-        });
+
+            // Initialize petList placeholder on load
+            ensurePetListPlaceholder();
+
+            // Initialize Select2 for AJAX customer search (select2 script loaded in layout)
+            if ($.fn.select2) {
+                var placeholderText = $('#customerSearch option[value=""]').first().text() || 'Search by name or phone number';
+                $('#customerSearch').select2({
+                    placeholder: placeholderText,
+                    minimumInputLength: 0,
+                    allowClear: true,
+                    ajax: {
+                        url: '/Admin/Home/SearchCustomers',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return { term: params.term };
+                        },
+                        processResults: function (data) {
+                            if (data && data.results) return { results: data.results };
+                            return { results: data };
+                        },
+                        cache: true
+                    },
+                    templateSelection: function (data, container) {
+                        if (!data || !data.id) {
+                            $(container).addClass('is-placeholder');
+                        } else {
+                            $(container).removeClass('is-placeholder');
+                        }
+                        return data && data.text ? data.text : '';
+                    },
+                    dropdownParent: $(document.body)
+                });
+            }
+
+            // After Select2 initialization, add a delegated handler to support clearing the selection
+            $(document).on('click', '.select2-selection__clear', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    // Clear Select2 control and trigger change so page logic responds
+                    $('#customerSearch').val(null).trigger('change');
+                    // Clear pet list UI
+                    $('#petList').empty();
+                    $('#petEmpty').hide();
+                    ensurePetListPlaceholder();
+                    // Also clear services when customer is cleared
+                    $('#serviceSelectContainer').empty().html('<p class="service-placeholder">Please select a customer and pet first</p>');
+                    updateGroomerSelectionUI();
+
+                } catch (ex) {
+                    // ignore
+                }
+            });
+
+
+            // On open, load default customers if needed
+            $('#customerSearch').on('select2:open', function (e) {
+                var $select = $(this);
+                if (customerDefaultsLoaded) return;
+                if ($select.find('option').length > 1) { customerDefaultsLoaded = true; return; }
+
+                $.ajax({
+                    url: '/Admin/Home/SearchCustomers',
+                    dataType: 'json',
+                    data: { term: '' },
+                    success: function (resp) {
+                        var list = resp && resp.results ? resp.results : resp;
+                        if (Array.isArray(list) && list.length > 0) {
+                            $.each(list, function (i, c) {
+                                if ($select.find('option[value="' + c.id + '"]').length === 0) {
+                                    var newOption = new Option(c.text, c.id, false, false);
+                                    $select.append(newOption);
+                                }
+                            });
+                            $select.trigger('change.select2');
+                        }
+                        customerDefaultsLoaded = true;
+                    }
+                });
+            });
+
+            // Handle change/select events
+            $('#customerSearch').on('change', function (e) {
+                var selectedCustomerId = $(this).val();
+                if (selectedCustomerId) {
+                    fetchPetsForCustomer(selectedCustomerId);
+                } else {
+                    // Clear pets and show placeholder box
+                    $('#petList').empty();
+                    $('#petEmpty').hide();
+                    ensurePetListPlaceholder();
+                    // Also clear services when customer is cleared
+                    $('#serviceSelectContainer').empty().html('<p class="service-placeholder">Please select a customer and pet first</p>');
+                    updateGroomerSelectionUI();
+                }
+            });
+
+            $('#customerSearch').on('select2:select', function (e) {
+                try {
+                    var sel = e.params && e.params.data && e.params.data.id ? e.params.data.id : $(this).val();
+                    if (sel) fetchPetsForCustomer(sel);
+                } catch (ex) { }
+            });
+
+            // Keep reference to current AJAX request so we can abort previous one to avoid duplicate responses
+            var currentPetRequest = null;
+
+            // Function to fetch and populate pets as checkbox list (tick style)
+            function fetchPetsForCustomer(customerId) {
+                var petList = $('#petList');
+                if (!customerId) return;
+
+                // Abort any previous request to avoid race conditions
+                if (currentPetRequest && typeof currentPetRequest.abort === 'function') {
+                    try { currentPetRequest.abort(); } catch (e) { }
+                }
+
+                // Immediately clear old lists and show loading state
+                petList.empty().append('<div class="pet-placeholder">Loading pets...</div>');
+                $('#serviceSelectContainer').empty().html('<p class="service-placeholder">Please select a pet to see available services</p>');
+
+                currentPetRequest = $.ajax({
+                    url: '@Url.Action("GetPetsByCustomerId", "Home", new { area = "Admin" })',
+                    data: { customerId: customerId },
+                    success: function (pets) {
+                        var list = pets && pets.results ? pets.results : pets;
+                        if (Array.isArray(list) && list.length > 0) {
+                            // On success, first clear the old pet list and service selections
+                            petList.empty().removeClass('empty');
+
+                            $.each(list, function (i, pet) {
+                                var id = pet.id || pet.petId || pet.PetId;
+                                var name = pet.text || pet.name || pet.Name || ('Pet ' + id);
+                                // Skip if we've already added this pet (prevents duplicates when requests race)
+                                if ($('#pet_' + id).length) return;
+
+                                // Get pet type
+                                var petType = pet.type || pet.Type;
+
+                                var item = $('<div class="pet-item"/>');
+                                var checkbox = $('<input/>', {
+                                    type: 'checkbox',
+                                    name: 'PetId',
+                                    value: id,
+                                    id: 'pet_' + id,
+                                    'class': 'form-check-input'
+                                }).data('pet-type', petType); // Store the pet type in a data attribute
+
+                                var label = $('<label/>', { 'for': 'pet_' + id, 'class': 'form-check-label' }).text(name + ' (' + petType + ')');
+                                item.append(checkbox).append(label);
+                                petList.append(item);
+                            });
+                        } else {
+                            // No pets - show light placeholder inside petList so box keeps same size
+                            petList.addClass('empty').empty().append('<div class="pet-placeholder">No pets available</div>');
+                        }
+                    },
+                    error: function (xhr, status) {
+                        if (status !== 'abort') {
+                            // If loading pets fails, also clear services and show a placeholder
+                            petList.addClass('empty').empty().append('<div class="pet-placeholder">Could not load pets</div>');
+                        }
+                    },
+                    complete: function () {
+                        currentPetRequest = null;
+                    }
+                });
+            }
+
+            function generateServiceSelect(petId, petType) {
+                var select = $('<select/>', {
+                    'class': 'form-control service-select',
+                    'name': 'PetServiceMap[' + petId + ']', // Use dictionary-style binding
+                    'required': true
+                });
+
+                select.append($('<option/>', {
+                    'value': '',
+                    'text': 'Select Service'
+                }));
+
+                $.getJSON('@Url.Action("GetServicesByPetType", "Home")', { petType: petType }, function (services) {
+                    $.each(services, function (i, service) {
+                        select.append($('<option/>', {
+                            'value': service.id,
+                            'text': service.text
+                        }));
+                    });
+                });
+
+                return select;
+            }
+
+            // Debounce function to limit how often a function gets called
+            function debounce(func, delay) {
+                let timeout;
+                return function(...args) { const context = this; clearTimeout(timeout); timeout = setTimeout(() => func.apply(context, args), delay); };
+            }
+            // Listen for changes on checkboxes in the pet list
+            $('#petList').on('change', 'input[type="checkbox"]', function () {
+                var $checkbox = $(this);
+                var petId = $checkbox.val();
+                var serviceSelectContainer = $('#serviceSelectContainer');
+                var serviceDivId = 'service-for-pet-' + petId;
+
+                // Clear any previous validation errors when pets change
+                clearAllValidationErrors();
+
+                if ($checkbox.is(':checked')) {
+                    // If a placeholder exists, remove it
+                    if (serviceSelectContainer.find('.service-placeholder').length > 0) {
+                        serviceSelectContainer.empty();
+                    }
+
+                    var petNameAndType = $checkbox.siblings('label').text();
+                    var petName = petNameAndType.split(' (')[0];
+                    var petType = $checkbox.data('pet-type');
+                    var serviceSelect = generateServiceSelect(petId, petType);
+
+                    var label = $('<label/>').text('Service for ' + petName + ' (' + petType + '):');
+                    var div = $('<div/>', { 'class': 'form-group', 'id': serviceDivId });
+                    div.append(label).append(serviceSelect);
+                    serviceSelectContainer.append(div);
+                } else {
+                    // Remove the service select div for the unchecked pet
+                    $('#' + serviceDivId).remove();
+                    if (serviceSelectContainer.children().length === 0) {
+                        serviceSelectContainer.html('<p class="service-placeholder">Please select a pet to see available services</p>');
+                    }
+                }
+
+                // After any change, update the groomer selection UI
+                updateGroomerSelectionUI();
+            });
+
+            function updateGroomerSelectionUI() {
+                var checkedPets = $('#petList input[type="checkbox"]:checked');
+                var groomerModeSelector = $('#groomer-mode-selector');
+                var singleGroomerContainer = $('#single-groomer-select-container');
+                var multiGroomerContainer = $('#multi-groomer-container');
+
+                groomerModeSelector.empty().hide();
+                multiGroomerContainer.empty().hide();
+                singleGroomerContainer.show(); // Show by default
+
+                if (checkedPets.length > 1) {
+                    // Show the mode selector for multiple pets
+                    groomerModeSelector.html(`
+                        <label>Groomer Assignment</label>
+                        <div class="radio-group">
+                            <input type="radio" id="groomer_mode_any" name="GroomerMode" value="any" checked>
+                            <label for="groomer_mode_any">Auto-assign (Any)</label>
+                            <input type="radio" id="groomer_mode_individual" name="GroomerMode" value="individual">
+                            <label for="groomer_mode_individual">Assign Individually</label>
+                        </div>
+                    `).show();
+
+                    // Initially, "Any" is selected, so hide the single groomer dropdown
+                    $('#staffId').val('any').trigger('change'); // Set to 'any'
+                    singleGroomerContainer.hide();
+                }
+                else if (checkedPets.length === 1) {
+                    // When only one pet is selected, ensure GroomerMode is set to 'one'
+                    // This is done by creating a hidden input if the radio group is not visible.
+                    if (groomerModeSelector.find('input[name="GroomerMode"]').length === 0) {
+                        groomerModeSelector.html('<input type="hidden" name="GroomerMode" value="one">');
+                    }
+                    singleGroomerContainer.show();
+                }
+            }
+
+            // Handle groomer assignment mode change
+            $(document).on('change', 'input[name="GroomerMode"]', function() {
+                var mode = $(this).val();
+                var singleGroomerContainer = $('#single-groomer-select-container');
+                var multiGroomerContainer = $('#multi-groomer-container');
+
+                clearAllValidationErrors();
+                multiGroomerContainer.empty().hide();
+
+                if (mode === 'individual') {
+                    singleGroomerContainer.hide(); // Hide the single dropdown
+                    multiGroomerContainer.show();
+                    // Create a dropdown for each selected pet
+                    $('#petList input[type="checkbox"]:checked').each(function() {
+                        var petId = $(this).val();
+                        var petName = $(this).siblings('label').text();
+                        var groomerSelect = generateGroomerSelectForPet(petId, petName);
+                        multiGroomerContainer.append(groomerSelect);
+                    });
+                }
+                else { // 'any'
+                    singleGroomerContainer.hide(); // Hide the single dropdown
+                    $('#staffId').val('any').trigger('change'); // Reset to 'any'
+                }
+            });
+
+            function generateGroomerSelectForPet(petId, petName) {
+                var formGroup = $('<div class="form-group"></div>');
+                var label = $('<label></label>').text('Groomer for ' + petName);
+                var select = $('<select class="form-control" required></select>').attr('name', `PetGroomerMap[${petId}]`);
+                select.append('<option value="" selected>-- Select Groomer --</option>');
+
+                groomerList.forEach(function(staff) {
+                    select.append(`<option value="${staff.value}">${staff.text}</option>`);
+                });
+
+                formGroup.append(label).append(select);
+                return formGroup;
+            }
+
+            // --- Real-time validation logic (moved to a shared scope) ---
+            function showValidationError(field, message) {
+                $('#error-' + field).text(message).show();
+            }
+
+            function clearAllValidationErrors() {
+                $('.error-message').text('').hide();
+            }
+
+            async function validateAppointment() {
+                clearAllValidationErrors();
+
+                const data = {
+                    AppointmentDateTime: $('#appointmentDateTime').val(),
+                    StaffId: $('#staffId').val(),
+                    GroomerMode: $('input[name="GroomerMode"]:checked').val() || 'any',
+                    PetServiceMap: {},
+                    PetGroomerMap: {}
+                };
+
+                // Collect pet-service map
+                $('#petList input[type="checkbox"]:checked').each(function () {
+                    const petId = $(this).val();
+                    const serviceId = $(`[name="PetServiceMap[${petId}]"]`).val();
+                    if (petId && serviceId) {
+                        data.PetServiceMap[petId] = serviceId;
+                    }
+                });
+
+                // Collect individual groomer assignments if in that mode
+                if (data.GroomerMode === 'individual') {
+                    $('[name^="PetGroomerMap"]').each(function() {
+                        var petId = this.name.match(/\[(.*?)\]/)[1];
+                        var groomerId = $(this).val();
+                        if (petId && groomerId) data.PetGroomerMap[petId] = groomerId;
+                    });
+                }
+
+                if (!data.AppointmentDateTime || !data.StaffId || Object.keys(data.PetServiceMap).length === 0) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('@Url.Action("ValidateAppointmentTime", "Home", new { area = "Admin" })', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+
+                    if (!result.isValid) {
+                        showValidationError(result.field || 'StaffId', result.message);
+                    }
+                } catch (error) {
+                    // Don't show a generic error on network failure.
+                    // The validation will run again on the server during submission anyway.
+                }
+            }
+            const debouncedValidateAppointment = debounce(validateAppointment, 800);
+
+
+            // Initialize flatpickr on appointmentDateTime and disable Mondays (weekday1)
+            if (typeof flatpickr !== 'undefined') {
+                (function () {
+                    var appointmentCounts = {};
+
+                    function fetchCounts(year, month, callback) {
+                        $.ajax({
+                            url: '@Url.Action("GetBookingDensity", "Home", new { area = "Admin" })',
+                            data: { year: year, month: month },
+                            dataType: 'json',
+                            success: function (resp) {
+                                appointmentCounts = (resp && resp.counts) ? resp.counts : (resp || {});
+                                if (typeof callback === 'function') callback(appointmentCounts);
+                            },
+                            error: function () {
+                                appointmentCounts = {};
+                                if (typeof callback === 'function') callback(appointmentCounts);
+                            }
+                        });
+                    }
+
+                    function paintDots(fp) {
+                        if (!fp || !fp.daysContainer) return;
+                        var days = fp.daysContainer.querySelectorAll('.flatpickr-day');
+                        days.forEach(function (dayElem) {
+                            var existing = dayElem.querySelector('.calendar-dot');
+                            if (existing) existing.remove();
+                            if (dayElem.classList.contains('prevMonth') || dayElem.classList.contains('nextMonth') || dayElem.classList.contains('disabled')) return;
+                            var dateObj = dayElem.dateObj;
+                            if (!dateObj) return;
+
+                            if (dateObj < new Date().setHours(0, 0, 0, 0)) return;
+
+                            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+                            var count = appointmentCounts[key] || 0;
+
+                            var dot = document.createElement('span');
+                            dot.className = 'calendar-dot';
+
+                            if (count <= 0) dot.classList.add('dot-green');
+                            else if (count <= 2) dot.classList.add('dot-green');
+                            else if (count <= 5) dot.classList.add('dot-orange');
+                            else if (count <= 8) dot.classList.add('dot-red');
+                            else dot.classList.add('dot-black');
+                            dayElem.appendChild(dot);
+                        });
+                    }
+
+                    var fp = flatpickr('#appointmentDateTime', {
+                        enableTime: true,
+                        dateFormat: 'Y-m-d H:i',
+                        altInput: true,
+                        altFormat: 'F j, Y h:i K',
+                        minDate: 'today',
+                        minuteIncrement: 15,
+                        minTime: '09:00',
+                        maxTime: '16:30',
+                        disable: [function (date) { return date.getDay() === 1; }],
+                        onReady: function (selectedDates, dateStr, instance) {
+                            var year = instance.currentYear;
+                            var month = instance.currentMonth + 1;
+                            fetchCounts(year, month, function () { paintDots(instance); });
+                        },
+                        onMonthChange: function (selectedDates, dateStr, instance) {
+                            var year = instance.currentYear;
+                            var month = instance.currentMonth + 1;
+                            fetchCounts(year, month, function () { paintDots(instance); });
+                        },
+                        onYearChange: function (selectedDates, dateStr, instance) {
+                            var year = instance.currentYear;
+                            var month = instance.currentMonth + 1;
+                            fetchCounts(year, month, function () { paintDots(instance); });
+                        },
+                        onChange: function (selectedDates, dateStr, instance) {
+                            clearAllValidationErrors();
+                            paintDots(instance);
+                            debouncedValidateAppointment(); // Trigger validation on change
+                        }
+                    });
+
+                })();
+            }
+
+            // Button handler
+            $('#btnAddAppointment').on('click', function (e) {
+                e.preventDefault();
+                showAppointmentForm(); // This now also resets the form
+            });
+
+            // Reset button handler for filter form
+            $('#filterForm button[type="reset"]').on('click', function (e) {
+                e.preventDefault();
+                // Redirect to the base URL to clear all filters
+                window.location.href = '@Url.Action("Appointment", "Home")';
+            });
+
+            // Cancel button handler for the create form
+            $('#btnCancelAddAppointment').on('click', function(e) {
+                e.preventDefault();
+                hideAppointmentForm();
+            });
+
+            // Trigger validation when groomer or services change
+            $('#staffId').on('change', debouncedValidateAppointment);
+            $('#serviceSelectContainer').on('change', '.service-select', debouncedValidateAppointment);
+            $('#multi-groomer-container').on('change', 'select', debouncedValidateAppointment);
+
+
+        }); // Close $(document).ready
     </script>
 }

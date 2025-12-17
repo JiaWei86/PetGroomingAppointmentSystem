@@ -7,6 +7,8 @@
 
     <link rel="stylesheet" href="~/admin/css/site.css?v=@DateTime.Now.Ticks" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="~/admin/lib/select2.min.css" />
+    <link rel="stylesheet" href="~/admin/lib/flatpickr.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @RenderSection("Styles", required: false)
 </head>
@@ -78,7 +80,7 @@
                         </a>
                     </li>
 
-                    <li style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
+                    <li style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.2); padding-top:20px;">
                         <a href="@Url.Action("AdminLogout", "Auth", new { area = "Admin" })" style="color: #fff;">
                             <i class="material-icons">logout</i> Logout
                         </a>
@@ -105,12 +107,14 @@
         </div>
     </div>
 
-    @RenderSection("Scripts", required: false)
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="~/admin/lib/select2.min.js"></script>
+    <script src="~/admin/lib/flatpickr.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
-            integrity="sha512-YcsIPGdh0IbnCt0A6Ld0JSafpPvM5TIVLSiDS5C7lzuWIe9okT8unU0I4ZgHn6+hWcIYgS4PpXWkU1D92dM1KQ=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 
     <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
+
+    @RenderSection("Scripts", required: false)
 </body>
 </html>
