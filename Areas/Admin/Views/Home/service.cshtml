@@ -8,514 +8,387 @@
 @using PetGroomingAppointmentSystem.Models
 
 @{
-    string editingId = Context.Request.Query["editId"];
-    var editingService = Model.FirstOrDefault(s => s.ServiceId == editingId);
+ string editingId = Context.Request.Query["editId"];
+ var editingService = Model.FirstOrDefault(s => s.ServiceId == editingId);
 }
 
 @section Styles {
-    <style>
-        /* Position the server-rendered alert like RedeemGift (aligned with topbar/sidebar) */
-        #alertMessage, .dynamic-alert {
-            position: fixed;
-            top: 85px;
-            left: calc(var(--sidebar-width) + 35px);
-            right: 35px;
-            z-index: 9999;
-            padding: 24px 32px !important;
-            font-size: 18px !important;
-            font-weight: 600 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-            animation: slideDown 0.5s ease;
-        }
+ <style>
 
-        .dynamic-alert.alert-success {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
-            color: #065f46 !important;
-            border-left: 6px solid #10b981 !important;
-        }
+ /* Position the server-rendered alert like RedeemGift (aligned with topbar/sidebar) */
+ #alertMessage {
+ position: fixed;
+ top: 85px;
+ left: calc(var(--sidebar-width) + 35px);
+ right: 35px;
+ z-index: 9999;
+ padding: 24px 32px !important;
+ font-size: 18px !important;
+ font-weight: 600 !important;
+ border-radius: 12px !important;
+ box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+ animation: slideDown0.5s ease;
+ }
 
-        .dynamic-alert.alert-danger {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
-            color: #991b1b !important;
-            border-left: 6px solid #ef4444 !important;
-        }
+ #alertMessage.alert-success {
+ background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+ color: #065f46 !important;
+ border-left:6px solid #10b981 !important;
+ }
 
-        .dynamic-alert.alert-warning {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-            color: #92400e !important;
-            border-left: 6px solid #f59e0b !important;
-        }
+ #alertMessage.alert-danger {
+ background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+ color: #991b1b !important;
+ border-left:6px solid #ef4444 !important;
+ }
 
-        .dynamic-alert strong {
-            font-size: 20px !important;
-            margin-right: 8px;
-        }
+ #alertMessage.alert-warning {
+ background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+ color: #92400e !important;
+ border-left:6px solid #f59e0b !important;
+ }
 
-        #alertMessage.fade-out, .dynamic-alert.fade-out {
-            animation: fadeOut 0.5s ease forwards;
-        }
+ #alertMessage strong { font-size:20px !important; margin-right:8px; }
+ #alertMessage.fade-out { animation: fadeOut 0.5s ease forwards; }
 
+ /* Rest of existing styles (checkbox tiles, panel, table, etc.) */
+ .panel { margin-top:0; }
+ .checkbox-tiles { display: flex; flex-wrap: wrap; gap:12px; }
+ .checkbox-item { position: relative; display: inline-block; }
+ .checkbox-item input[type="checkbox"] { position: absolute; left:12px; top:50%; transform: translateY(-50%); width:25px; height:18px; opacity:0; z-index:3; cursor: pointer; margin:0; }
+ .checkbox-tile { position: relative; padding:10px18px10px44px; border-radius:10px; background: #f5f7fb; border:1px solid rgba(0,0,0,0.06); color: #111827; min-width:90px; }
+ .checkbox-tile::before { content: ""; position: absolute; left:14px; top:50%; transform: translateY(-50%); width:18px; height:18px; border:2px solid #d1d5db; border-radius:4px; background: #fff; z-index:0; }
+ .checkbox-item input[type="checkbox"]:checked + .checkbox-tile { background: #fffaf6; border-color: #f2d2b2; }
+ .checkbox-item input[type="checkbox"]:checked + .checkbox-tile::before { background-color: #0ea5a9; border-color: #0ea5a9; }
+ .checkbox-item input[type="checkbox"]:checked + .checkbox-tile::after { content: '✔'; position: absolute; left:16px; top:48%; transform: translateY(-50%); font-size:16px; font-weight: bold; color: white; z-index:1; }
+ .checkbox-tile > span { position: relative; z-index:5; padding-left:20px; color: #111827 !important; }
 
+ /* Table/inline edit styles kept as before */
+ .data-table tbody tr td[colspan="7"] { background-color: #fffbeb; padding:0 !important; }
+ .data-table tbody tr td[colspan="7"] table td { padding:16px12px; vertical-align: middle; border-bottom:1px solid #e5e7eb; }
+ .data-table tbody tr td[colspan="7"] .form-control { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
+ .data-table tbody tr td[colspan="7"] .form-control:focus { border-color: var(--primary-color); outline: none; box-shadow:0003px rgba(217,119,6,0.1); }
+ .data-table tbody tr td[colspan="7"] textarea { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
+ .data-table tbody tr td[colspan="7"] .btn-sm { padding:6px12px; font-size:13px; margin-right:5px; }
 
-        /* Lift panel slightly so table aligns like RedeemGift page */
-        .panel {
-            margin-top:0; /* align with RedeemGift */
-        }
+ .data-table tbody tr.inline-edit-row td:nth-child(1) { width:8%; text-align: left; padding-left:20px; }
+ .data-table tbody tr.inline-edit-row td:nth-child(2) { width:22%; }
+ .data-table tbody tr.inline-edit-row td:nth-child(3) { width:18%; }
+ .data-table tbody tr.inline-edit-row td:nth-child(4) { width:12%; }
+ .data-table tbody tr.inline-edit-row td:nth-child(5) { width:10%; }
+ .data-table tbody tr.inline-edit-row td:nth-child(6) { width:18%; }
+ .data-table tbody tr.inline-edit-row td:nth-child(7) { width:12%; text-align: center; }
 
-        /* Checkbox tile visuals (kept lightweight) */
-        .checkbox-tiles { display: flex; flex-wrap: wrap; gap:12px; }
-        .checkbox-item { position: relative; display: inline-block; }
-        .checkbox-item input[type="checkbox"] {
-            position: absolute; left:12px; top:50%; transform: translateY(-50%);
-            width:25px; height:18px; opacity:0; z-index:3; cursor: pointer; margin:0;
-        }
-        .checkbox-tile {
-            position: relative; padding:10px18px10px44px; border-radius:10px;
-            background: #f5f7fb; border:1px solid rgba(0,0,0,0.06); color: #111827; min-width:90px;
-        }
-        .checkbox-tile::before {
-            content: ""; position: absolute; left:14px; top:50%; transform: translateY(-50%);
-            width:18px; height:18px; border:2px solid #d1d5db; border-radius:4px; background: #fff; z-index:0;
-        }
-        .checkbox-item input[type="checkbox"]:checked + .checkbox-tile { background: #fffaf6; border-color: #f2d2b2; }
-        .checkbox-item input[type="checkbox"]:checked + .checkbox-tile::before { background-color: #0ea5a9; border-color: #0ea5a9; }
-
-        .checkbox-tile > span {
-            position: relative;
-            z-index: 5;
-            padding-left: 20px;
-            color: #111827 !important;
-        }
-
-        /* Inline edit specific styles (kept from original) */
-        .data-table tbody tr td[colspan="8"] { background-color: #fffbeb; padding:0 !important; }
-        .data-table tbody tr td[colspan="8"] table td { padding:16px12px; vertical-align: middle; border-bottom:1px solid #e5e7eb; }
-        .data-table tbody tr td[colspan="8"] .form-control { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
-        .data-table tbody tr td[colspan="8"] .form-control:focus { border-color: var(--primary-color); outline: none; box-shadow:0003px rgba(217,119,6,0.1); }
-        .data-table tbody tr td[colspan="8"] .checkbox-tiles { gap:6px; }
-        .data-table tbody tr td[colspan="8"] textarea { width:100%; padding:8px10px; font-size:13px; border:1.5px solid var(--border-color); border-radius:6px; background-color: #ffffff; }
-        .data-table tbody tr td[colspan="8"] .btn-sm { padding:6px12px; font-size:13px; margin-right:5px; }
-
-        .data-table tbody tr.inline-edit-row td:nth-child(1) { width:8%; text-align: left; padding-left:20px; }
-        .data-table tbody tr.inline-edit-row td:nth-child(2) { width:20%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(3) { width:18%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(4) { width:10%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(5) { width:10%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(6) { width:10%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(7) { width:14%; }
-        .data-table tbody tr.inline-edit-row td:nth-child(8) { width:10%; text-align: center; }
-
-        .data-table tbody tr td[colspan="8"] table td { vertical-align: middle; }
-        .data-table tbody tr td[colspan="8"] table td .form-control { margin:0; }
-        .data-table tbody tr td[colspan="8"] table td textarea.form-control { resize: vertical; }
-
-        /* Modal Styles */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 10000; /* Ensure it's on top */
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-backdrop.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 500px;
-            width: 90%;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            color: #666;
-            cursor: pointer;
-        }
-
-        .close-btn:hover {
-            color: #000;
-        }
-    </style>
+ /* Modal Styles */
+ .modal-backdrop { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:10000; align-items: center; justify-content: center; }
+ .modal-backdrop.show { display: flex; }
+ .modal-content { background-color: white; padding:20px; border-radius:8px; max-width:450px; width:90%; position: relative; box-shadow:08px20px rgba(0,0,0,0.3); text-align: center; }
+ .close-btn { position: absolute; top:10px; right:15px; font-size:28px; font-weight: bold; color: #666; cursor: pointer; }
+ .close-btn:hover { color: #000; }
+ </style>
 }
 
 <div class="content-header">
-    <h1 class="page-title">Services Management</h1>
+ <h1 class="page-title">Services Management</h1>
 </div>
 
-@* ========== 消息显示 ========== *@
+@* ========== Alerts ========== *@
 @if (ViewData["Error"] != null)
 {
-    <div class="alert alert-danger dynamic-alert" id="alertMessage">
-        <strong>❌ Error:</strong> @ViewData["Error"]
-    </div>
+ <div class="alert alert-danger" id="alertMessage">
+ <strong>❌ Error:</strong> @ViewData["Error"]
+ </div>
 }
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success dynamic-alert" id="alertMessage">
-        <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
-    </div>
+ <div class="alert alert-success" id="alertMessage">
+ <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
+ </div>
 }
 @if (TempData["WarningMessage"] != null)
 {
-    <div class="alert alert-warning dynamic-alert" id="alertMessage">
-        @TempData["WarningMessage"]
-    </div>
+ <div class="alert alert-warning" id="alertMessage">
+ @TempData["WarningMessage"]
+ </div>
 }
 
 <div class="panel">
-    <div class="panel-header-wrapper">
-        <h3 class="panel-title">Existing Services (@Model?.Count())</h3>
-        <button class="btn btn-primary" id="btnAddService" type="button" onclick="window.showCreateForm()">
-            <i class="material-icons">add</i>
-            <span>Add New Service</span>
-        </button>
-    </div>
+ <div class="panel-header-wrapper">
+ <h3 class="panel-title">Existing Services (@Model?.Count())</h3>
+ <button class="btn btn-primary" id="btnAddService" type="button" onclick="window.showCreateForm()">
+ <i class="material-icons">add</i>
+ <span>Add New Service</span>
+ </button>
+ </div>
 
-    <!-- Create Service form (hidden by default) -->
-    <div class="panel create-form" id="createServiceForm" style="display:none; margin-top:18px;">
-        <h3 class="panel-title">Create New Service</h3>
-        <form id="addServiceForm" method="post" class="form-grid" asp-action="Service" asp-controller="Home" asp-area="Admin">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="actionType" value="create" />
-            <div class="form-group">
-                <label for="serviceName">Service Name</label>
-                <input type="text" id="serviceName" name="Name" required />
-            </div>
+ <!-- Create Service form (hidden by default) -->
+ <div class="panel create-form" id="createServiceForm" style="display:none; margin-top:18px;">
+ <h3 class="panel-title">Create New Service</h3>
+ <form id="addServiceForm" method="post" class="form-grid" asp-action="Service" asp-controller="Home" asp-area="Admin" onsubmit="return confirmAdd(event)">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="actionType" value="create" />
+ <div class="form-group">
+ <label for="serviceName">Service Name</label>
+ <input type="text" id="serviceName" name="Name" required />
+ </div>
 
-            <div class="form-group">
-                <label>Categories (Select multiple)</label>
-                <div id="category" class="checkbox-tiles">
-                    @if (ViewBag.ServiceCategories != null)
-                    {
-                        foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
-                        {
-                            var cbId = "cat_" + c.CategoryId;
-                            <label class="checkbox-item">
-                                <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId" />
-                                <span class="checkbox-tile" data-value="@c.CategoryId">
-                                    <span>@c.Name</span>
-                                </span>
-                            </label>
-                        }
-                    }
-                </div>
-            </div>
+ <div class="form-group">
+ <label>Categories (Select multiple)</label>
+ <div id="category" class="checkbox-tiles">
+ @if (ViewBag.ServiceCategories != null)
+ {
+ foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
+ {
+ var cbId = "cat_" + c.CategoryId;
+ <label class="checkbox-item">
+ <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId" />
+ <span class="checkbox-tile" data-value="@c.CategoryId">
+ <span>@c.PetType</span>
+ </span>
+ </label>
+ }
+ }
+ </div>
+ </div>
 
-            <div class="form-group">
-                <label for="price">Price (RM)</label>
-                <input type="number" step="0.01" id="price" name="Price" required />
-            </div>
+ <div class="form-group">
+ <label for="duration">Duration (mins)</label>
+ <input type="number" id="duration" name="DurationTime" placeholder="e.g.,60" required />
+ </div>
 
-            <div class="form-group">
-                <label for="duration">Duration (mins)</label>
-                <input type="number" id="duration" name="DurationTime" placeholder="e.g.,60" required />
-            </div>
+ <div class="form-group">
+ <label for="status">Status</label>
+ <select id="status" name="Status" required>
+ <option value="Active">Active</option>
+ <option value="Inactive">Inactive</option>
+ </select>
+ </div>
 
-            <div class="form-group">
-                <label for="status">Status</label>
-                <select id="status" name="Status" required>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
-            </div>
+ <div class="form-group full-width">
+ <label for="description">Description</label>
+ <textarea id="description" name="Description" rows="3"></textarea>
+ </div>
 
-            <div class="form-group full-width">
-                <label for="description">Description</label>
-                <textarea id="description" name="Description" rows="3"></textarea>
-            </div>
+ <div class="form-actions">
+ <button type="submit" class="btn btn-success">Save Service</button>
+ <button type="button" class="btn btn-action" onclick="window.hideCreateForm()">
+ Cancel
+ </button>
+ </div>
+ </form>
+ </div>
 
-            <div class="form-actions">
-                <button type="button" onclick="submitAddForm()" class="btn btn-success">Save Service</button>
-            </div>
-        </form>
-    </div>
+ <div style="margin-top:0;">
+ <table class="data-table">
+ <thead>
+ <tr>
+ <th>Service ID</th>
+ <th>Service Name</th>
+ <th>Category</th>
+ <th>Duration</th>
+ <th>Status</th>
+ <th>Description</th>
+ <th>Actions</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var service in Model)
+ {
+ if (editingService != null && editingService.ServiceId == service.ServiceId)
+ {
+ <!-- INLINE EDIT ROW -->
+ <tr class="inline-edit-row" style="background-color: #fffbeb;">
+ <form id="editServiceForm_@service.ServiceId" asp-action="Service" asp-controller="Home"
+ method="post" style="display: contents;" onsubmit="return window.confirmEdit(event, '@service.Name')">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="actionType" value="edit" />
+ <input type="hidden" name="editServiceId" value="@service.ServiceId" />
 
-    <div style="margin-top:0;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Service ID</th>
-                    <th>Service Name</th>
-                    <th>Category</th>
-                    <th>Price (RM)</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                    <th>Description</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var service in Model)
-                {
-                    if (editingService != null && editingService.ServiceId == service.ServiceId)
-                    {
-                        <!-- INLINE EDIT ROW -->
-                        <tr class="inline-edit-row" style="background-color: #fffbeb;">
-                            <form id="editServiceForm_@service.ServiceId" asp-action="Service" asp-controller="Home"
-                                method="post" style="display: contents;">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="actionType" value="edit" />
-                                <input type="hidden" name="editServiceId" value="@service.ServiceId" />
+ <!-- Service ID (read-only) -->
+ <td>@service.ServiceId</td>
 
-                                <!-- Service ID (read-only) -->
-                                <td>@service.ServiceId</td>
+ <!-- Service Name -->
+ <td>
+ <input type="text" name="Name" value="@service.Name" required class="form-control" />
+ </td>
 
-                                <!-- Service Name -->
-                                <td>
-                                    <input type="text" name="Name" value="@service.Name" required class="form-control" />
-                                </td>
+ <!-- Categories -->
+ <td>
+ <div class="checkbox-tiles" style="margin:0;">
+ @if (ViewBag.ServiceCategories != null)
+ {
+ foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
+ {
+ var cbId = "edit_cat_" + c.CategoryId + "_" + service.ServiceId;
+ var isSelected = service.ServiceServiceCategories.Any(ssc => ssc.CategoryId == c.CategoryId);
+ <label class="checkbox-item" style="margin-bottom:5px;">
+ <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId"
+ @(isSelected ? "checked" : "") />
+ <span class="checkbox-tile" data-value="@c.CategoryId">
+ <span>@c.PetType</span>
+ </span>
+ </label>
+ }
+ }
+ </div>
+ </td>
 
-                                <!-- Categories -->
-                                <td>
-                                    <div class="checkbox-tiles" style="margin:0;">
-                                        @if (ViewBag.ServiceCategories != null)
-                                        {
-                                            foreach (var c in ViewBag.ServiceCategories as List<ServiceCategory>)
-                                            {
-                                                var cbId = "edit_cat_" + c.CategoryId + "_" + service.ServiceId;
-                                                var isSelected = service.ServiceServiceCategories.Any(ssc => ssc.CategoryId == c.CategoryId);
-                                                <label class="checkbox-item" style="margin-bottom:5px;">
-                                                    <input type="checkbox" id="@cbId" name="SelectedCategories" value="@c.CategoryId"
-                                                        @(isSelected ? "checked" : "") />
-                                                    <span class="checkbox-tile" data-value="@c.CategoryId">
-                                                        <span>@c.Name</span>
-                                                    </span>
-                                                </label>
-                                            }
-                                        }
-                                    </div>
-                                </td>
+ <!-- Duration -->
+ <td>
+ <input type="number" name="DurationTime" value="@service.DurationTime" required
+ class="form-control" placeholder="e.g.,60" />
+ </td>
 
-                                <!-- Price -->
-                                <td>
-                                    <input type="number" step="0.01" name="Price" value="@service.Price" required
-                                        class="form-control" />
-                                </td>
+ <!-- Status -->
+ <td>
+ <select name="Status" class="form-control" required>
+ <option value="Active" selected="@(service.Status == "Active")">Active</option>
+ <option value="Inactive" selected="@(service.Status == "Inactive")">Inactive</option>
+ </select>
+ </td>
 
-                                <!-- Duration -->
-                                <td>
-                                    <input type="number" name="DurationTime" value="@service.DurationTime" required
-                                        class="form-control" placeholder="e.g.,60" />
-                                </td>
+ <!-- Description (inline small textarea) -->
+ <td>
+ <textarea name="Description" rows="2" class="form-control">@service.Description</textarea>
+ </td>
 
-                                <!-- Status -->
-                                <td>
-                                    <select name="Status" class="form-control" required>
-                                        <option value="Active" selected="@(service.Status == "Active")">Active</option>
-                                        <option value="Inactive" selected="@(service.Status == "Inactive")">Inactive</option>
-                                    </select>
-                                </td>
-
-                                <!-- Description (inline small textarea) -->
-                                <td>
-                                    <textarea name="Description" rows="2" class="form-control">@service.Description</textarea>
-                                </td>
-
-                                <!-- Actions -->
-                                <td>
-                                    <button type="button" onclick="submitEditForm('@service.ServiceId', '@service.Name')"
-                                        class="btn btn-success btn-sm">
-                                        Save
-                                    </button>
-                                    <a asp-action="Service" asp-controller="Home" class="btn btn-secondary btn-sm">
-                                        Cancel
-                                    </a>
-                                </td>
-                            </form>
-                        </tr>
-                    }
-                    else
-                    {
-                        <!-- NORMAL VIEW ROW -->
-                        <tr data-service-id="@service.ServiceId" data-name="@service.Name"
-                            data-categories="@string.Join(",", service.ServiceServiceCategories.Select(ssc => ssc.CategoryId))"
-                            data-price="@service.Price" data-duration="@service.DurationTime" data-status="@service.Status"
-                            data-description="@service.Description">
-                            <td>@service.ServiceId</td>
-                            <td>@service.Name</td>
-                            <td>@string.Join(", ", service.ServiceServiceCategories.Select(ssc => ssc.Category.Name))</td>
-                            <td>@service.Price?.ToString("F2")</td>
-                            <td>@(service.DurationTime.HasValue ? $"{service.DurationTime} mins" : "")</td>
-                            <td>@service.Status</td>
-                            <td>@service.Description</td>
-                            <td>
-                                <a asp-action="Service" asp-controller="Home" asp-route-editId="@service.ServiceId"
-                                    class="btn btn-sm btn-action edit-btn">
-                                    <i class="material-icons">edit</i> Edit
-                                </a>
-                                <button type="button" class="btn btn-sm btn-action delete-btn"
-                                    onclick="deleteService('@service.ServiceId', '@service.Name')">
-                                    <i class="material-icons">delete</i> Delete
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
+ <!-- Actions -->
+ <td>
+ <button type="submit" class="btn btn-success btn-sm">Save</button>
+ <a asp-action="Service" asp-controller="Home" class="btn btn-secondary btn-sm">
+ Cancel
+ </a>
+ </td>
+ </form>
+ </tr>
+ }
+ else
+ {
+ <!-- NORMAL VIEW ROW -->
+ <tr data-service-id="@service.ServiceId" data-name="@service.Name"
+ data-categories="@string.Join(",", service.ServiceServiceCategories.Select(ssc => ssc.CategoryId))"
+ data-duration="@service.DurationTime" data-status="@service.Status"
+ data-description="@service.Description">
+ <td>@service.ServiceId</td>
+ <td>@service.Name</td>
+ <td>@string.Join(", ", service.ServiceServiceCategories.Select(ssc => ssc.Category.PetType))</td>
+ <td>@(service.DurationTime.HasValue ? $"{service.DurationTime} mins" : "")</td>
+ <td>@service.Status</td>
+ <td>@service.Description</td>
+ <td>
+ <a asp-action="Service" asp-controller="Home" asp-route-editId="@service.ServiceId"
+ class="btn btn-sm btn-action edit-btn">
+ <i class="material-icons">edit</i> Edit
+ </a>
+ <form id="deleteServiceForm_@service.ServiceId" asp-action="Service" asp-controller="Home" method="post" style="display:inline" onsubmit="return confirmDelete(event, '@service.Name')">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="actionType" value="delete" />
+ <input type="hidden" name="deleteServiceId" value="@service.ServiceId" />
+ <button type="submit" class="btn btn-sm btn-action delete-btn">
+ <i class="material-icons">delete</i> Delete
+ </button>
+ </form>
+ </td>
+ </tr>
+ }
+ }
+ </tbody>
+ </table>
+ </div>
 </div>
 
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="modal-backdrop">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
-        <div style="padding: 20px 0;">
-            <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
-                <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
-            </div>
-            <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
-            <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">
-                    Cancel
-                </button>
-                <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">
-                    Confirm
-                </button>
-            </div>
-        </div>
-    </div>
+ <div class="modal-content" style="max-width:450px;">
+ <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+ <div style="padding:20px0; text-align: center;">
+ <div style="font-size:48px; color: var(--primary-color); margin-bottom:20px;">
+ <i class="material-icons" id="confirmIcon" style="font-size:64px;">help_outline</i>
+ </div>
+ <h3 id="confirmTitle" style="margin-bottom:15px; color: var(--text-color);">Confirm Action</h3>
+ <p id="confirmMessage" style="color: var(--text-light); margin-bottom:30px; font-size:15px;"></p>
+ <div style="display: flex; gap:12px; justify-content: center;">
+ <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width:100px;">
+ Cancel
+ </button>
+ <button id="confirmBtn" class="btn btn-primary" style="min-width:100px;">
+ Confirm
+ </button>
+ </div>
+ </div>
+ </div>
 </div>
 
 <!-- hidden antiforgery token for AJAX posts -->
 <div style="display:none">@Html.AntiForgeryToken()</div>
 
 @section Scripts {
-    <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
-    <script>
-        // bind tile behavior: keep label visual in sync with checkbox state (for server-set checked values)
-        function showDynamicAlert(message, type = 'success') {
-            // Remove any existing alert
-            const existingAlert = document.getElementById('dynamic-alert-container');
-            if (existingAlert) {
-                existingAlert.remove();
-            }
+ <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
+ <script>
+ // showDynamicAlert: create same markup as RedeemGift
+ (function () {
+ const alertMessage = document.getElementById('alertMessage');
+ if (!alertMessage) return;
 
-            const alertDiv = document.createElement('div');
-            alertDiv.id = 'dynamic-alert-container';
-            alertDiv.className = `alert dynamic-alert alert-${type}`;
+ // Auto-hide after 5 seconds with fade animation
+ setTimeout(function () {
+ alertMessage.classList.add('fade-out');
+ // remove from DOM after fade completes
+ setTimeout(function () {
+ if (alertMessage && alertMessage.parentNode) {
+ alertMessage.parentNode.removeChild(alertMessage);
+ }
+ }, 500);
+ }, 5000);
+ })();
+ function showDynamicAlert(message, type = 'success') {
+ var existing = document.getElementById('alertMessage');
+ if (existing) existing.remove();
+ var alertDiv = document.createElement('div');
+ alertDiv.id = 'alertMessage';
+ alertDiv.className = 'alert ' + (type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger'));
+ if (type === 'success') alertDiv.innerHTML = '<strong>✔️ Success:</strong> ' + message;
+ else if (type === 'warning') alertDiv.innerHTML = message;
+ else alertDiv.innerHTML = '<strong>❌ Error:</strong> ' + message;
+ document.body.appendChild(alertDiv);
+ setTimeout(function() { alertDiv.classList.add('fade-out'); setTimeout(function(){ if (alertDiv && alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv); },500); },5000);
+ }
+ 
+ // Force page modal usage: override openConfirmModal to always use the DOM modal (no native confirm)
+ window.openConfirmModal = function(title, message, confirmCallback) {
+ var modal = document.getElementById('confirmModal');
+ var confirmBtn = document.getElementById('confirmBtn');
+ var confirmIcon = document.getElementById('confirmIcon');
+ var confirmTitle = document.getElementById('confirmTitle');
+ var confirmMessage = document.getElementById('confirmMessage');
+ if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+ // As absolute fallback, call callback directly
+ if (typeof confirmCallback === 'function') confirmCallback();
+ return;
+ }
+ confirmTitle.textContent = title || 'Confirm';
+ confirmMessage.textContent = message || '';
+ confirmIcon.textContent = 'help_outline';
+ confirmIcon.style.color = '#ef4444';
+ modal.classList.add('show');
+ var newBtn = confirmBtn.cloneNode(true);
+ confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+ newBtn.addEventListener('click', function(e) {
+ e.preventDefault();
+ if (typeof confirmCallback === 'function') confirmCallback();
+ modal.classList.remove('show');
+ });
+ };
 
-            if (type === 'success') {
-                alertDiv.innerHTML = `<strong>✔️ Success:</strong> ${message}`;
-            } else {
-                alertDiv.innerHTML = `<strong>❌ Error:</strong> ${message}`;
-            }
-
-
-            document.body.appendChild(alertDiv);
-
-            setTimeout(() => {
-                alertDiv.classList.add('fade-out');
-                setTimeout(() => {
-                    alertDiv.remove();
-                }, 500);
-            }, 5000); // Auto-hide after 5 seconds
-        }
-
-
-        function bindCategoryTiles(rootId) {
-            const root = document.getElementById(rootId);
-            if (!root) return;
-            root.querySelectorAll('input[type="checkbox"][name="SelectedCategories"]').forEach(cb => {
-                // the visual tile is the sibling span with class .checkbox-tile
-                const tile = cb.parentElement ? cb.parentElement.querySelector('.checkbox-tile') : null;
-                if (!tile) return;
-                if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
-                cb.addEventListener('change', () => {
-                    if (cb.checked) tile.classList.add('selected'); else tile.classList.remove('selected');
-                });
-            });
-        }
-
-        function submitEditForm(serviceId, name) {
-            const formId = 'editServiceForm_' + serviceId;
-            const form = document.getElementById(formId);
-            if (!form) {
-                console.error('Edit form not found:', formId);
-                return;
-            }
-
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            window.confirmEdit({ target: form, preventDefault: () => { } }, name);
-        }
-
-        async function deleteService(serviceId, serviceName) {
-            const onConfirm = async () => {
-                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
-                const token = tokenInput ? tokenInput.value : '';
-                try {
-                    const resp = await fetch('@Url.Action("DeleteServiceAjax", "Home", new { area = "Admin" })', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ serviceId: serviceId, __RequestVerificationToken: token })
-                    });
-                    const data = await resp.json();
-
-                    window.closeConfirmModal(); // Close modal after fetch
-
-                    if (data && data.success) {
-                        const row = document.querySelector('tr[data-service-id="' + serviceId + '"]');
-                        if (row) row.remove();
-                        showDynamicAlert(data.message || 'Service deleted successfully!', 'success');
-                    } else {
-                        showDynamicAlert(data?.message || 'Failed to delete service', 'danger');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    window.closeConfirmModal(); // Also close modal on error
-                    showDynamicAlert('An unexpected error occurred. Failed to delete service.', 'danger');
-                }
-            };
-
-            GroomerManager.showConfirmModal(
-                'Delete Service?',
-                `Are you sure you want to delete "${serviceName}"? This cannot be undone.`,
-                'delete_forever',
-                '#ef4444',
-                onConfirm
-            );
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            // Auto-hide server-rendered alerts
-            const alertMessage = document.getElementById('alertMessage');
-            if (alertMessage) {
-                setTimeout(function () {
-                    alertMessage.classList.add('fade-out');
-                    setTimeout(function () {
-                        if (alertMessage && alertMessage.parentNode) {
-                            alertMessage.parentNode.removeChild(alertMessage);
-                        }
-                    }, 500);
-                }, 5000);
-            }
-
-            var createForm = document.getElementById('createServiceForm');
-            if (createForm) createForm.style.display = 'none';
-            bindCategoryTiles('category');
-            var btnAddService = document.getElementById('btnAddService');
-            if (btnAddService) btnAddService.addEventListener('click', window.showCreateForm);
-        });
-    </script>
+ // Minimal fallback for modal confirms if global admin.js helpers are missing
+ (function(){
+ if (typeof window.showConfirmModal === 'function') return;
+ window.showConfirmModal = function(title, message, icon, iconColor, cb) {
+ window.openConfirmModal(title, message, cb);
+ };
+ window.closeConfirmModal = function(){ var m=document.getElementById('confirmModal'); if(m) m.classList.remove('show'); };
+ window.confirmAdd = function(e){ if(e&&e.preventDefault) e.preventDefault(); var f=e.target; var name=(f&&f.querySelector('[name="Name"]')?f.querySelector('[name="Name"]').value:'item'); window.openConfirmModal('Confirm Add', 'Are you sure you want to add "'+name+'"?', function(){ try{ appendSelectedCategoriesToForm(f); }catch{} if(f) f.submit(); }); return false; };
+ window.confirmDelete = function(e,name){ if(e&&e.preventDefault) e.preventDefault(); var f=e.target; window.openConfirmModal('Confirm Delete', 'Are you sure you want to delete "'+name+'"?', function(){ if(f) f.submit(); }); return false; };
+ })();
+ </script>
 }

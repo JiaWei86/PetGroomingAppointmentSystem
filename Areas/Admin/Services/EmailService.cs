@@ -61,18 +61,14 @@ public class EmailService : IEmailService
         </table>
       </div>
         
-        <p><strong>?? Important Security Notice:</strong></p>
+        <p><strong> Important Security Notice:</strong></p>
    <ul>
   <li>Please change your password after your first login</li>
        <li>Do not share your credentials with anyone</li>
   <li>Keep this email in a secure location</li>
   </ul>
     
-  <div style='text-align: center; margin: 30px 0;'>
- <a href='{loginUrl}' style='background-color: #ff9500; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>
-       Login Now
-         </a>
-    </div>
+  
         
             <p>If you have any questions, please contact your administrator.</p>
        

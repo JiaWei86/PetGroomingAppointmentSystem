@@ -38,7 +38,6 @@
       top: 85px;
       left: calc(var(--sidebar-width) + 35px);
       right: 35px;
-      z-index: 9999;
       animation: slideDown 0.5s ease;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
       padding: 24px 32px !important;
@@ -343,7 +342,6 @@
       <div class="form-group">
         <label for="groomerName">Full Name <span style="color: red;">*</span></label>
         <input type="text" id="groomerName" name="Name" placeholder="e.g., John Smith" required />
-        <small class="error-message" id="error-Name"></small>
       </div>
 
       <!-- IC (Identity Card) -->
@@ -613,8 +611,78 @@
 
 
 @section Scripts {
-  <script src="~/admin/js/admin.js?v=@DateTime.Now.Ticks"></script>
   <script src="~/admin/js/groomer.js?v=@DateTime.Now.Ticks"></script>
+  <script>
+ // If global modal helpers are not available (admin.js failed), provide page-local fallbacks
+ if (typeof window.showConfirmModal !== 'function') {
+ window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
+ try { ensureConfirmModal(); } catch (e) {}
+ const modal = document.getElementById('confirmModal');
+ const confirmBtn = document.getElementById('confirmBtn');
+ const confirmIcon = document.getElementById('confirmIcon');
+ const confirmTitle = document.getElementById('confirmTitle');
+ const confirmMessage = document.getElementById('confirmMessage');
+ if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+ // fallback to native confirm
+ if (confirm(message)) { confirmCallback && confirmCallback(); }
+ return;
+ }
+ confirmTitle.textContent = title;
+ confirmMessage.textContent = message;
+ confirmIcon.textContent = icon || 'help_outline';
+ confirmIcon.style.color = iconColor || '#000';
+ modal.classList.add('show');
+ const newConfirmBtn = confirmBtn.cloneNode(true);
+ confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+ newConfirmBtn.addEventListener('click', function(e) {
+ e.preventDefault();
+ if (typeof confirmCallback === 'function') confirmCallback();
+ modal.classList.remove('show');
+ });
+ };
+
+ window.closeConfirmModal = function() {
+ const modal = document.getElementById('confirmModal');
+ if (modal) modal.classList.remove('show');
+ };
+
+ window.openConfirmModal = function(title, message, callback) {
+ window.showConfirmModal(title, message, 'delete', '#ef4444', callback);
+ };
+
+ window.confirmDelete = function(event, name) {
+ if (event && event.preventDefault) event.preventDefault();
+ const form = event && event.target ? event.target : null;
+ window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${name}"?`, function() {
+ if (form) form.submit();
+ });
+ return false;
+ };
+
+ window.confirmAdd = function(event) {
+ if (event && event.preventDefault) event.preventDefault();
+ const form = event && event.target ? event.target : null;
+ const name = form && form.querySelector('[name="Name"]') ? form.querySelector('[name="Name"]').value : 'item';
+ window.openConfirmModal('Confirm Add', `Are you sure you want to add "${name}"?`, function() {
+ if (form) form.submit();
+ });
+ return false;
+ };
+
+ window.showDynamicAlert = function(message, type) {
+ const existing = document.getElementById('alertMessage');
+ if (existing) existing.remove();
+ const alertDiv = document.createElement('div');
+ alertDiv.id = 'alertMessage';
+ alertDiv.className = 'alert ' + (type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger'));
+ if (type === 'success') alertDiv.innerHTML = `<strong>✔️ Success:</strong> ${message}`;
+ else if (type === 'warning') alertDiv.innerHTML = message;
+ else alertDiv.innerHTML = `<strong>❌ Error:</strong> ${message}`;
+ document.body.appendChild(alertDiv);
+ setTimeout(function() { alertDiv.classList.add('fade-out'); setTimeout(() => alertDiv.remove(),500); },5000);
+ };
+ }
+ </script>
 }
 
 <!-- Real-time AJAX validation script for the inline edit form -->

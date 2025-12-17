@@ -131,9 +131,7 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             // Try Admin Login First
             // ========================================
             var adminUser = _dbContext.Admins
-                .FirstOrDefault(a => (a.Name == username || a.UserId == username)
-                                    && a.Password == password
-                                    && a.Role == "admin");
+                                    .FirstOrDefault(a => (a.UserId == username || a.Name == username) && a.Password == password);
 
             if (adminUser != null)
             {
@@ -156,23 +154,16 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             // ========================================
             // Try Staff Login - UPDATED VERSION
             // ========================================
-            // First, find the staff record
             var staffUser = _dbContext.Staffs
-                .FirstOrDefault(s => s.UserId == username 
-                                    && s.Password == password 
-                                    && s.Role == "staff");
-
+               .FirstOrDefault(s => (s.UserId == username || s.Name == username) && s.Password == password);
+            
             if (staffUser != null)
             {
-                // Get the name from Users table (because Staff inherits from User)
-                var userInfo = _dbContext.Users
-                    .FirstOrDefault(u => u.UserId == staffUser.UserId);
-
                 // Clear failed login attempts
                 loginAttempts.Remove(username);
 
                 // Set Staff session variables
-                HttpContext.Session.SetString("StaffUsername", userInfo?.Name ?? "Staff User");
+                HttpContext.Session.SetString("StaffUsername", staffUser.Name);
                 HttpContext.Session.SetString("StaffId", staffUser.UserId);
                 HttpContext.Session.SetString("UserRole", "staff");
                 HttpContext.Session.SetString("IsStaffLoggedIn", "true");
@@ -209,36 +200,13 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         // ========================================
         // Admin Logout
         // ========================================
-        public IActionResult AdminLogout()
-        {
-            // Clear all admin session data
-            HttpContext.Session.Remove("AdminUsername");
-            HttpContext.Session.Remove("AdminId");
-            HttpContext.Session.Remove("UserRole");
-            HttpContext.Session.Remove("IsAdminLoggedIn");
-            
-            // Clear general session
-            HttpContext.Session.Clear();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AdminLogout() => Logout();
 
-            return RedirectToAction("Login", "Auth", new { area = "Admin" });
-        }
-
-        // ========================================
-        // Staff Logout
-        // ========================================
-        public IActionResult StaffLogout()
-        {
-            // Clear all staff session data
-            HttpContext.Session.Remove("StaffUsername");
-            HttpContext.Session.Remove("StaffId");
-            HttpContext.Session.Remove("UserRole");
-            HttpContext.Session.Remove("IsStaffLoggedIn");
-            
-            // Clear general session
-            HttpContext.Session.Clear();
-
-            return RedirectToAction("Login", "Auth", new { area = "Admin" });
-        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult StaffLogout() => Logout();
 
         // ========================================
         // Universal Logout (for both Admin and Staff)
@@ -246,11 +214,8 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         public IActionResult Logout()
         {
             var userRole = HttpContext.Session.GetString("UserRole");
-
             // Clear all session data
             HttpContext.Session.Clear();
-
-            // Redirect based on previous role
             return RedirectToAction("Login", "Auth", new { area = "Admin" });
         }
 

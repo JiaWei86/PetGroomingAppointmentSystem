@@ -1,4 +1,5 @@
-﻿@{
+﻿@model PetGroomingAppointmentSystem.Models.ViewModels.DashboardViewModel
+@{
     ViewData["Title"] = "Administrator Dashboard";
     ViewData["ActivePage"] = "Dashboard";
 }
@@ -20,10 +21,13 @@
         <div class="stat-content">
             <p class="stat-title">Total Appointments</p>
             <div class="stat-value">
-                24
-                <span class="change up">
-                    <i class="material-icons">trending_up</i> 12%
-                </span>
+                @(Model?.TotalAppointments?.Count ?? 24)
+                @if (Model?.TotalAppointments != null && Model.TotalAppointments.ChangePercentage != 0)
+                {
+                    <span class="change @(Model.TotalAppointments.ChangePercentage >= 0 ? "up" : "down")">
+                        <i class="material-icons">@(Model.TotalAppointments.ChangePercentage >= 0 ? "trending_up" : "trending_down")</i> @Model.TotalAppointments.ChangePercentage.ToString("0.##")%
+                    </span>
+                }
             </div>
             <p class="stat-extra">This month's appointments</p>
         </div>
@@ -34,12 +38,9 @@
             <i class="material-icons">person</i>
         </div>
         <div class="stat-content">
-            <p class="stat-title">Active Groomers</p>
+            <p class="stat-title">Total Groomers</p>
             <div class="stat-value">
-                2
-                <span class="change up">
-                    <i class="material-icons">trending_up</i> 2
-                </span>
+                @(Model?.ActiveGroomers?.Count ?? 2)
             </div>
             <p class="stat-extra">Available to work</p>
         </div>
@@ -47,35 +48,18 @@
 
     <div class="stat-card yellow">
         <div class="stat-icon">
-            <i class="material-icons">pending_actions</i>
+            <i class="material-icons">contacts</i>
         </div>
         <div class="stat-content">
-            <p class="stat-title">Pending Appointments</p>
+            <p class="stat-title">Total Customer</p>
             <div class="stat-value">
-                1
-                <span class="change up">
-                    <i class="material-icons">trending_up</i> 1
-                </span>
+                @(Model?.PendingAppointments?.Count ?? 1)
             </div>
-            <p class="stat-extra">Awaiting confirmation</p>
+            <p class="stat-extra">Registered in system</p>
         </div>
     </div>
 
-    <div class="stat-card red">
-        <div class="stat-icon">
-            <i class="material-icons">payments</i>
-        </div>
-        <div class="stat-content">
-            <p class="stat-title">Total Revenue</p>
-            <div class="stat-value">
-                $35,078
-                <span class="change down">
-                    <i class="material-icons">trending_down</i> 27.4%
-                </span>
-            </div>
-            <p class="stat-extra">Compared to last month</p>
-        </div>
-    </div>
+
 </div>
 
 <div class="chart-and-info-grid">
@@ -86,29 +70,29 @@
                 <p class="panel-subtitle-small">Track your booking patterns</p>
             </div>
             <div class="chart-options">
-                <button class="btn-chart-option" onclick="updateChart('month')">Month</button>
-                <button class="btn-chart-option active" onclick="updateChart('week')">Week</button>
-                <button class="btn-chart-option" onclick="updateChart('day')">Day</button>
+                <button class="btn-chart-option" onclick="DashboardChart.updateChart(event, 'month')">Month</button>
+                <button class="btn-chart-option active" onclick="DashboardChart.updateChart(event, 'week')">Week</button>
+                <button class="btn-chart-option" onclick="DashboardChart.updateChart(event, 'day')">Day</button>
             </div>
         </div>
         <canvas id="appointmentChart" style="max-height: 350px;"></canvas>
     </div>
 
     <div class="info-panel">
-        <div class="loyalty-header">
+        <div class="loyalty-header" >
             <i class="material-icons loyalty-icon">card_giftcard</i>
         </div>
         <h3 class="panel-title">Loyalty Points</h3>
-        <p class="stat-value-large">7,650</p>
+        <p class="stat-value-large">@(Model?.LoyaltyPoints?.AwardedThisWeek.ToString("N0") ?? "7,650")</p>
         <p class="panel-subtitle">Points Awarded This Week</p>
         <div class="loyalty-stats">
             <div class="loyalty-stat-item">
-                <span class="loyalty-stat-label">Active Members</span>
-                <span class="loyalty-stat-value">156</span>
+                <span class="loyalty-stat-label">Active Members</span> 
+                <span class="loyalty-stat-value">@(Model?.LoyaltyPoints?.ActiveMembers.ToString("N0") ?? "156")</span>
             </div>
             <div class="loyalty-stat-item">
                 <span class="loyalty-stat-label">Points Redeemed</span>
-                <span class="loyalty-stat-value">2,340</span>
+                <span class="loyalty-stat-value">@(Model?.LoyaltyPoints?.RedeemedThisWeek.ToString("N0") ?? "2,340")</span>
             </div>
         </div>
     </div>
@@ -162,61 +146,30 @@
     // DASHBOARD DATA (Page-Specific)
     // ========================================
 
-    // Chart data
-    window.dashboardChartData = {
-        week: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            data: [12, 19, 15, 25, 22, 18, 20]
-        },
-        month: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            data: [65, 78, 82, 95]
-        },
-        day: {
-            labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
-            data: [2, 4, 3, 5, 4, 6, 3, 2, 1]
-        }
+    // Dynamically inject data from the ViewModel.
+    // If the model is null, it serializes empty objects/arrays to prevent script errors.
+    window.dashboardChartData = @Html.Raw(Json.Serialize(Model?.ChartData ?? new PetGroomingAppointmentSystem.Models.ViewModels.ChartDataModel()));
+    const appointmentData = @Html.Raw(Json.Serialize(Model?.AppointmentsForCalendar ?? new List<PetGroomingAppointmentSystem.Models.ViewModels.CalendarAppointmentModel>()));
+
+    // Fallback data for local testing if the backend doesn't provide data.
+    const fallbackChartData = {
+         week: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], data: [12, 19, 15, 25, 22, 18, 20] },
+         month: { labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'], data: [65, 78, 82, 95] },
+         day: { labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'], data: [2, 4, 3, 5, 4, 6, 3, 2, 1] }
     };
 
-    // Appointment data
-    const appointmentData = [
-        {
-            id: 1,
-            date: new Date().toISOString().split('T')[0],
-            time: "09:00",
-            petName: "Buddy",
-            groomerName: "Anna Lee",
-            serviceType: "Full Groom",
-            status: "confirmed"
-        },
-        {
-            id: 2,
-            date: new Date().toISOString().split('T')[0],
-            time: "10:30",
-            petName: "Whiskers",
-            groomerName: "Mark Chen",
-            serviceType: "Bath",
-            status: "confirmed"
-        },
-        {
-            id: 3,
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: "14:00",
-            petName: "Max",
-            groomerName: "Anna Lee",
-            serviceType: "Nail Trim",
-            status: "pending"
-        },
-        {
-            id: 4,
-            date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: "11:00",
-            petName: "Luna",
-            groomerName: "Mark Chen",
-            serviceType: "Full Groom",
-            status: "confirmed"
-        }
-    ];
+    if (!window.dashboardChartData || Object.keys(window.dashboardChartData).length === 0) {
+        window.dashboardChartData = fallbackChartData;
+    }
+
+    if (!appointmentData || appointmentData.length === 0) {
+        // Add some static data if the dynamic list is empty
+        appointmentData.push(
+            { id: 1, date: new Date().toISOString().split('T')[0], time: "09:00", petName: "Buddy (Sample)", groomerName: "Anna Lee", serviceType: "Full Groom", status: "confirmed" },
+            { id: 2, date: new Date().toISOString().split('T')[0], time: "10:30", petName: "Whiskers (Sample)", groomerName: "Mark Chen", serviceType: "Bath", status: "confirmed" },
+            { id: 3, date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], time: "14:00", petName: "Max (Sample)", groomerName: "Anna Lee", serviceType: "Nail Trim", status: "pending" }
+        );
+    }
 
     // ========================================
     // DASHBOARD CHART MODULE
@@ -229,13 +182,13 @@
             const ctx = document.getElementById('appointmentChart');
             if (!ctx) return;
 
-            chart = new Chart(ctx, {
+            chart = new Chart(ctx, { 
                 type: 'line',
                 data: {
-                    labels: chartData[currentView].labels,
-                    datasets: [{
+                    labels: chartData[currentView]?.labels || [],
+                    datasets: [{ 
                         label: 'Appointments',
-                        data: chartData[currentView].data,
+                        data: chartData[currentView]?.data || [],
                         borderColor: '#d97706',
                         backgroundColor: 'rgba(217, 119, 6, 0.1)',
                         borderWidth: 3,
@@ -281,26 +234,24 @@
             });
         };
 
-        const updateChart = (view) => {
+        const updateChart = (event, view) => {
             if (!chart || !window.dashboardChartData) return;
 
             currentView = view;
             const data = window.dashboardChartData[view];
 
-            chart.data.labels = data.labels;
-            chart.data.datasets[0].data = data.data;
+            chart.data.labels = data?.labels || [];
+            chart.data.datasets[0].data = data?.data || [];
             chart.update();
 
             document.querySelectorAll('.btn-chart-option').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (event && event.target) event.target.classList.add('active');
         };
 
         return { init, updateChart };
     })();
-
-    window.updateChart = (view) => DashboardChart.updateChart(view);
 
     // ========================================
     // DASHBOARD CALENDAR MODULE

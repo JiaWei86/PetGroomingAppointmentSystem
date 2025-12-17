@@ -1,4 +1,4 @@
-﻿@model PetGroomingAppointmentSystem.Areas.Customer.ViewModels.HomeViewModel
+@model PetGroomingAppointmentSystem.Areas.Customer.ViewModels.HomeViewModel
 
 @{
     ViewData["Title"] = "Home";
@@ -97,7 +97,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
                 <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
-                    <h3>🐕 Services for dog</h3>
+                    <h3>🐾 Services for dog</h3>
                 </div>
             </div>
         </div>
@@ -111,15 +111,14 @@
                     <div class="service_content text-center">
                         <h3>@s.Name</h3>
                         <p>@s.Description</p>
-                        <button type="button" class="boxed-btn4 book-now-btn"
-                           data-pet-type="dog" 
-                           data-service-id="@s.ServiceId"
-                           data-service-name="@s.Name"
-                           data-description="@(s.Description ?? "")"
-                           data-price="@s.Price"
-                           data-duration="@s.DurationTime"
-                           onclick="handleBookNow(event, this)"
-                           style="border: none; cursor: pointer;">
+                        <a asp-controller="Home" asp-action="Appointment" 
+                           asp-route-petType="dog" 
+                           asp-route-serviceId="@s.ServiceId"
+                           asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
+                           asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
+                           asp-route-price="@s.Price"
+                           asp-route-duration="@s.DurationTime"
+                           class="boxed-btn4">
                             Book Now
                         </button>
                     </div>
@@ -150,15 +149,14 @@
                         <div class="service_content text-center">
                             <h3>@s.Name</h3>
                             <p>@s.Description</p>
-                            <button type="button" class="boxed-btn4 book-now-btn"
-                               data-pet-type="cat"
-                               data-service-id="@s.ServiceId"
-                               data-service-name="@s.Name"
-                               data-description="@(s.Description ?? "")"
-                               data-price="@s.Price"
-                               data-duration="@s.DurationTime"
-                               onclick="handleBookNow(event, this)"
-                               style="border: none; cursor: pointer;">
+                            <a asp-controller="Home" asp-action="Appointment" 
+                               asp-route-petType="cat"
+                               asp-route-serviceId="@s.ServiceId"
+                               asp-route-serviceName="@Uri.EscapeDataString(s.Name)"
+                               asp-route-description="@Uri.EscapeDataString(s.Description ?? "")"
+                               asp-route-price="@s.Price"
+                               asp-route-duration="@s.DurationTime"
+                               class="boxed-btn4">
                                 Book Now
                             </button>
                         </div>
@@ -254,7 +252,7 @@
         $(document).ready(function () {
             new WOW().init();
 
-            // ✔ read counts from model (rendered as numbers)
+            // ? read counts from model (rendered as numbers)
             var dogCount = @Model.DogServices.Count;
             var catCount = @Model.CatServices.Count;
             var giftCount = @Model.RedeemGifts.Count;

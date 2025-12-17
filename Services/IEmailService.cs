@@ -17,11 +17,6 @@ namespace PetGroomingAppointmentSystem.Services
             string loginUrl);
 
         /// <summary>
-        /// Send verification code email to customer for password reset
-        /// </summary>
-        Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode);
-
-        /// <summary>
         /// Send password reset email to customer
         /// </summary>
         Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink);
