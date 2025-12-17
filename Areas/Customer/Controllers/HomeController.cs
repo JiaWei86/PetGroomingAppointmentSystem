@@ -47,9 +47,9 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
-        // Get current user's ID from claims
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var loyaltyPoints =0;
+        // Get current user's ID from SESSION (not Claims)
+        var userId = HttpContext.Session.GetString("CustomerId");
+        var loyaltyPoints = 0;
 
         // If user is logged in, fetch their loyalty points
         if (!string.IsNullOrEmpty(userId))
@@ -568,7 +568,17 @@ public class HomeController : Controller
         if (string.IsNullOrEmpty(giftId))
             return BadRequest();
 
+        // Check both claims and session for user ID
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            userId = HttpContext.Session.GetString("CustomerId");
+        }
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+
         var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
 
         if (customer == null)
@@ -592,27 +602,39 @@ public class HomeController : Controller
     [HttpPost]
     public IActionResult RedeemGiftConfirm(string giftId, int quantity)
     {
+        // Check both claims and session for user ID
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            userId = HttpContext.Session.GetString("CustomerId");
+        }
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { success = false, message = "User not logged in." });
+
         var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
 
         if (customer == null)
-            return Unauthorized();
+            return NotFound(new { success = false, message = "Customer not found." });
 
         var gift = _db.RedeemGifts.FirstOrDefault(g => g.GiftId == giftId);
         if (gift == null)
-            return NotFound();
+            return NotFound(new { success = false, message = "Gift not found." });
 
         int totalCost = quantity * gift.LoyaltyPointCost;
 
         // Validation
         if (quantity <= 0)
-            return BadRequest("Invalid quantity.");
+            return BadRequest(new { success = false, message = "Invalid quantity." });
 
         if (quantity > gift.Quantity)
-            return BadRequest("Not enough gift stock.");
+            return BadRequest(new { success = false, message = "Not enough gift stock." });
 
         if (totalCost > customer.LoyaltyPoint)
-            return BadRequest("Not enough loyalty points.");
+            return BadRequest(new { success = false, message = "Not enough loyalty points." });
 
         // Update DB
         gift.Quantity -= quantity;
@@ -621,7 +643,7 @@ public class HomeController : Controller
         var redeemed = new CustomerRedeemGift
         {
             CrgId = Guid.NewGuid().ToString("N").Substring(0, 15),
-            CustomerId = customer.UserId,  // Changed from CustomerId to UserId
+            CustomerId = customer.UserId,
             GiftId = giftId,
             QuantityRedeemed = quantity,
             RedeemDate = DateTime.Now
@@ -820,7 +842,12 @@ public class HomeController : Controller
 
                     // Add to database
                     _db.Appointments.Add(appointment);
-                    _db.SaveChanges(); // Save each appointment immediately
+                    _db.SaveChanges();
+
+                    // ✅ ADD LOYALTY POINTS (10 points per confirmed appointment)
+                    customer.LoyaltyPoint += 10;
+                    _db.Customers.Update(customer);
+                    _db.SaveChanges();
 
                     appointmentIds.Add(appointmentId);
                 }
@@ -1449,7 +1476,7 @@ public class HomeController : Controller
                 var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
                 if (timeUntilAppointment.TotalHours <24)
                 {
-                    return BadRequest(new { success = false, message = "Cannot cancel within24 hours of appointment" });
+                    return BadRequest(new { success = false, message = "Cannot cancel within 24 hours of appointment" });
                 }
             }
 
@@ -1457,6 +1484,18 @@ public class HomeController : Controller
             appointment.Status = "cancelled";
             _db.Appointments.Update(appointment);
             _db.SaveChanges();
+
+            // ✅ DEDUCT LOYALTY POINTS (10 points when cancelled)
+            var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
+            if (customer != null)
+            {
+                customer.LoyaltyPoint -= 10;
+                // Ensure loyalty points don't go below 0
+                if (customer.LoyaltyPoint < 0)
+                    customer.LoyaltyPoint = 0;
+                _db.Customers.Update(customer);
+                _db.SaveChanges();
+            }
 
             return Ok(new { success = true, message = "Appointment cancelled successfully" });
         }

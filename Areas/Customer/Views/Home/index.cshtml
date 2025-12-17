@@ -97,7 +97,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
                 <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
-                    <h3>🐾 Services for dog</h3>
+                    <h3>🐕 Services for dog</h3>
                 </div>
             </div>
         </div>
@@ -134,7 +134,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-7 col-md-10">
                 <div class="section_title text-center mb-95 wow fadeInUp" data-wow-delay="0.2s">
-                    <h3>🐈 Services for cat</h3>
+                    <h3>🐈 Services for cat hihi</h3>
                 </div>
             </div>
         </div>
@@ -196,7 +196,8 @@
                                     data-gift-name="@gift.Name"
                                     data-cost="@gift.LoyaltyPointCost"
                                     data-maxqty="@gift.Quantity"
-                                    data-userpoints="@Model.CustomerLoyaltyPoints">
+                                    data-userpoints="@Model.CustomerLoyaltyPoints"
+                                    data-photo="@gift.Photo">
                                 Redeem Gift
                             </button>
                         </div>
@@ -210,19 +211,30 @@
 <!-- Popup -->
 <div id="redeemPopup" class="popup-container" style="display:none;">
     <div class="popup-box">
+        <button type="button" class="close-popup" onclick="closeRedeemPopup()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        
+        <div class="popup-image-container" style="text-align: center; margin-bottom: 20px;">
+            <img id="popupGiftImage" 
+                 src="" 
+                 alt="Gift image" 
+                 style="max-width: 200px; height: auto; border-radius: 8px; object-fit: cover;"
+                 onerror="this.src='/Customer/img/service/pet_icon.png';">
+        </div>
+
         <h3 id="popupGiftName"></h3>
         <p>Cost per item: <span id="popupGiftCost"></span> pts</p>
         <p>Your points: <span id="popupUserPoints"></span></p>
         <p>Available quantity: <span id="popupMaxQty"></span></p>
 
-        <label>Quantity:</label>
-        <input id="popupQty" type="number" min="1" style="width:80px; text-align:center;">
+        <div style="margin-bottom: 15px;">
+            <label for="popupQty">Quantity:</label>
+            <input id="popupQty" type="number" min="1" style="width:80px; text-align:center; padding: 5px; margin-left: 10px;">
+        </div>
 
         <div class="button-row">
             <button id="confirmBtn" class="boxed-btn4">Confirm</button>
             <button id="cancelBtn" class="boxed-btn4">Cancel</button>
         </div>
-
     </div>
 </div>
 
@@ -275,6 +287,7 @@
             }
 
             // Initialize carousels with model count
+           
             initCarousel(".dog-carousel", dogCount);
             initCarousel(".cat-carousel", catCount);
             initCarousel(".gift-carousel", giftCount);
@@ -348,39 +361,112 @@
         }
 
         // Popup / Redeem Logic
-        let redeemData = { giftId: null, giftName: "", cost: 0, maxQty: 0, userPoints: 0 };
+        let redeemData = { giftId: null, giftName: "", cost: 0, maxQty: 0, userPoints: 0, photoUrl: "" };
+        let alertShown = false; // Track if alert is currently shown
 
         function openRedeemPopup(data) {
             redeemData = data;
+            alertShown = false; // Reset alert flag
+            
             $("#popupGiftName").text(data.giftName);
             $("#popupGiftCost").text(data.cost);
             $("#popupUserPoints").text(data.userPoints);
             $("#popupMaxQty").text(data.maxQty);
+            
+            // Set the gift image
+            let imageSrc = data.photoUrl;
+            if (!imageSrc || imageSrc.trim() === "") {
+                imageSrc = "/Customer/img/service/pet_icon.png";
+            } else if (!imageSrc.startsWith("/")) {
+                imageSrc = "/" + imageSrc;
+            }
+            $("#popupGiftImage").attr("src", imageSrc);
 
             const qtyInput = $("#popupQty");
             qtyInput.val(1);
             qtyInput.attr("max", data.maxQty);
+            
+            // Unbind previous event listeners to avoid duplicates
+            qtyInput.off("input change keyup mouseup");
+            
+            // Bind fresh event listeners with current redeemData
+            qtyInput.on("input change keyup mouseup", function () {
+                setTimeout(function() {
+                    validateQuantity();
+                }, 10);
+            });
 
             $("#redeemPopup").fadeIn();
         }
 
-        $(".redeem-btn").click(function () {
+        function validateQuantity() {
+            const qtyInput = $("#popupQty");
+            let qty = parseInt(qtyInput.val()) || 0;
+            const totalCost = qty * redeemData.cost;
+            
+            // Check if quantity exceeds stock availability
+            if (qty > redeemData.maxQty) {
+                if (!alertShown) {
+                    alertShown = true;
+                    showQuantityExceed(redeemData.maxQty);
+                    setTimeout(function() {
+                        qtyInput.val(redeemData.maxQty);
+                        alertShown = false;
+                    }, 100);
+                }
+                return;
+            }
+            
+            // Check if total cost exceeds user loyalty points
+            if (totalCost > redeemData.userPoints) {
+                const maxQtyAllowed = Math.floor(redeemData.userPoints / redeemData.cost);
+                
+                if (qty > maxQtyAllowed && !alertShown) {
+                    alertShown = true;
+                    showQuantityWarning(maxQtyAllowed);
+                    setTimeout(function() {
+                        qtyInput.val(maxQtyAllowed);
+                        alertShown = false;
+                    }, 100);
+                }
+            }
+        }
+
+        function showQuantityWarning(maxAllowed) {
+            console.log(`Maximum quantity allowed: ${maxAllowed}`);
+            alert(`You can only redeem ${maxAllowed} item(s) with your current loyalty points.`);
+        }
+
+        function showQuantityExceed(maxQtyAllowed) {
+            console.log(`Only ${maxQtyAllowed} item(s) available in stock.`);
+            alert(`Only ${maxQtyAllowed} item(s) available in stock.`);
+        }
+
+        function closeRedeemPopup() {
+            $("#redeemPopup").fadeOut();
+        }
+
+        // Use event delegation for redeem buttons - works with carousel
+        $(document).on("click", ".redeem-btn", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             let data = {
                 giftId: $(this).data("gift-id"),
                 giftName: $(this).data("gift-name"),
                 cost: parseInt($(this).data("cost")),
                 maxQty: parseInt($(this).data("maxqty")),
-                userPoints: parseInt($(this).data("userpoints"))
+                userPoints: parseInt($(this).data("userpoints")),
+                photoUrl: $(this).data("photo")
             };
             openRedeemPopup(data);
         });
 
-        $("#cancelBtn").click(() => $("#redeemPopup").fadeOut());
-
-        $("#confirmBtn").click(() => {
+        $(document).on("click", "#confirmBtn", function () {
             const qty = parseInt($("#popupQty").val());
             const totalCost = qty * redeemData.cost;
 
+            // Validation checks
             if (qty <= 0) {
                 alert("Quantity must be at least 1!");
                 return;
@@ -396,25 +482,52 @@
                 return;
             }
 
-            // AJAX request to confirm redemption
-            $.post("/Customer/Home/RedeemGiftConfirm", { giftId: redeemData.giftId, quantity: qty })
-                .done(response => {
-                    alert(response.message || "Gift redeemed successfully!");
-                    location.reload(); // reload page to update points and gift stock
-                })
-                .fail(xhr => alert(xhr.responseText || "Error redeeming gift!"));
+            // Disable button during submission
+            const confirmBtn = $("#confirmBtn");
+            confirmBtn.prop("disabled", true);
 
-            $("#redeemPopup").fadeOut();
+            // AJAX request to confirm redemption
+            $.ajax({
+                url: "/Customer/Home/RedeemGiftConfirm",
+                type: "POST",
+                data: { 
+                    giftId: redeemData.giftId, 
+                    quantity: qty 
+                },
+                dataType: "json",
+                success: function(response) {
+                    console.log("Redemption successful:", response);
+                    alert(response.message || "Gift redeemed successfully!");
+                    closeRedeemPopup();
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Redemption error:", error);
+                    console.error("Response:", xhr.responseText);
+                    
+                    // Parse error response if JSON
+                    let errorMessage = "Error redeeming gift!";
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        errorMessage = errorResponse.message || xhr.responseText;
+                    } catch (e) {
+                        errorMessage = xhr.responseText || "Error redeeming gift!";
+                    }
+                    
+                    alert(errorMessage);
+                    
+                    // Re-enable button
+                    confirmBtn.prop("disabled", false);
+                    confirmBtn.text("Confirm");
+                }
+            });
         });
 
-        // Optional: dynamically update total cost when quantity changes
-        $("#popupQty").on("input", function () {
-            const qty = parseInt($(this).val());
-            const totalCost = qty * redeemData.cost;
-            if (totalCost > redeemData.userPoints) {
-                $(this).val(Math.floor(redeemData.userPoints / redeemData.cost));
-                alert("Adjusted quantity to match available loyalty points.");
-            }
+        // Cancel button handler
+        $(document).on("click", "#cancelBtn", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeRedeemPopup();
         });
     </script>
 }
