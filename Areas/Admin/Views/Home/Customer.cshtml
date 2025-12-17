@@ -6,6 +6,8 @@
     ViewData["ActivePage"] = "Customer";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="content-header">
     <h1 class="page-title">👥 Customer Management</h1>
     <p class="page-subtitle">Manage all customers and their information</p>
@@ -14,7 +16,7 @@
 <!-- Filters Section -->
 <div class="panel">
     <h3 class="panel-title">Filter Customers</h3>
-    
+
     <form method="get" class="form-grid filter-form">
         <div class="form-group">
             <label for="searchName">Search Name</label>
@@ -31,6 +33,7 @@
             <select id="searchStatus" name="searchStatus" class="form-control">
                 <option value="">All Status</option>
                 <option value="active">Active</option>
+                <option value="pending_password">Pending Password</option>
                 <option value="blocked">Blocked</option>
                 <option value="inactive">Inactive</option>
             </select>
@@ -68,31 +71,47 @@
                 <tbody>
                     @foreach (var customer in Model)
                     {
-                        var statusClass = customer.Status == "active" ? "status-active" : "status-inactive";
-                        
+                        var statusClass = customer.Status switch
+                        {
+                            "active" => "status-active",
+                            "pending_password" => "status-pending",
+                            "blocked" => "status-blocked",
+                            _ => "status-inactive"
+                        };
+
+                        var statusDisplay = customer.Status switch
+                        {
+                            "pending_password" => "PENDING PASSWORD",
+                            _ => customer.Status?.ToUpper()
+                        };
+
                         <tr>
                             <td>
                                 <strong>@customer.Name</strong>
+                                @if (customer.Status == "pending_password")
+                                {
+                                    <span class="new-customer-badge" title="Customer needs to set password">🔑 New</span>
+                                }
                             </td>
                             <td>@customer.Email</td>
                             <td>@customer.Phone</td>
                             <td>
-                                <span class="status-tag @statusClass">@customer.Status?.ToUpper()</span>
+                                <span class="status-tag @statusClass">@statusDisplay</span>
                             </td>
                             <td>@customer.CreatedAt?.ToString("MMM dd, yyyy")</td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="@Url.Action("CustomerProfile", "Home", new { area = "Admin", customerId = customer.UserId })" 
+                                    <a href="@Url.Action("CustomerProfile", "Home", new { area = "Admin", customerId = customer.UserId })"
                                        class="btn btn-sm btn-info">
-                                       👁️ View
+                                        👁️ View
                                     </a>
-                                    <button class="btn btn-sm btn-action edit-btn" 
+                                    <button class="btn btn-sm btn-action edit-btn"
                                             onclick="editCustomer('@customer.UserId')">
-                                       ✏️ Edit
+                                        ✏️ Edit
                                     </button>
-                                    <button class="btn btn-sm btn-action delete-btn" 
+                                    <button class="btn btn-sm btn-action delete-btn"
                                             onclick="deleteCustomer('@customer.UserId', '@customer.Name')">
-                                       🗑️ Delete
+                                        🗑️ Delete
                                     </button>
                                 </div>
                             </td>
@@ -121,6 +140,12 @@
 
             <form id="customerForm" asp-controller="Home" asp-action="CreateCustomer" method="post" enctype="multipart/form-data">
                 <div class="modal-body">
+                    <!-- Info Notice for New Customers -->
+                    <div class="form-section-info" id="newCustomerNotice">
+                        📧 A temporary password will be generated and sent to the customer's email.
+                        The customer will be required to set a new password on first login.
+                    </div>
+
                     <!-- Tabs -->
                     <div class="modal-tabs">
                         <button type="button" class="modal-tab-btn active" onclick="switchModalTab('customer')">
@@ -134,7 +159,7 @@
                     <!-- Customer Information Tab -->
                     <div id="customer-tab" class="modal-tab-content active">
                         <div class="form-section-title">Basic Information</div>
-                        
+
                         <div class="modal-form-row">
                             <div class="modal-form-group">
                                 <label>Full Name <span class="required">*</span></label>
@@ -149,25 +174,17 @@
                         <div class="modal-form-row">
                             <div class="modal-form-group">
                                 <label>Phone Number <span class="required">*</span></label>
-                                <input type="tel" id="customerPhone" name="Phone" class="modal-form-input" required placeholder="123-456-7890" />
+                                <input type="tel" id="customerPhone" name="Phone" class="modal-form-input" required placeholder="012-3456789" />
                             </div>
                             <div class="modal-form-group">
                                 <label>IC Number</label>
-                                <input type="text" id="customerIC" name="IC" class="modal-form-input" placeholder="123456789012" />
+                                <input type="text" id="customerIC" name="IC" class="modal-form-input" placeholder="123456-78-9012" />
                             </div>
                         </div>
 
                         <div class="form-section-title">Profile Settings</div>
 
                         <div class="modal-form-row">
-                            <div class="modal-form-group">
-                                <label>Status</label>
-                                <select id="customerStatus" name="Status" class="modal-form-select">
-                                    <option value="active" selected>Active</option>
-                                    <option value="blocked">Blocked</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
                             <div class="modal-form-group">
                                 <label>Profile Photo</label>
                                 <div class="file-upload-wrapper">
@@ -206,9 +223,7 @@
                                         <option value="">Select Pet Type</option>
                                         <option value="Dog">🐕 Dog</option>
                                         <option value="Cat">🐱 Cat</option>
-                                        <option value="Rabbit">🐰 Rabbit</option>
-                                        <option value="Bird">🐦 Bird</option>
-                                        <option value="Other">📌 Other</option>
+
                                     </select>
                                 </div>
                             </div>
@@ -230,17 +245,6 @@
                                     <textarea id="petRemark" name="PetRemark" class="modal-form-textarea" placeholder="Any special care requirements, allergies, or behaviors..." rows="3"></textarea>
                                 </div>
                             </div>
-
-                            <div class="modal-form-row">
-                                <div class="modal-form-group">
-                                    <label>Pet Photo</label>
-                                    <div class="file-upload-wrapper">
-                                        <input type="file" id="petPhoto" name="PetPhotoUpload" class="modal-form-input" accept="image/*" />
-                                        <span id="petPhotoFileName" class="file-name-display">No file chosen</span>
-                                    </div>
-                                    <small class="form-help-text">Optional - Max 5MB</small>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -254,14 +258,113 @@
     </div>
 </div>
 
+<style>
+    /* Status tag for pending password */
+    .status-tag.status-pending {
+        background-color: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fbbf24;
+    }
+
+    /* New customer badge */
+    .new-customer-badge {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 8px;
+        margin-left: 8px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #d97706;
+        border-radius: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+        animation: pulse-badge 2s infinite;
+    }
+
+    @@keyframes pulse-badge {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    /* Info notice styling */
+    #newCustomerNotice {
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border-left-color: #10b981;
+        color: #065f46;
+        margin-bottom: 20px;
+    }
+
+    /* Modal header styling */
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: linear-gradient(135deg, #d97706, #b45309);
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0;
+    }
+
+    .modal-close-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #ffffff;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+        .modal-close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+    .modal-body {
+        padding: 24px;
+        max-height: calc(100vh - 220px);
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: #f9fafb;
+    }
+</style>
+
 @section Scripts {
     <script>
+        // Get anti-forgery token
+        function getAntiForgeryToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        }
+
         // Modal Management
         function openAddCustomerModal() {
             document.getElementById('customerModalOverlay').classList.add('show');
             document.body.style.overflow = 'hidden';
             document.getElementById('customerForm').reset();
             document.getElementById('customerModalTitle').textContent = '➕ Add New Customer';
+            document.getElementById('newCustomerNotice').style.display = 'block';
             switchModalTab('customer');
             resetPetFields();
         }
@@ -273,15 +376,12 @@
 
         // Tab Switching
         function switchModalTab(tab) {
-            // Hide all tabs
             document.getElementById('customer-tab').classList.remove('active');
             document.getElementById('pet-tab').classList.remove('active');
 
-            // Remove active class from buttons
             const buttons = document.querySelectorAll('.modal-tab-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
 
-            // Show selected tab and mark button as active
             if (tab === 'customer') {
                 document.getElementById('customer-tab').classList.add('active');
                 buttons[0].classList.add('active');
@@ -295,7 +395,7 @@
         function togglePetFields() {
             const checkbox = document.getElementById('addPetCheckbox');
             const petFields = document.getElementById('petFields');
-            
+
             if (checkbox.checked) {
                 petFields.style.display = 'block';
             } else {
@@ -307,11 +407,12 @@
         function resetPetFields() {
             document.getElementById('addPetCheckbox').checked = false;
             document.getElementById('petFields').style.display = 'none';
-            document.getElementById('customerForm').querySelector('#petName').value = '';
-            document.getElementById('customerForm').querySelector('#petType').value = '';
-            document.getElementById('customerForm').querySelector('#petBreed').value = '';
-            document.getElementById('customerForm').querySelector('#petAge').value = '';
-            document.getElementById('customerForm').querySelector('#petRemark').value = '';
+            const form = document.getElementById('customerForm');
+            if (form.querySelector('#petName')) form.querySelector('#petName').value = '';
+            if (form.querySelector('#petType')) form.querySelector('#petType').value = '';
+            if (form.querySelector('#petBreed')) form.querySelector('#petBreed').value = '';
+            if (form.querySelector('#petAge')) form.querySelector('#petAge').value = '';
+            if (form.querySelector('#petRemark')) form.querySelector('#petRemark').value = '';
         }
 
         // File Upload Display
@@ -320,30 +421,23 @@
             document.getElementById('photoFileName').textContent = fileName;
         });
 
-        document.getElementById('petPhoto')?.addEventListener('change', function() {
-            const fileName = this.files[0]?.name || 'No file chosen';
-            document.getElementById('petPhotoFileName').textContent = fileName;
-        });
-
-        // Customer Actions - FIX DELETE TO WORK WITHOUT PAGE REDIRECT
+        // Customer Actions
         function editCustomer(customerId) {
             window.location.href = `/Admin/Home/CustomerProfile?customerId=${customerId}`;
         }
 
         function deleteCustomer(customerId, customerName) {
             if (confirm(`Are you sure you want to delete ${customerName}? This action cannot be undone.`)) {
-                // Send AJAX request to delete directly
                 fetch(`/Admin/Home/DeleteCustomer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        'RequestVerificationToken': getAntiForgeryToken()
                     },
                     body: `customerId=${encodeURIComponent(customerId)}`
                 })
                 .then(response => {
-                    if (response.ok) {
-                        // Delete successful - show message and reload
+                    if (response.ok || response.redirected) {
                         alert(`${customerName} has been deleted successfully.`);
                         location.reload();
                     } else {

@@ -1,11 +1,12 @@
-﻿
-@using PetGroomingAppointmentSystem.Models;
+﻿@using PetGroomingAppointmentSystem.Models;
 @model Customer
 
 @{
     ViewData["Title"] = $"Customer Profile - {Model?.Name}";
     ViewData["ActivePage"] = "Customer";
 }
+
+
 
 <div class="content-header">
     <a href="@Url.Action("Customer", "Home", new { area = "Admin" })" class="btn btn-sm btn-secondary">← Back to Customers</a>

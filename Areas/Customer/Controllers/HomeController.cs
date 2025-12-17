@@ -22,12 +22,34 @@ public class HomeController : Controller
         _webHostEnvironment = webHostEnvironment;
     }
 
+    // ========== STATUS CHECK HELPER METHODS (Profile Only) ==========
+    private Models.Customer? GetCurrentCustomerFromSession()
+    {
+        var userId = HttpContext.Session.GetString("CustomerId");
+        if (string.IsNullOrEmpty(userId)) return null;
+        return _db.Customers.FirstOrDefault(c => c.UserId == userId);
+    }
+
+    private bool IsCustomerBlocked(Models.Customer? customer)
+    {
+        return customer?.Status?.ToLower() == "blocked";
+    }
+
+    private IActionResult BlockedResponse(string action = "perform this action")
+    {
+        return Json(new {
+            success = false,
+            message = $"Your account is blocked. You cannot {action}.",
+            statusCode = "BLOCKED"
+        });
+    }
+    // =================================================================
 
     public IActionResult Index()
     {
         // Get current user's ID from claims
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var loyaltyPoints = 0;
+        var loyaltyPoints =0;
 
         // If user is logged in, fetch their loyalty points
         if (!string.IsNullOrEmpty(userId))
@@ -39,17 +61,17 @@ public class HomeController : Controller
             }
         }
 
-            var vm = new HomeViewModel
-            {
-                DogServices = _db.Services
-                    .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Dog"))
-                    .ToList(),
+        var vm = new HomeViewModel
+        {
+            DogServices = _db.Services
+                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "dog"))
+                .ToList(),
 
-                CatServices = _db.Services
-                    .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                    .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name == "Cat"))
-                    .ToList(),
+            CatServices = _db.Services
+                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "cat"))
+                .ToList(),
 
             RedeemGifts = _db.RedeemGifts.ToList(),
             CustomerLoyaltyPoints = loyaltyPoints
@@ -60,26 +82,22 @@ public class HomeController : Controller
 
     public IActionResult Profile()
     {
-        // Get current logged-in customer from SESSION
-        var userId = HttpContext.Session.GetString("CustomerId");
-        if (string.IsNullOrEmpty(userId))
-        {
-            return RedirectToAction("Login", "Auth");
-        }
+        var customer = GetCurrentCustomerFromSession();
+        if (customer == null)
+            return Unauthorized();
 
-        var customer = _db.Customers
+        customer = _db.Customers
             .Include(c => c.Redeems)
-            .FirstOrDefault(c => c.UserId == userId);
+            .FirstOrDefault(c => c.UserId == customer.UserId);
 
         if (customer == null)
-        {
             return NotFound("Customer not found");
-        }
 
-        // ✅ Use userId instead of customer.CustomerId
-        var pets = _db.Pets.Where(p => p.CustomerId == userId).ToList();
+        if (IsCustomerBlocked(customer))
+            return BlockedResponse("view profile");
 
-        // Pass customer data to view
+        var pets = _db.Pets.Where(p => p.CustomerId == customer.UserId).ToList();
+
         ViewBag.Customer = customer;
         ViewBag.Pets = pets;
 
@@ -91,25 +109,22 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Unauthorized();
 
-            var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-            if (customer == null)
-                return NotFound("Customer not found");
+            if (IsCustomerBlocked(customer))
+                return BlockedResponse("update profile");
 
-            // Update customer information
             customer.Name = name;
             customer.Email = email;
             customer.IC = ic;
             customer.Phone = phone;
 
-            // Handle photo upload
-            if (Request.Form.Files.Count > 0)
+            if (Request.Form.Files.Count >0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length > 0)
+                if (photoFile.Length >0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
                     if (!Directory.Exists(uploadsFolder))
@@ -130,7 +145,6 @@ public class HomeController : Controller
             _db.Customers.Update(customer);
             _db.SaveChanges();
 
-            // Update session name if changed
             HttpContext.Session.SetString("CustomerName", customer.Name);
 
             return Json(new { success = true, message = "Profile updated successfully!" });
@@ -146,19 +160,16 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Unauthorized();
 
-            var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-            if (customer == null)
-                return NotFound("Customer not found");
+            if (IsCustomerBlocked(customer))
+                return BlockedResponse("change password");
 
-            // Verify current password (plain text comparison)
             if (customer.Password != currentPassword)
                 return BadRequest(new { success = false, message = "Current password is incorrect" });
 
-            // Update to new password (plain text)
             customer.Password = newPassword;
             _db.Customers.Update(customer);
             _db.SaveChanges();
@@ -176,12 +187,23 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Unauthorized();
 
-            // ✅ Use UserId instead of CustomerId
-            var pets = _db.Pets.Where(p => p.CustomerId == userId).ToList();
+            var pets = _db.Pets
+                .Where(p => p.CustomerId == customer.UserId)
+                .Select(p => new
+                {
+                    petId = p.PetId,
+                    name = p.Name,
+                    age = p.Age,
+                    type = p.Type,
+                    breed = p.Breed,
+                    remark = p.Remark,
+                    photo = p.Photo
+                })
+                .ToList();
             return Json(new { success = true, data = pets });
         }
         catch (Exception ex)
@@ -195,26 +217,46 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Unauthorized();
+
+            // ========== STATUS CHECK ==========
+            if (IsCustomerBlocked(customer))
+                return BlockedResponse("add pet");
+
+            // Generate sequential PetId (P001, P002, etc.)
+            int nextNumber =1;
+
+            var existingPetIds = _db.Pets
+                .Where(p => p.PetId.StartsWith("P"))
+                .Select(p => p.PetId)
+                .ToList();
+
+            if (existingPetIds.Any())
+            {
+                // Extract numeric part and find the maximum
+                nextNumber = existingPetIds
+                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num :0)
+                    .Max() +1;
+            }
+
 
             var pet = new Pet
             {
-                PetId = "P" + Guid.NewGuid().ToString("N").Substring(0, 9).ToUpper(),
+                PetId = $"P{nextNumber:D3}", // Formats as P001, P002, etc.
                 Name = name,
                 Type = type,
                 Breed = breed,
                 Age = age,
                 Remark = remark,
-                CustomerId = userId  // ✅ Use userId directly, not customer.CustomerId
+                CustomerId = customer.UserId
             };
 
-            // Handle pet photo upload
-            if (Request.Form.Files.Count > 0)
+            if (Request.Form.Files.Count >0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length > 0)
+                if (photoFile.Length >0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
                     if (!Directory.Exists(uploadsFolder))
@@ -235,7 +277,19 @@ public class HomeController : Controller
             _db.Pets.Add(pet);
             _db.SaveChanges();
 
-            return Json(new { success = true, message = "Pet added successfully!", data = pet });
+            var result = new
+            {
+                petId = pet.PetId,
+                name = pet.Name,
+                age = pet.Age,
+                type = pet.Type,
+                breed = pet.Breed,
+                remark = pet.Remark,
+                photo = pet.Photo,
+                customerId = pet.CustomerId
+            };
+
+            return Json(new { success = true, message = "Pet added successfully!", data = result });
         }
         catch (Exception ex)
         {
@@ -248,12 +302,14 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Unauthorized();
 
-            // ✅ Use userId instead of customer.CustomerId
-            var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+            if (IsCustomerBlocked(customer))
+                return BlockedResponse("update pet");
+
+            var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == customer.UserId);
             if (pet == null)
                 return NotFound("Pet not found");
 
@@ -263,11 +319,10 @@ public class HomeController : Controller
             pet.Age = age;
             pet.Remark = remark;
 
-            // Handle pet photo upload
-            if (Request.Form.Files.Count > 0)
+            if (Request.Form.Files.Count >0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length > 0)
+                if (photoFile.Length >0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
                     if (!Directory.Exists(uploadsFolder))
@@ -288,7 +343,19 @@ public class HomeController : Controller
             _db.Pets.Update(pet);
             _db.SaveChanges();
 
-            return Json(new { success = true, message = "Pet updated successfully!", data = pet });
+            var result = new
+            {
+                petId = pet.PetId,
+                name = pet.Name,
+                age = pet.Age,
+                type = pet.Type,
+                breed = pet.Breed,
+                remark = pet.Remark,
+                photo = pet.Photo,
+                customerId = pet.CustomerId
+            };
+
+            return Json(new { success = true, message = "Pet updated successfully!", data = result });
         }
         catch (Exception ex)
         {
@@ -297,26 +364,50 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public IActionResult DeletePet(string petId)
+    public IActionResult DeletePet([FromForm] string petId)
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
+            {
+                Console.WriteLine($"DeletePet: Not logged in. petId={petId}");
+                return Json(new { success = false, message = "Not logged in" });
+            }
 
-            // ✅ Use userId instead of customer.CustomerId
-            var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+            if (IsCustomerBlocked(customer))
+            {
+                Console.WriteLine($"DeletePet: Customer blocked. customerId={customer.UserId}, petId={petId}");
+                return BlockedResponse("delete pet");
+            }
+
+            Console.WriteLine($"DeletePet called. customerId={customer.UserId}, petId={petId}");
+
+            var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == customer.UserId);
             if (pet == null)
-                return NotFound("Pet not found");
+            {
+                Console.WriteLine($"DeletePet: Pet not found for customer. customerId={customer.UserId}, petId={petId}");
+                return Json(new { success = false, message = "Pet not found" });
+            }
+
+            // Check for related appointments
+            var hasAppointments = _db.Appointments.Any(a => a.PetId == petId);
+            if (hasAppointments)
+            {
+                Console.WriteLine($"DeletePet: Pet has existing appointments. customerId={customer.UserId}, petId={petId}");
+                return Json(new { success = false, message = "Cannot delete pet with existing appointments. Please cancel or complete them first." });
+            }
 
             _db.Pets.Remove(pet);
             _db.SaveChanges();
+
+            Console.WriteLine($"DeletePet: Pet removed. customerId={customer.UserId}, petId={petId}");
 
             return Json(new { success = true, message = "Pet deleted successfully!" });
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"DeletePet Exception: {ex.Message}\n{ex.StackTrace}");
             return Json(new { success = false, message = ex.Message });
         }
     }
@@ -326,13 +417,27 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
+                return Json(new { success = false, message = "Not logged in" });
 
-            var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
+            var pet = _db.Pets
+                .Where(p => p.PetId == petId && p.CustomerId == customer.UserId)
+                .Select(p => new
+                {
+                    petId = p.PetId,
+                    name = p.Name,
+                    age = p.Age,
+                    type = p.Type,
+                    breed = p.Breed,
+                    remark = p.Remark,
+                    photo = p.Photo,
+                    customerId = p.CustomerId
+                })
+                .FirstOrDefault();
+
             if (pet == null)
-                return NotFound("Pet not found");
+                return Json(new { success = false, message = "Pet not found" });
 
             return Json(new { success = true, data = pet });
         }
@@ -341,8 +446,6 @@ public class HomeController : Controller
             return Json(new { success = false, message = ex.Message });
         }
     }
-
-    // Add this action to your HomeController
 
     [HttpPost]
     public async Task<IActionResult> UpdateProfileMultiPhoto(
@@ -354,21 +457,18 @@ public class HomeController : Controller
     {
         try
         {
-            var userId = HttpContext.Session.GetString("CustomerId");
-            if (string.IsNullOrEmpty(userId))
+            var customer = GetCurrentCustomerFromSession();
+            if (customer == null)
                 return Json(new { success = false, message = "Not logged in" });
 
-            var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-            if (customer == null)
-                return Json(new { success = false, message = "Customer not found" });
+            if (IsCustomerBlocked(customer))
+                return BlockedResponse("update profile");
 
-            // Update basic info
             customer.Name = name;
             customer.Email = email;
             customer.IC = ic;
             customer.Phone = phone;
 
-            // Process photos from JSON array
             var photoPaths = new List<string>();
 
             if (!string.IsNullOrEmpty(allPhotosData))
@@ -379,26 +479,25 @@ public class HomeController : Controller
 
                     if (photoDataArray != null)
                     {
-                        for (int i = 0; i < photoDataArray.Count; i++)
+                        for (int i =0; i < photoDataArray.Count; i++)
                         {
                             var photoData = photoDataArray[i];
 
                             if (string.IsNullOrEmpty(photoData))
                                 continue;
 
-                            // If it's a base64 image (new upload), save it
                             if (photoData.StartsWith("data:image"))
                             {
                                 try
                                 {
-                                    var base64Data = photoData.Substring(photoData.IndexOf(",") + 1);
+                                    var base64Data = photoData.Substring(photoData.IndexOf(",") +1);
                                     var imageBytes = Convert.FromBase64String(base64Data);
 
                                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
                                     if (!Directory.Exists(uploadsFolder))
                                         Directory.CreateDirectory(uploadsFolder);
 
-                                    var uniqueFileName = $"{userId}_photo{i}_{Guid.NewGuid():N}.jpg";
+                                    var uniqueFileName = $"{customer.UserId}_photo{i}_{Guid.NewGuid():N}.jpg";
                                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                                     await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
@@ -409,7 +508,6 @@ public class HomeController : Controller
                                     Console.WriteLine($"Error saving photo {i}: {ex.Message}");
                                 }
                             }
-                            // If it's already a path (existing photo), keep it
                             else if (photoData.StartsWith("/"))
                             {
                                 photoPaths.Add(photoData);
@@ -423,7 +521,6 @@ public class HomeController : Controller
                 }
             }
 
-            // Store as comma-separated paths (no limit!)
             customer.Photo = photoPaths.Any() ? string.Join(",", photoPaths) : null;
 
             _db.Customers.Update(customer);
@@ -443,7 +540,6 @@ public class HomeController : Controller
             return Json(new { success = false, message = ex.Message });
         }
     }
-
 
     public IActionResult About()
     {
@@ -546,34 +642,23 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Try multiple ways to get userId
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // If not found in claims, check session
             if (string.IsNullOrEmpty(userId))
             {
                 userId = HttpContext.Session.GetString("CustomerId");
             }
-
-            // Debug log
-            Console.WriteLine($"GetCustomerPets - UserId from claims: {User.FindFirst(ClaimTypes.NameIdentifier)?.Value}");
-            Console.WriteLine($"GetCustomerPets - UserId from session: {HttpContext.Session.GetString("CustomerId")}");
-            Console.WriteLine($"GetCustomerPets - Final userId: {userId}");
 
             if (string.IsNullOrEmpty(userId))
             {
                 return Json(new { success = false, message = "User not logged in" });
             }
 
-            // Get customer by UserId
             var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
             if (customer == null)
             {
-                Console.WriteLine($"GetCustomerPets - Customer not found for userId: {userId}");
                 return Json(new { success = false, message = "Customer not found" });
             }
 
-            // Get all pets for this customer
             var pets = _db.Pets
                 .Where(p => p.CustomerId == userId)
                 .Select(p => new
@@ -585,19 +670,11 @@ public class HomeController : Controller
                 })
                 .ToList();
 
-            Console.WriteLine($"GetCustomerPets - Found {pets.Count} pets for userId: {userId}");
-
-            foreach (var pet in pets)
-            {
-                Console.WriteLine($"  Pet: {pet.id} - {pet.name} ({pet.type})");
-            }
-
             return Json(new { success = true, pets = pets });
         }
         catch (Exception ex)
         {
             Console.WriteLine($"GetCustomerPets - Error: {ex.Message}");
-            Console.WriteLine($"GetCustomerPets - StackTrace: {ex.StackTrace}");
             return BadRequest(new { success = false, message = ex.Message });
         }
     }
@@ -607,15 +684,12 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Check both claims and session
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrEmpty(userId))
             {
                 userId = HttpContext.Session.GetString("CustomerId");
             }
-
-            Console.WriteLine($"GetServices - UserId: {userId}");
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -624,8 +698,8 @@ public class HomeController : Controller
 
             var dogServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "dog"))
-                .Select(s => new 
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "dog"))
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
@@ -635,17 +709,23 @@ public class HomeController : Controller
 
             var catServices = _db.Services
                 .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.Name.ToLower() == "cat"))
-                .Select(s => new 
+                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "cat"))
+                .Select(s => new
                 {
                     serviceId = s.ServiceId,
                     name = s.Name,
                     durationTime = s.DurationTime
                 })
                 .ToList();
- 
-            return Json(new { dogServices, catServices });
+
+            return Json(new { success = true, dogServices, catServices });
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetServices - Error: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 
     [HttpPost]
     public IActionResult SaveAppointment([FromBody] AppointmentRequest request)
@@ -662,7 +742,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(request.ServiceId))
                 return BadRequest(new { success = false, message = "Service selection is required" });
 
-            if (request.PetIds == null || request.PetIds.Count == 0)
+            if (request.PetIds == null || request.PetIds.Count ==0)
                 return BadRequest(new { success = false, message = "Please select at least one pet" });
 
             // Get current user ID
@@ -705,12 +785,14 @@ public class HomeController : Controller
                 assignedStaff = _db.Staffs.FirstOrDefault(s => s.Role == "staff");
             }
 
-                // Save appointment for each selected pet
-                var appointmentIds = new List<string>();
-                
-                foreach (var petId in request.PetIds)
+            var appointmentIds = new List<string>();
+            var errors = new List<string>();
+
+            foreach (var petId in request.PetIds)
+            {
+                try
                 {
-                    // Verify pet belongs to customer (use userId as CustomerId)
+                    // Verify pet belongs to customer
                     var pet = _db.Pets.FirstOrDefault(p => p.PetId == petId && p.CustomerId == userId);
                     if (pet == null)
                     {
@@ -731,7 +813,7 @@ public class HomeController : Controller
                         AppointmentDateTime = appointmentDateTime,
                         DurationTime = service.DurationTime,
                         SpecialRequest = request.Notes ?? string.Empty,
-                        Status = "confirmed",
+                        Status = "Confirmed",
                         StaffId = assignedStaff?.UserId,  // ✅ Assign the groomer here
                         CreatedAt = DateTime.Now
                     };
@@ -761,18 +843,25 @@ public class HomeController : Controller
                 ? "All appointments booked successfully!"
                 : $"Successfully booked {appointmentIds.Count} of {request.PetIds.Count} appointments. Errors: {string.Join("; ", errors)}";
 
-                return Ok(new 
-                { 
-                    success = true, 
-                    message = "Appointment(s) booked successfully!",
-                    appointmentIds = appointmentIds
-                });
-            }
-            catch (Exception ex)
+            return Ok(new
             {
-                return BadRequest(new { success = false, message = $"Error saving appointment: {ex.Message}" });
-            }
+                success = true,
+                message = message,
+                appointmentIds = appointmentIds,
+                partialFailure = appointmentIds.Count < request.PetIds.Count
+            });
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SaveAppointment Exception: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            return BadRequest(new
+            {
+                success = false,
+                message = $"Server error: {ex.InnerException?.Message ?? ex.Message}"
+            });
+        }
+    }
 
     // GET: Appointment History Data
     [HttpGet]
@@ -780,13 +869,9 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Check both claims and session
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userId))
-            {
                 userId = HttpContext.Session.GetString("CustomerId");
-            }
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { success = false, message = "User not logged in" });
@@ -803,18 +888,18 @@ public class HomeController : Controller
                 .OrderByDescending(a => a.AppointmentDateTime)
                 .ToList();
 
-                var result = appointments.Select(a => new
-                {
-                    appointmentId = a.AppointmentId,
-                    date = a.AppointmentDateTime?.ToString("MMM dd, yyyy"),
-                    time = a.AppointmentDateTime?.ToString("hh:mm tt"),                         
-                    petName = a.Pet?.Name,
-                    petImage = a.Pet?.Photo,
-                    groomerName = a.Staff?.Name ?? "Not assigned",
-                    serviceName = a.Service?.Name,
-                    status = a.Status,
-                    durationTime = a.DurationTime
-                }).ToList();
+            var result = appointments.Select(a => new
+            {
+                appointmentId = a.AppointmentId,
+                date = a.AppointmentDateTime?.ToString("MMM dd, yyyy"),
+                time = a.AppointmentDateTime?.ToString("hh:mm tt"),
+                petName = a.Pet?.Name,
+                petImage = a.Pet?.Photo,
+                groomerName = a.Staff?.Name ?? "Not assigned",
+                serviceName = a.Service?.Name,
+                status = a.Status,
+                durationTime = a.DurationTime
+            }).ToList();
 
             return Json(new { success = true, data = result });
         }
@@ -831,13 +916,9 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Check both claims and session
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userId))
-            {
                 userId = HttpContext.Session.GetString("CustomerId");
-            }
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { success = false, message = "User not logged in" });
@@ -879,13 +960,9 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Check both claims and session
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userId))
-            {
                 userId = HttpContext.Session.GetString("CustomerId");
-            }
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { success = false, message = "User not logged in" });
@@ -923,13 +1000,9 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ UPDATED: Check both claims and session
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userId))
-            {
                 userId = HttpContext.Session.GetString("CustomerId");
-            }
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { success = false, message = "User not logged in" });
@@ -947,19 +1020,18 @@ public class HomeController : Controller
             if (appointment == null)
                 return NotFound(new { success = false, message = "Appointment not found" });
 
-                var result = new
-                {
-                    appointmentId = appointment.AppointmentId,
-                    date = appointment.AppointmentDateTime?.ToString("MMM dd, yyyy"),
-                    time = appointment.AppointmentDateTime?.ToString("hh:mm tt"),
-                    petNames = appointment.Pet?.Name,
-                    groomerName = appointment.Staff?.Name ?? "Not assigned",
-                    serviceName = appointment.Service?.Name,
-                    amount = appointment.Service?.Price ?? 0,
-                    status = appointment.Status,
-                    notes = appointment.SpecialRequest,
-                    durationTime = appointment.DurationTime
-                };
+            var result = new
+            {
+                appointmentId = appointment.AppointmentId,
+                date = appointment.AppointmentDateTime?.ToString("MMM dd, yyyy"),
+                time = appointment.AppointmentDateTime?.ToString("hh:mm tt"),
+                petNames = appointment.Pet?.Name,
+                groomerName = appointment.Staff?.Name ?? "Not assigned",
+                serviceName = appointment.Service?.Name,
+                status = appointment.Status,
+                notes = appointment.SpecialRequest,
+                durationTime = appointment.DurationTime
+            };
 
             return Json(new { success = true, data = result });
         }
@@ -969,159 +1041,48 @@ public class HomeController : Controller
         }
     }
 
-        // POST: Reschedule Appointment
-        [HttpPost]
-        public IActionResult RescheduleAppointment(string appointmentId)
+    // Helper: Generate TXT Receipt
+    private string GenerateReceiptTxt(Appointment appointment, User customer)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("╔════════════════════════════════════════╗");
+        sb.AppendLine("║ PET GROOMING APPOINTMENT RECEIPT ║");
+        sb.AppendLine("╚════════════════════════════════════════╝");
+        sb.AppendLine();
+        sb.AppendLine($"Receipt #: {appointment.AppointmentId}");
+        sb.AppendLine($"Date Issued: {DateTime.Now:MMM dd, yyyy HH:mm tt}");
+        sb.AppendLine();
+        sb.AppendLine("────────────────────────────────────────");
+        sb.AppendLine("CUSTOMER INFORMATION");
+        sb.AppendLine("────────────────────────────────────────");
+        sb.AppendLine($"Name: {customer.Name}");
+        sb.AppendLine($"Email: {customer.Email}");
+        sb.AppendLine($"Phone: {customer.Phone}");
+        sb.AppendLine();
+        sb.AppendLine("────────────────────────────────────────");
+        sb.AppendLine("APPOINTMENT DETAILS");
+        sb.AppendLine("────────────────────────────────────────");
+        sb.AppendLine($"Date: {appointment.AppointmentDateTime:MMM dd, yyyy}");
+        sb.AppendLine($"Time: {appointment.AppointmentDateTime:hh:mm tt}");
+        sb.AppendLine($"Pet(s): {appointment.Pet?.Name}");
+        sb.AppendLine($"Groomer: {appointment.Staff?.Name ?? "Not assigned"}");
+        sb.AppendLine($"Service: {appointment.Service?.Name}");
+        sb.AppendLine($"Duration: {appointment.DurationTime} minutes");
+        sb.AppendLine($"Status: {appointment.Status}");
+        sb.AppendLine();
+        if (!string.IsNullOrEmpty(appointment.SpecialRequest))
         {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
-
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return NotFound();
-
-                var appointment = _db.Appointments
-                    .Include(a => a.Service)
-                    .FirstOrDefault(a => a.AppointmentId == appointmentId && a.CustomerId == userId);
-
-                if (appointment == null)
-                    return NotFound();
-
-                return Json(new
-                {
-                    success = true,
-                    redirectUrl = $"/Customer/Home/Appointment?petId={appointment.PetId}&serviceId={appointment.ServiceId}&appointmentId={appointmentId}"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
+            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine("SPECIAL REQUESTS");
+            sb.AppendLine("────────────────────────────────────────");
+            sb.AppendLine(appointment.SpecialRequest);
+            sb.AppendLine();
         }
-
-        // GET: Download Receipt as TXT
-        [HttpGet]
-        public IActionResult DownloadReceiptTxt(string appointmentId)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
-
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return NotFound();
-
-                var appointment = _db.Appointments
-                    .Include(a => a.Pet)
-                    .Include(a => a.Service)
-                    .Include(a => a.Staff)
-                    .FirstOrDefault(a => a.AppointmentId == appointmentId && a.CustomerId == userId);
-
-                if (appointment == null)
-                    return NotFound();
-
-                var txtContent = GenerateReceiptTxt(appointment, customer);
-                var fileName = $"Receipt_{appointmentId}_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-                
-                return File(
-                    Encoding.UTF8.GetBytes(txtContent),
-                    "text/plain",
-                    fileName
-                );
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // GET: Download Receipt as PDF
-        [HttpGet]
-        public IActionResult DownloadReceiptPdf(string appointmentId)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
-
-                var customer = _db.Customers.FirstOrDefault(c => c.UserId == userId);
-                if (customer == null)
-                    return NotFound();
-
-                var appointment = _db.Appointments
-                    .Include(a => a.Pet)
-                    .Include(a => a.Service)
-                    .Include(a => a.Staff)
-                    .FirstOrDefault(a => a.AppointmentId == appointmentId && a.CustomerId == userId);
-
-                if (appointment == null)
-                    return NotFound();
-
-                var pdfBytes = GenerateReceiptPdf(appointment, customer);
-                var fileName = $"Receipt_{appointmentId}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-
-                return File(pdfBytes, "application/pdf", fileName);
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-        // Helper: Generate TXT Receipt
-        private string GenerateReceiptTxt(Appointment appointment, User customer)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("╔════════════════════════════════════════╗");
-            sb.AppendLine("║      PET GROOMING APPOINTMENT RECEIPT   ║");
-            sb.AppendLine("╚════════════════════════════════════════╝");
-            sb.AppendLine();
-            sb.AppendLine($"Receipt #:        {appointment.AppointmentId}");
-            sb.AppendLine($"Date Issued:      {DateTime.Now:MMM dd, yyyy HH:mm tt}");
-            sb.AppendLine();
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine("CUSTOMER INFORMATION");
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine($"Name:             {customer.Name}");
-            sb.AppendLine($"Email:            {customer.Email}");
-            sb.AppendLine($"Phone:            {customer.Phone}");
-            sb.AppendLine();
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine("APPOINTMENT DETAILS");
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine($"Date:             {appointment.AppointmentDateTime:MMM dd, yyyy}");
-            sb.AppendLine($"Time:             {appointment.AppointmentDateTime:hh:mm tt}");
-            sb.AppendLine($"Pet(s):           {appointment.Pet?.Name}");
-            sb.AppendLine($"Groomer:          {appointment.Staff?.Name ?? "Not assigned"}");
-            sb.AppendLine($"Service:          {appointment.Service?.Name}");
-            sb.AppendLine($"Duration:         {appointment.DurationTime} minutes");
-            sb.AppendLine($"Status:           {appointment.Status}");
-            sb.AppendLine();
-            if (!string.IsNullOrEmpty(appointment.SpecialRequest))
-            {
-                sb.AppendLine("────────────────────────────────────────");
-                sb.AppendLine("SPECIAL REQUESTS");
-                sb.AppendLine("────────────────────────────────────────");
-                sb.AppendLine(appointment.SpecialRequest);
-                sb.AppendLine();
-            }
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine("AMOUNT");
-            sb.AppendLine("────────────────────────────────────────");
-            sb.AppendLine($"Service Cost:     ${appointment.Service?.Price:F2}");
-            sb.AppendLine($"Total Amount:     ${appointment.Service?.Price:F2}");
-            sb.AppendLine();
-            sb.AppendLine("════════════════════════════════════════");
-            sb.AppendLine("Thank you for choosing our service!");
-            sb.AppendLine("════════════════════════════════════════");
-            sb.AppendLine();
-            sb.AppendLine($"Printed: {DateTime.Now:MMM dd, yyyy HH:mm:ss}");
+        sb.AppendLine("════════════════════════════════════════");
+        sb.AppendLine("Thank you for choosing our service!");
+        sb.AppendLine("════════════════════════════════════════");
+        sb.AppendLine();
+        sb.AppendLine($"Printed: {DateTime.Now:MMM dd, yyyy HH:mm:ss}");
 
         return sb.ToString();
     }
@@ -1131,53 +1092,57 @@ public class HomeController : Controller
     {
         using (var memoryStream = new MemoryStream())
         {
-            var document = new Document(PageSize.A4, 40, 40, 40, 40);
+            var document = new Document(PageSize.A4,40,40,40,40);
             var writer = PdfWriter.GetInstance(document, memoryStream);
             document.Open();
 
             // Set fonts
-            var titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
-            var headerFont = new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD);
-            var normalFont = new Font(Font.FontFamily.HELVETICA, 10);
-            var labelFont = new Font(Font.FontFamily.HELVETICA, 9, Font.BOLD);
-            var smallFont = new Font(Font.FontFamily.HELVETICA, 8);
+            var titleFont = new Font(Font.FontFamily.HELVETICA,18, Font.BOLD);
+            var headerFont = new Font(Font.FontFamily.HELVETICA,11, Font.BOLD);
+            var normalFont = new Font(Font.FontFamily.HELVETICA,10);
+            var labelFont = new Font(Font.FontFamily.HELVETICA,9, Font.BOLD);
+            var smallFont = new Font(Font.FontFamily.HELVETICA,8);
 
             // Title
             var title = new Paragraph("PET GROOMING APPOINTMENT RECEIPT", titleFont);
             title.Alignment = Element.ALIGN_CENTER;
-            title.SpacingAfter = 15;
+            title.SpacingAfter =15;
             document.Add(title);
 
             // Receipt Info
             var receiptTable = new PdfPTable(2);
-            receiptTable.SetWidths(new float[] { 50, 50 });
-            receiptTable.DefaultCell.Border = 0;
-            receiptTable.DefaultCell.Padding = 5;
+            receiptTable.SetWidths(new float[] {50,50 });
+            receiptTable.DefaultCell.Border =0;
+            receiptTable.DefaultCell.Padding =5;
 
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border = 0 });
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Date Printed: {DateTime.Now:MMM dd, yyyy hh:mm tt}", normalFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
+            receiptTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border =0 });
+            receiptTable.AddCell(new PdfPCell(new Phrase($"Date Printed: {DateTime.Now:MMM dd, yyyy hh:mm tt}", normalFont)) { Border =0, HorizontalAlignment = Element.ALIGN_RIGHT });
 
             document.Add(receiptTable);
             document.Add(new Paragraph(" "));
 
             // Divider line using Paragraph instead of LineSeparator
-            var dividerParagraph = new Paragraph(new string('─', 50));
+            var dividerParagraph = new Paragraph(new string('─',50));
             dividerParagraph.Alignment = Element.ALIGN_CENTER;
             document.Add(dividerParagraph);
             document.Add(new Paragraph(" "));
 
-                // Customer Section
-                var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
-                document.Add(customerHeader);
-                
-                var customerTable = new PdfPTable(2);
-                customerTable.SetWidths(new float[] { 30, 70 });
-                customerTable.AddCell(new PdfPCell(new Phrase("Name:", normalFont)) { Border = 0 });
-                customerTable.AddCell(new PdfPCell(new Phrase(customer.Name, normalFont)) { Border = 0 });
-                customerTable.AddCell(new PdfPCell(new Phrase("Email:", normalFont)) { Border = 0 });
-                customerTable.AddCell(new PdfPCell(new Phrase(customer.Email, normalFont)) { Border = 0 });
-                customerTable.AddCell(new PdfPCell(new Phrase("Phone:", normalFont)) { Border = 0 });
-                customerTable.AddCell(new PdfPCell(new Phrase(customer.Phone, normalFont)) { Border = 0 });
+            // Customer Section
+            var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
+            customerHeader.SpacingAfter =8;
+            document.Add(customerHeader);
+
+            var customerTable = new PdfPTable(2);
+            customerTable.SetWidths(new float[] {25,75 });
+            customerTable.DefaultCell.Border =0;
+            customerTable.DefaultCell.Padding =4;
+
+            customerTable.AddCell(new PdfPCell(new Phrase("Name:", labelFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Name, normalFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase("Email:", labelFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Email, normalFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase("Phone:", labelFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Phone, normalFont)) { Border =0 });
 
             document.Add(customerTable);
             document.Add(new Paragraph(" "));
@@ -1188,34 +1153,34 @@ public class HomeController : Controller
 
             // Appointment Section
             var appointmentHeader = new Paragraph("APPOINTMENT DETAILS", headerFont);
-            appointmentHeader.SpacingAfter = 8;
+            appointmentHeader.SpacingAfter =8;
             document.Add(appointmentHeader);
 
             var appointmentTable = new PdfPTable(2);
-            appointmentTable.SetWidths(new float[] { 25, 75 });
-            appointmentTable.DefaultCell.Border = 0;
-            appointmentTable.DefaultCell.Padding = 4;
+            appointmentTable.SetWidths(new float[] {25,75 });
+            appointmentTable.DefaultCell.Border =0;
+            appointmentTable.DefaultCell.Padding =4;
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Date:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("MMM dd, yyyy") ?? "N/A", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Date:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("MMM dd, yyyy") ?? "N/A", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Time:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Time:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Pet(s):", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Pet(s):", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Groomer:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Groomer:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Service:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Service:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Duration:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Duration:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border =0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Status:", labelFont)) { Border = 0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Status, normalFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Status:", labelFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Status, normalFont)) { Border =0 });
 
             document.Add(appointmentTable);
 
@@ -1227,7 +1192,7 @@ public class HomeController : Controller
                 document.Add(new Paragraph(" "));
 
                 var notesHeader = new Paragraph("SPECIAL REQUESTS", headerFont);
-                notesHeader.SpacingAfter = 8;
+                notesHeader.SpacingAfter =8;
                 document.Add(notesHeader);
 
                 var notes = new Paragraph(appointment.SpecialRequest, normalFont);
@@ -1235,21 +1200,14 @@ public class HomeController : Controller
                 document.Add(notes);
             }
 
-                document.Add(space);
+            // Footer
+            document.Add(new Paragraph(" "));
+            document.Add(dividerParagraph);
+            document.Add(new Paragraph(" "));
 
-                // Amount Section
-                var amountHeader = new Paragraph("AMOUNT", headerFont);
-                document.Add(amountHeader);
-
-                var amountTable = new PdfPTable(2);
-                amountTable.SetWidths(new float[] { 70, 30 });
-                amountTable.AddCell(new PdfPCell(new Phrase("Service Cost:", normalFont)) { Border = 0 });
-                amountTable.AddCell(new PdfPCell(new Phrase($"${appointment.Service?.Price:F2}", normalFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
-                amountTable.AddCell(new PdfPCell(new Phrase("Total Amount:", headerFont)) { Border = 0 });
-                amountTable.AddCell(new PdfPCell(new Phrase($"${appointment.Service?.Price:F2}", headerFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
-
-                document.Add(amountTable);
-                document.Add(space);
+            var footer1 = new Paragraph("Thank you for choosing our service!", smallFont);
+            footer1.Alignment = Element.ALIGN_CENTER;
+            document.Add(footer1);
 
             var footer = new Paragraph("Hope to see you next time ~ ^.^ ", smallFont);
             footer.Alignment = Element.ALIGN_CENTER;
@@ -1261,20 +1219,347 @@ public class HomeController : Controller
         }
     }
 
-        private string GenerateAppointmentId()
+    // Update the GenerateAppointmentId method
+    private string GenerateAppointmentId()
+    {
+        // Get the last appointment ID and increment it
+        var lastAppointment = _db.Appointments
+            .OrderByDescending(a => a.AppointmentId)
+            .FirstOrDefault();
+
+        int nextNumber =1;
+
+        if (lastAppointment != null && lastAppointment.AppointmentId.StartsWith("AP"))
         {
-            return "APT" + Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper();
+            // Extract the number from the last ID (e.g., "AP001" -> 1)
+            if (int.TryParse(lastAppointment.AppointmentId.Substring(2), out int lastNumber))
+            {
+                nextNumber = lastNumber +1;
+            }
+        }
+
+        return $"AP{nextNumber:D3}"; // Formats as AP001, AP002, etc.
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SavePet([FromBody] PetDto petDto)
+    {
+        try
+        {
+            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(customerId))
+            {
+                customerId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(customerId))
+                return Json(new { success = false, message = "User not authenticated" });
+
+            // ✅ UPDATED: Generate sequential pet ID (P001, P002, P003, etc.)
+            var lastPet = _db.Pets
+                .OrderByDescending(p => p.PetId)
+                .FirstOrDefault();
+
+            int nextNumber =1;
+            if (lastPet != null && lastPet.PetId.StartsWith("P"))
+            {
+                // Extract the numeric part from the last pet ID (e.g., "P001" -> 1)
+                string numericPart = lastPet.PetId.Substring(1);
+                if (int.TryParse(numericPart, out int lastNumber))
+                {
+                    nextNumber = lastNumber +1;
+                }
+            }
+
+            // Format as P001, P002, P003, etc.
+            var petId = $"P{nextNumber:D3}";
+
+            var photoPath = "/mnt/data/dbc0ff5e-4bb2-4648-ab38-94af11a53bb9.png";
+
+            // Handle base64 photo
+            if (!string.IsNullOrEmpty(petDto.Photo) && petDto.Photo.StartsWith("data:image"))
+            {
+                try
+                {
+                    var base64Data = petDto.Photo.Substring(petDto.Photo.IndexOf(",") +1);
+                    var imageBytes = Convert.FromBase64String(base64Data);
+
+                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "pets");
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    var uniqueFileName = $"{petId}_{Guid.NewGuid():N}.jpg";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                    photoPath = $"/uploads/pets/{uniqueFileName}";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error saving pet photo: {ex.Message}");
+                }
+            }
+
+            var pet = new Pet
+            {
+                PetId = petId,
+                Name = petDto.Name,
+                Type = petDto.Category,
+                Photo = photoPath,
+                CustomerId = customerId,
+                Breed = petDto.Breed,
+                Age = petDto.Age,
+                Remark = petDto.Remark
+            };
+
+            _db.Pets.Add(pet);
+            _db.SaveChanges();
+
+            return Json(new
+            {
+                success = true,
+                message = "Pet saved successfully",
+                petId = petId,
+                photo = photoPath
+            });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+    public class PetDto
+    {
+        public string Name { get; set; }
+        public string Category { get; set; }
+        public string Photo { get; set; }
+        public int? Age { get; set; }
+        public string Breed { get; set; }
+        public string Remark { get; set; }
+    }
+
+    [HttpGet]
+    public IActionResult CheckUserStatus()
+    {
+        // Check both claims-based and session-based authentication
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // If not found in claims, check session
+        if (string.IsNullOrEmpty(userId))
+        {
+            userId = HttpContext.Session.GetString("CustomerId");
+        }
+
+        var isLoggedIn = !string.IsNullOrEmpty(userId);
+
+        return Json(new { isLoggedIn = isLoggedIn });
+    }
+
+    [HttpGet]
+    public IActionResult GetAvailableGroomers()
+    {
+        try
+        {
+            // Fetch all staff members from the Staffs table
+            var groomers = _db.Staffs
+                .Where(s => s.Role == "staff") // Ensure we only get staff
+                .Select(s => new
+                {
+                    id = s.UserId,              // e.g., S001, S002, S003
+                    name = s.Name,
+                    position = s.Position,      // e.g., Senior Groomer, Junior Groomer
+                })
+                .ToList();
+
+            return Json(new { success = true, groomers = groomers });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
         }
     }
 
-    // Request model for appointment
-    public class AppointmentRequest
+    // POST: Check if appointment can be cancelled (validate 24-hour rule)
+    [HttpGet]
+    public IActionResult CanCancelAppointment(string appointmentId)
     {
-        public string Date { get; set; }
-        public string Time { get; set; }
-        public string ServiceId { get; set; }
-        public List<string> PetIds { get; set; } = new();
-        public string Groomer { get; set; }
-        public string Notes { get; set; }
+        try
+        {
+            var appointment = _db.Appointments.FirstOrDefault(a => a.AppointmentId == appointmentId);
+            if (appointment == null)
+                return Json(new { canCancel = false, message = "Appointment not found" });
+
+            // Check status
+            if (appointment.Status == "Cancelled" || appointment.Status == "Completed")
+                return Json(new { canCancel = false, message = $"Cannot cancel a {appointment.Status} appointment" });
+
+            // Check 24-hour rule
+            if (appointment.AppointmentDateTime.HasValue)
+            {
+                var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
+
+                if (timeUntilAppointment.TotalHours <24)
+                {
+                    var hoursRemaining = Math.Round(timeUntilAppointment.TotalHours,1);
+                    return Json(new
+                    {
+                        canCancel = false,
+                        message = $"Cannot cancel within24 hours. {hoursRemaining} hours remaining."
+                    });
+                }
+            }
+
+            return Json(new { canCancel = true, message = "Appointment can be cancelled" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"CanCancelAppointment Error: {ex.Message}");
+            return Json(new { canCancel = false, message = ex.Message });
+        }
     }
+
+    // POST: Cancel Appointment
+    [HttpPost]
+    public IActionResult CancelAppointment([FromBody] CancelRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "User not logged in" });
+
+            var appointment = _db.Appointments
+                .FirstOrDefault(a => a.AppointmentId == request.AppointmentId && a.CustomerId == userId);
+
+            if (appointment == null)
+                return NotFound(new { success = false, message = "Appointment not found" });
+
+            // Check if already cancelled
+            if (appointment.Status == "cancelled")
+                return BadRequest(new { success = false, message = "Appointment is already cancelled" });
+
+            // Check 24-hour rule
+            if (appointment.AppointmentDateTime.HasValue)
+            {
+                var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
+                if (timeUntilAppointment.TotalHours <24)
+                {
+                    return BadRequest(new { success = false, message = "Cannot cancel within24 hours of appointment" });
+                }
+            }
+
+            // Update status to cancelled
+            appointment.Status = "cancelled";
+            _db.Appointments.Update(appointment);
+            _db.SaveChanges();
+
+            return Ok(new { success = true, message = "Appointment cancelled successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    // Request model for cancellation
+    public class CancelRequest
+    {
+        public required string AppointmentId { get; set; }
+    }
+
+    [HttpGet]
+    public IActionResult DownloadReceiptTxt(string appointmentId)
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var appointment = _db.Appointments
+                .Include(a => a.Pet)
+                .Include(a => a.Staff)
+                .Include(a => a.Service)
+                .FirstOrDefault(a => a.AppointmentId == appointmentId && a.CustomerId == userId);
+
+            if (appointment == null)
+                return NotFound();
+
+            var customer = _db.Users.FirstOrDefault(u => u.UserId == userId);
+            if (customer == null)
+                return NotFound();
+
+            string receipt = GenerateReceiptTxt(appointment, customer);
+            byte[] fileBytes = Encoding.UTF8.GetBytes(receipt);
+
+            return File(fileBytes, "text/plain", $"Receipt_{appointmentId}.txt");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet]
+    public IActionResult DownloadReceiptPdf(string appointmentId)
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var appointment = _db.Appointments
+                .Include(a => a.Pet)
+                .Include(a => a.Staff)
+                .Include(a => a.Service)
+                .FirstOrDefault(a => a.AppointmentId == appointmentId && a.CustomerId == userId);
+
+            if (appointment == null)
+                return NotFound();
+
+            var customer = _db.Users.FirstOrDefault(u => u.UserId == userId);
+            if (customer == null)
+                return NotFound();
+
+            byte[] pdfBytes = GenerateReceiptPdf(appointment, customer);
+
+            return File(pdfBytes, "application/pdf", $"Receipt_{appointmentId}.pdf");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+}
+
+public class AppointmentRequest
+{
+    public required string Date { get; set; }
+    public required string Time { get; set; }
+    public required string ServiceId { get; set; }
+    public List<string> PetIds { get; set; } = new();
+    public string? Groomer { get; set; }
+    public string? Notes { get; set; }
+}
+
+public class RescheduleRequest
+{
+    public required string NewDate { get; set; }
+    public required string NewTime { get; set; }
 }

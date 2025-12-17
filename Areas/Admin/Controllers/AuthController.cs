@@ -200,18 +200,15 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
         // ========================================
         // Admin Logout
         // ========================================
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public IActionResult AdminLogout() => Logout();
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public IActionResult StaffLogout() => Logout();
 
         // ========================================
         // Universal Logout (for both Admin and Staff)
         // ========================================
-        public IActionResult Logout()
+        private IActionResult Logout()
+
         {
             var userRole = HttpContext.Session.GetString("UserRole");
             // Clear all session data

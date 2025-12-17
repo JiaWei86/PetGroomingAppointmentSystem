@@ -687,5 +687,854 @@ body {
 
 /* Small responsive tweak */
 @media (max-width: 480px) {
- .checkbox-tile { min-width: 100px; padding: 10px 12px; font-size: 14px; }
+    .checkbox-tile {
+        min-width: 100px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+}
+
+/* ====== CUSTOMER MANAGEMENT & PROFILE PAGES ====== */
+
+/* --- 26. Filter Form Styles --- */
+.filter-form {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    align-items: flex-end;
+}
+
+    .filter-form .form-group {
+        margin-bottom: 0;
+    }
+
+        .filter-form .form-group label {
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+/* --- 27. Panel Header with Actions --- */
+.panel-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+/* --- 28. Table Responsive Wrapper --- */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+    margin-bottom: 0;
+}
+
+    .data-table td {
+        vertical-align: middle;
+    }
+
+/* --- 29. Action Buttons in Tables --- */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+    .action-buttons .btn {
+        margin: 0;
+    }
+
+.btn-action {
+    padding: 6px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.btn-info {
+    background-color: transparent;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    text-decoration: none;
+}
+
+    .btn-info:hover {
+        background-color: #6366f1;
+        color: #ffffff;
+    }
+
+/* --- 30. Status Tag Styles --- */
+.status-tag {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+    .status-tag.status-active {
+        background-color: #d1fae5;
+        color: #059669;
+        border: 1px solid #6ee7b7;
+    }
+
+    .status-tag.status-inactive {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+    .status-tag.status-blocked {
+        background-color: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+/* --- 31. Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-light);
+}
+
+    .empty-state p {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .empty-state a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+        .empty-state a:hover {
+            text-decoration: underline;
+        }
+
+/* --- 32. Modal Overlay --- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+.modal-dialog {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    max-width: 650px;
+    width: 100%;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+}
+
+    /* Only apply flex layout to modal-content INSIDE modal-dialog */
+    .modal-dialog > .modal-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+/* --- 33. Modal Tabs --- */
+.modal-tabs {
+    display: flex;
+    gap: 16px;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.modal-tab-btn {
+    padding: 12px 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+    .modal-tab-btn:hover {
+        color: var(--primary-color);
+    }
+
+    .modal-tab-btn.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+.modal-tab-content {
+    display: none;
+}
+
+    .modal-tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- 34. Modal Form Styles --- */
+.form-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 20px 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+    .form-section-title:first-child {
+        margin-top: 0;
+    }
+
+.form-section-info {
+    background: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    padding: 12px 16px;
+    border-radius: 6px;
+    color: #0369a1;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.modal-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.modal-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+    .modal-form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .modal-form-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-color);
+        font-size: 14px;
+    }
+
+.modal-form-input,
+.modal-form-select,
+.modal-form-textarea {
+    padding: 10px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+}
+
+    .modal-form-input:focus,
+    .modal-form-select:focus,
+    .modal-form-textarea:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.1);
+        background-color: #fffbf0;
+    }
+
+.modal-form-textarea {
+    resize: vertical;
+    font-family: inherit;
+    min-height: 100px;
+}
+
+.required {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.form-help-text {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.modal-form-help-text {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.modal-form-required {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* --- 35. File Upload --- */
+.file-upload-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .file-upload-wrapper input[type="file"] {
+        flex: 1;
+    }
+
+.file-name-display {
+    color: #6b7280;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* --- 36. Pet Toggle --- */
+.pet-toggle-wrapper {
+    margin-bottom: 16px;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-color);
+    user-select: none;
+}
+
+    .toggle-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--primary-color);
+    }
+
+/* --- 37. Customer Profile Page --- */
+.customer-profile-wrapper {
+    padding: 0 35px 35px;
+    flex: 1;
+}
+
+.profile-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 24px;
+}
+
+/* --- 38. Profile Card --- */
+.profile-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    height: fit-content;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color);
+    margin: 0 auto 16px;
+}
+
+.profile-card h4 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+}
+
+.profile-card-email {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.profile-edit-btn {
+    width: 100%;
+    margin-bottom: 16px;
+    justify-content: center;
+}
+
+.profile-info-list {
+    border-top: 1px solid #e5e7eb;
+}
+
+.profile-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+
+    .profile-info-row:last-child {
+        border-bottom: none;
+    }
+
+.profile-info-label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.profile-info-value {
+    color: #6b7280;
+}
+
+    .profile-info-value.loyalty-points {
+        color: var(--primary-color);
+        font-weight: 700;
+    }
+
+/* --- 39. Quick Actions Card --- */
+.quick-actions-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-top: 16px;
+}
+
+    .quick-actions-card h6 {
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: var(--text-color);
+    }
+
+.quick-actions-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quick-actions-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* --- 40. Profile Content Card --- */
+.profile-content-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* --- 41. Profile Tabs --- */
+.profile-tabs {
+    display: flex;
+    gap: 24px;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+
+.profile-tab-btn {
+    padding: 12px 0;
+    border: none;
+    background: none;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+    .profile-tab-btn.active {
+        font-weight: 700;
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+.profile-tab-content {
+    display: none;
+}
+
+    .profile-tab-content.active {
+        display: block;
+    }
+
+/* --- 42. Pets Grid --- */
+.pets-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.pet-item {
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    gap: 16px;
+}
+
+.pet-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+    flex-shrink: 0;
+}
+
+.pet-info {
+    flex: 1;
+}
+
+.pet-name {
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: var(--text-color);
+}
+
+.pet-detail {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 0 0 4px 0;
+}
+
+.pet-last-detail {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 0 0 8px 0;
+}
+
+/* --- 43. Empty State --- */
+.empty-state-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+}
+
+    .empty-state-message p {
+        margin: 0 0 16px 0;
+    }
+
+/* --- 44. Loyalty Grid --- */
+.loyalty-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.loyalty-balance-card {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.loyalty-balance-label {
+    color: #6b7280;
+    font-size: 12px;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.loyalty-balance-amount {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 16px;
+}
+
+.loyalty-balance-unit {
+    font-size: 20px;
+    margin-left: 8px;
+}
+
+.loyalty-benefits-card {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+    .loyalty-benefits-card h6 {
+        font-weight: 700;
+        margin: 0 0 16px 0;
+        color: var(--text-color);
+    }
+
+.loyalty-tier-item {
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+    .loyalty-tier-item:last-child {
+        margin-bottom: 0;
+    }
+
+.loyalty-tier-name {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.loyalty-tier-description {
+    color: #6b7280;
+}
+
+/* --- 45. Redemptions Card --- */
+.redemptions-card {
+    margin-top: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.redemptions-header {
+    background: #f9fafb;
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.redemption-item {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+    .redemption-item:last-child {
+        border-bottom: none;
+    }
+
+.redemption-details strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-color);
+}
+
+.redemption-date {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.redemption-points {
+    background: #d1d5db;
+    color: var(--text-color);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* --- 46. Edit Profile Modal --- */
+.edit-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+    .edit-modal-overlay.show {
+        display: flex;
+    }
+
+.edit-modal-content {
+    background: white;
+    padding: 28px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+    .edit-modal-header h5 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text-color);
+    }
+
+.edit-modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+    .edit-modal-close-btn:hover {
+        color: var(--text-color);
+        background-color: #f3f4f6;
+        border-radius: 6px;
+    }
+
+.modal-form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.modal-form-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+/* --- 47. Responsive Design --- */
+@media (max-width: 768px) {
+    .profile-container {
+        grid-template-columns: 1fr;
+    }
+
+    .loyalty-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-dialog {
+        max-width: 95vw;
+    }
+
+    .modal-form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .modal-form-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+        .action-buttons .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+    .filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-header-wrapper {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+        .panel-header-wrapper .btn {
+            width: 100%;
+            justify-content: center;
+        }
+}
+
+@media (max-width: 480px) {
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .modal-dialog,
+    .edit-modal-content {
+        max-height: 95vh;
+    }
+
+    .modal-header {
+        padding: 16px;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+    }
+
+    .profile-card {
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+    }
+
+    .profile-card h4 {
+        font-size: 18px;
+    }
 }
