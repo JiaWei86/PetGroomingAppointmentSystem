@@ -1224,4 +1224,113 @@ select.form-control:focus {
     .form-card {
         grid-column: 1;
     }
+
+
+
+    /* ============================================
+   PET GROOMER ASSIGNMENT SECTION
+   ============================================ */
+.pet-groomer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.pet-groomer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    transition: var(--transition);
+}
+
+.pet-groomer-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(255, 122, 24, 0.1);
+}
+
+.pet-groomer-name {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+    display: block;
+}
+
+.pet-groomer-select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pet-groomer-select:hover {
+    border-color: var(--accent);
+}
+
+.pet-groomer-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(255, 122, 24, 0.1);
+}
+
+.pet-groomer-select option {
+    padding: 10px 12px;
+    background: white;
+    color: var(--text);
+}
+
+/* Per-pet groomer selection cards */
+.pet-groomer-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.pet-groomer-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.pet-groomer-card:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pet-groomer-card label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.pet-groomer-card select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.pet-groomer-card small {
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
 }

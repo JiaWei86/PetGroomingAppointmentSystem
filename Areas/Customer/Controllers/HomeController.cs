@@ -41,7 +41,8 @@ public class HomeController : Controller
 
     private IActionResult BlockedResponse(string action = "perform this action")
     {
-        return Json(new {
+        return Json(new
+        {
             success = false,
             message = $"Your account is blocked. You cannot {action}.",
             statusCode = "BLOCKED"
@@ -125,10 +126,10 @@ public class HomeController : Controller
             customer.IC = ic;
             customer.Phone = phone;
 
-            if (Request.Form.Files.Count >0)
+            if (Request.Form.Files.Count > 0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length >0)
+                if (photoFile.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
                     if (!Directory.Exists(uploadsFolder))
@@ -501,7 +502,7 @@ public class HomeController : Controller
 
                     if (photoDataArray != null)
                     {
-                        for (int i =0; i < photoDataArray.Count; i++)
+                        for (int i = 0; i < photoDataArray.Count; i++)
                         {
                             var photoData = photoDataArray[i];
 
@@ -782,7 +783,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(request.ServiceId))
                 return BadRequest(new { success = false, message = "Service selection is required" });
 
-            if (request.PetIds == null || request.PetIds.Count ==0)
+            if (request.PetIds == null || request.PetIds.Count == 0)
                 return BadRequest(new { success = false, message = "Please select at least one pet" });
 
             // Get current user ID
@@ -813,21 +814,9 @@ public class HomeController : Controller
             if (service == null)
                 return BadRequest(new { success = false, message = "Selected service not found" });
 
-            // Get staff member (groomer) - assign the first available one if not specified
-            Models.Staff assignedStaff = null;
-            if (!string.IsNullOrEmpty(request.Groomer))
-            {
-                assignedStaff = _db.Staffs.FirstOrDefault(s => s.UserId == request.Groomer);
-            }
-            else
-            {
-                // Assign the first available staff member
-                assignedStaff = _db.Staffs.FirstOrDefault(s => s.Role == "staff");
-            }
-
             var appointmentIds = new List<string>();
             var errors = new List<string>();
-            int totalPointsEarned = 0; // ✅ 追踪总积分
+            int totalPointsEarned = 0;
 
             foreach (var petId in request.PetIds)
             {
@@ -839,6 +828,34 @@ public class HomeController : Controller
                     {
                         errors.Add($"Pet {petId} not found or doesn't belong to you");
                         continue;
+                    }
+
+                    // ✅ Get groomer for this specific pet from petGroomerMappings
+                    Models.Staff assignedStaff = null;
+                    
+                    if (request.PetGroomerMappings != null && request.PetGroomerMappings.ContainsKey(petId))
+                    {
+                        var groomerId = request.PetGroomerMappings[petId];
+                        if (!string.IsNullOrEmpty(groomerId) && groomerId != "any")
+                        {
+                            // ✅ Use specific groomer selected by customer
+                            assignedStaff = _db.Staffs.FirstOrDefault(s => s.UserId == groomerId);
+                        }
+                    }
+
+                    // If no pet-specific groomer assigned, randomly select from available staff
+                    if (assignedStaff == null)
+                    {
+                        var availableStaff = _db.Staffs
+                            .Where(s => s.Role == "staff")
+                            .ToList();
+
+                        if (availableStaff.Count > 0)
+                        {
+                            // ✅ Randomly select one groomer
+                            var random = new Random();
+                            assignedStaff = availableStaff[random.Next(availableStaff.Count)];
+                        }
                     }
 
                     // Generate unique appointment ID
@@ -855,7 +872,7 @@ public class HomeController : Controller
                         DurationTime = service.DurationTime,
                         SpecialRequest = request.Notes ?? string.Empty,
                         Status = "Confirmed",
-                        StaffId = assignedStaff?.UserId,  // ✅ Assign the groomer here
+                        StaffId = assignedStaff?.UserId,  // ✅ Use randomly assigned groomer
                         CreatedAt = DateTime.Now
                     };
 
@@ -865,7 +882,7 @@ public class HomeController : Controller
 
                     // ✅ ADD LOYALTY POINTS (10 points per pet booked)
                     customer.LoyaltyPoint += 10;
-                    totalPointsEarned += 10; // Track total points for this booking session
+                    totalPointsEarned += 10;
                     _db.Customers.Update(customer);
                     _db.SaveChanges();
 
@@ -895,7 +912,7 @@ public class HomeController : Controller
                 success = true,
                 message = message,
                 appointmentIds = appointmentIds,
-                loyaltyPointsEarned = totalPointsEarned, // ✅ 返回获得的积分
+                loyaltyPointsEarned = totalPointsEarned,
                 partialFailure = appointmentIds.Count < request.PetIds.Count
             });
         }
@@ -1140,57 +1157,57 @@ public class HomeController : Controller
     {
         using (var memoryStream = new MemoryStream())
         {
-            var document = new Document(PageSize.A4,40,40,40,40);
+            var document = new Document(PageSize.A4, 40, 40, 40, 40);
             var writer = PdfWriter.GetInstance(document, memoryStream);
             document.Open();
 
             // Set fonts
-            var titleFont = new Font(Font.FontFamily.HELVETICA,18, Font.BOLD);
-            var headerFont = new Font(Font.FontFamily.HELVETICA,11, Font.BOLD);
-            var normalFont = new Font(Font.FontFamily.HELVETICA,10);
-            var labelFont = new Font(Font.FontFamily.HELVETICA,9, Font.BOLD);
-            var smallFont = new Font(Font.FontFamily.HELVETICA,8);
+            var titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
+            var headerFont = new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD);
+            var normalFont = new Font(Font.FontFamily.HELVETICA, 10);
+            var labelFont = new Font(Font.FontFamily.HELVETICA, 9, Font.BOLD);
+            var smallFont = new Font(Font.FontFamily.HELVETICA, 8);
 
             // Title
             var title = new Paragraph("PET GROOMING APPOINTMENT RECEIPT", titleFont);
             title.Alignment = Element.ALIGN_CENTER;
-            title.SpacingAfter =15;
+            title.SpacingAfter = 15;
             document.Add(title);
 
             // Receipt Info
             var receiptTable = new PdfPTable(2);
-            receiptTable.SetWidths(new float[] {50,50 });
-            receiptTable.DefaultCell.Border =0;
-            receiptTable.DefaultCell.Padding =5;
+            receiptTable.SetWidths(new float[] { 50, 50 });
+            receiptTable.DefaultCell.Border = 0;
+            receiptTable.DefaultCell.Padding = 5;
 
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border =0 });
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Date Printed: {DateTime.Now:MMM dd, yyyy hh:mm tt}", normalFont)) { Border =0, HorizontalAlignment = Element.ALIGN_RIGHT });
+            receiptTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border = 0 });
+            receiptTable.AddCell(new PdfPCell(new Phrase($"Date Printed: {DateTime.Now:MMM dd, yyyy hh:mm tt}", normalFont)) { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
 
             document.Add(receiptTable);
             document.Add(new Paragraph(" "));
 
             // Divider line using Paragraph instead of LineSeparator
-            var dividerParagraph = new Paragraph(new string('─',50));
+            var dividerParagraph = new Paragraph(new string('─', 50));
             dividerParagraph.Alignment = Element.ALIGN_CENTER;
             document.Add(dividerParagraph);
             document.Add(new Paragraph(" "));
 
             // Customer Section
             var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
-            customerHeader.SpacingAfter =8;
+            customerHeader.SpacingAfter = 8;
             document.Add(customerHeader);
 
             var customerTable = new PdfPTable(2);
-            customerTable.SetWidths(new float[] {25,75 });
-            customerTable.DefaultCell.Border =0;
-            customerTable.DefaultCell.Padding =4;
+            customerTable.SetWidths(new float[] { 25, 75 });
+            customerTable.DefaultCell.Border = 0;
+            customerTable.DefaultCell.Padding = 4;
 
-            customerTable.AddCell(new PdfPCell(new Phrase("Name:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Name, normalFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase("Email:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Email, normalFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase("Phone:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Phone, normalFont)) { Border =0 });
+            customerTable.AddCell(new PdfPCell(new Phrase("Name:", labelFont)) { Border = 0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Name, normalFont)) { Border = 0 });
+            customerTable.AddCell(new PdfPCell(new Phrase("Email:", labelFont)) { Border = 0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Email, normalFont)) { Border = 0 });
+            customerTable.AddCell(new PdfPCell(new Phrase("Phone:", labelFont)) { Border = 0 });
+            customerTable.AddCell(new PdfPCell(new Phrase(customer.Phone, normalFont)) { Border = 0 });
 
             document.Add(customerTable);
             document.Add(new Paragraph(" "));
@@ -1201,34 +1218,34 @@ public class HomeController : Controller
 
             // Appointment Section
             var appointmentHeader = new Paragraph("APPOINTMENT DETAILS", headerFont);
-            appointmentHeader.SpacingAfter =8;
+            appointmentHeader.SpacingAfter = 8;
             document.Add(appointmentHeader);
 
             var appointmentTable = new PdfPTable(2);
-            appointmentTable.SetWidths(new float[] {25,75 });
-            appointmentTable.DefaultCell.Border =0;
-            appointmentTable.DefaultCell.Padding =4;
+            appointmentTable.SetWidths(new float[] { 25, 75 });
+            appointmentTable.DefaultCell.Border = 0;
+            appointmentTable.DefaultCell.Padding = 4;
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Date:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("MMM dd, yyyy") ?? "N/A", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Date:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("MMM dd, yyyy") ?? "N/A", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Time:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Time:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Pet(s):", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Pet(s):", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Groomer:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Groomer:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Service:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Service:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Duration:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Duration:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border = 0 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Status:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Status, normalFont)) { Border =0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase("Status:", labelFont)) { Border = 0 });
+            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Status, normalFont)) { Border = 0 });
 
             document.Add(appointmentTable);
 
@@ -1240,7 +1257,7 @@ public class HomeController : Controller
                 document.Add(new Paragraph(" "));
 
                 var notesHeader = new Paragraph("SPECIAL REQUESTS", headerFont);
-                notesHeader.SpacingAfter =8;
+                notesHeader.SpacingAfter = 8;
                 document.Add(notesHeader);
 
                 var notes = new Paragraph(appointment.SpecialRequest, normalFont);
@@ -1275,14 +1292,14 @@ public class HomeController : Controller
             .OrderByDescending(a => a.AppointmentId)
             .FirstOrDefault();
 
-        int nextNumber =1;
+        int nextNumber = 1;
 
         if (lastAppointment != null && lastAppointment.AppointmentId.StartsWith("AP"))
         {
             // Extract the number from the last ID (e.g., "AP001" -> 1)
             if (int.TryParse(lastAppointment.AppointmentId.Substring(2), out int lastNumber))
             {
-                nextNumber = lastNumber +1;
+                nextNumber = lastNumber + 1;
             }
         }
 
@@ -1441,9 +1458,9 @@ public class HomeController : Controller
             {
                 var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
 
-                if (timeUntilAppointment.TotalHours <24)
+                if (timeUntilAppointment.TotalHours < 24)
                 {
-                    var hoursRemaining = Math.Round(timeUntilAppointment.TotalHours,1);
+                    var hoursRemaining = Math.Round(timeUntilAppointment.TotalHours, 1);
                     return Json(new
                     {
                         canCancel = false,
@@ -1490,7 +1507,7 @@ public class HomeController : Controller
             if (appointment.AppointmentDateTime.HasValue)
             {
                 var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
-                if (timeUntilAppointment.TotalHours <24)
+                if (timeUntilAppointment.TotalHours < 24)
                 {
                     return BadRequest(new { success = false, message = "Cannot cancel within 24 hours of appointment" });
                 }
@@ -1534,7 +1551,7 @@ public class HomeController : Controller
         public string Time { get; set; }
         public string ServiceId { get; set; }
         public List<string> PetIds { get; set; }
-        public string Groomer { get; set; }
+        public Dictionary<string, string> PetGroomerMappings { get; set; }  // ✅ Add this
         public string Notes { get; set; }
     }
 
@@ -1613,14 +1630,14 @@ public class HomeController : Controller
         }
     }
 
-    [HttpGet]  
+    [HttpGet]
     public IActionResult GetMonthAppointments(int year, int month)
     {
         try
         {
             var userId = HttpContext.Session.GetString("CustomerId");
             Console.WriteLine($"GetMonthAppointments - userId from session: {userId}");
-            
+
             if (string.IsNullOrEmpty(userId))
             {
                 Console.WriteLine("GetMonthAppointments - UserId is empty");
@@ -1667,7 +1684,7 @@ public class HomeController : Controller
     {
         try
         {
-            var customerId = GetCurrentCustomerId(); 
+            var customerId = GetCurrentCustomerId();
             if (string.IsNullOrEmpty(customerId))
             {
                 return Json(new { success = false, message = "Please login first" });
@@ -1681,7 +1698,7 @@ public class HomeController : Controller
 
             // ✅ FIX: Use DateTime comparison instead of ToString()
             var appointments = await _db.Appointments
-                .Where(a => a.CustomerId == customerId && 
+                .Where(a => a.CustomerId == customerId &&
                             a.AppointmentDateTime.HasValue &&
                             a.AppointmentDateTime.Value.Year == parsedDate.Year &&
                             a.AppointmentDateTime.Value.Month == parsedDate.Month &&
@@ -1720,13 +1737,13 @@ public class HomeController : Controller
     {
         // First, try to get from Claims (for token-based auth)
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+
         // If not found in claims, try Session
         if (string.IsNullOrEmpty(userId))
         {
             userId = HttpContext.Session.GetString("CustomerId");
         }
-        
+
         return userId;
     }
 
