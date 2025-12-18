@@ -90,26 +90,27 @@ public class HomeController : Controller
  viewModel.PendingAppointments.Count = await _db.Customers.CountAsync();
 
 
- // --- 2. 填充忠诚度积分 (Loyalty Points) ---
- // 注意: 以下是基于现有模型的模拟。您需要根据您的业务逻辑调整。
- var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
- var endOfWeek = startOfWeek.AddDays(7);
+        // --- 2. 填充忠诚度积分 (Loyalty Points) ---
+        // Note: Calculate based on actual customer loyalty point activities
+        var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
+        var endOfWeek = startOfWeek.AddDays(7);
 
- // 假设每次完成的预约都奖励10个积分
- viewModel.LoyaltyPoints.AwardedThisWeek = await _db.Appointments
- .CountAsync(a => a.Status == "Completed" && a.AppointmentDateTime >= startOfWeek && a.AppointmentDateTime < endOfWeek) * 10;
+        // Total points awarded this week (sum of completed appointments * 10 points each)
+        viewModel.LoyaltyPoints.RedeemedThisWeek = await _db.CustomerRedeemGifts
+            .Where(crg => crg.RedeemDate >= startOfWeek && crg.RedeemDate < endOfWeek)
+            .Include(crg => crg.Gift)
+            .SumAsync(crg => crg.Gift.LoyaltyPointCost * crg.QuantityRedeemed);
 
- // 活跃会员数 (假设为总顾客数)
- viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers.CountAsync();
-
- // 假设每次使用礼品兑换都消耗500积分
- viewModel.LoyaltyPoints.RedeemedThisWeek = 0; // 您需要一个礼品兑换记录表来计算这个值
+        // Active members count (customers with active status)
+        viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers
+            .CountAsync(c => c.Status == "active");
 
 
- // --- 3. 填充图表数据 (Chart Data) ---
 
- // 周视图 (过去7天)
- var last7Days = Enumerable.Range(0, 7).Select(i => now.AddDays(-i).Date).Reverse().ToList();
+        // --- 3. 填充图表数据 (Chart Data) ---
+
+        // 周视图 (过去7天)
+        var last7Days = Enumerable.Range(0, 7).Select(i => now.AddDays(-i).Date).Reverse().ToList();
  var weeklyData = await _db.Appointments
  .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
  .GroupBy(a => a.AppointmentDateTime.Value.Date)
@@ -1623,9 +1624,15 @@ public class HomeController : Controller
     public async Task<IActionResult> RedeemGift()
     {
         ViewData["ActivePage"] = "RedeemGift";
-        var gifts = await _db.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
+
+        var gifts = await _db.RedeemGifts
+            .Where(g => g.IsDeleted == false)   // filter out deleted items
+            .OrderByDescending(g => g.GiftId)
+            .ToListAsync();
+
         return View(gifts);
     }
+
 
     // CREATE (POST)
     [HttpPost]
@@ -1712,6 +1719,8 @@ public class HomeController : Controller
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $" Gift '{gift.Name}' created successfully!";
             return RedirectToAction(nameof(RedeemGift));
+
+
         }
 
         // --- EDIT ---
@@ -1747,14 +1756,29 @@ public class HomeController : Controller
         // --- DELETE ---
         else if (actionType == "delete")
         {
-            if (deleteGiftId == null) return NotFound();
-            var dbGift = await _db.RedeemGifts.FindAsync(deleteGiftId);
-            if (dbGift == null) return NotFound();
-            _db.RedeemGifts.Remove(dbGift);
+            if (string.IsNullOrEmpty(deleteGiftId))
+                return NotFound();
+
+            var dbGift = await _db.RedeemGifts
+                .IgnoreQueryFilters() // important if you added global filter
+                .FirstOrDefaultAsync(g => g.GiftId == deleteGiftId);
+
+            if (dbGift == null)
+                return NotFound();
+
+            dbGift.IsDeleted = true; // ✅ SOFT DELETE
+            _db.RedeemGifts.Update(dbGift);
             await _db.SaveChangesAsync();
-            TempData["SuccessMessage"] = " Gift deleted successfully!";
+
+            TempData["SuccessMessage"] = "Gift deleted successfully!";
             return RedirectToAction(nameof(RedeemGift));
+
+
+
         }
+
+
+
 
         // --- FALLBACK ---
         var gifts = await _db.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
