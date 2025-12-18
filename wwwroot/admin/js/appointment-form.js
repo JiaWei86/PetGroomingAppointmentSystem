@@ -65,6 +65,9 @@ $(document).ready(function() {
         altInput: true,
         altFormat: "F j, Y h:i K",
         minDate: "today",
+        minuteIncrement: 30,
+        minTime: "09:00",
+        maxTime: "16:30",
         disable: [
             function(date) {
                 // Disable Mondays (day 1 is Monday)
@@ -267,3 +270,4 @@ $(document).ready(function() {
             }
         }
     });
+});
