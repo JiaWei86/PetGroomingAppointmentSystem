@@ -753,6 +753,14 @@ public class HomeController : Controller
             TempData["SuccessMessage"] = $"✅ Customer {customer.Name} created! ⚠️ Email failed - Temp Password: {temporaryPassword}";
         }
 
+        // ✅ ADD LOYALTY POINTS (10 points per confirmed appointment when admin creates it)
+        var appointmentCustomer = await _db.Customers.FirstOrDefaultAsync(c => c.UserId == customer.UserId);
+        if (appointmentCustomer != null && customer.Status == "Confirmed")
+        {
+            appointmentCustomer.LoyaltyPoint += 10;
+            _db.Customers.Update(appointmentCustomer);
+        }
+
         return RedirectToAction(nameof(Customer));
     }
 
@@ -849,7 +857,10 @@ public class HomeController : Controller
                 // Extract numeric part and find the maximum
                 nextNumber = existingPetIds
                     .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
-                    .Max() + 1;
+                    .Where(n => n > 0)
+                    .OrderBy(n => n)
+                    .ToList()
+                    .Last() + 1;
             }
 
             var petId = $"P{nextNumber:D3}";
@@ -1434,7 +1445,20 @@ public class HomeController : Controller
                     {
                         _db.Appointments.AddRange(newAppointments);
                         await _db.SaveChangesAsync();
-                        TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
+
+                        // ========== ADD LOYALTY POINTS FOR EACH APPOINTMENT ==========
+                        // Award 10 loyalty points per service to the customer
+                        var customer = await _db.Customers.FindAsync(model.CustomerId);
+                        if (customer != null)
+                        {
+                            // 10 points for each appointment created
+                            int totalPointsToAdd = newAppointments.Count * 10;
+                            customer.LoyaltyPoint += totalPointsToAdd;
+                            _db.Customers.Update(customer);
+                            await _db.SaveChangesAsync();
+                        }
+
+                        TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created! Customer earned {newAppointments.Count * 10} loyalty points.";
                     }
                     else
                     {
@@ -1472,6 +1496,7 @@ public class HomeController : Controller
             if (appointmentToUpdate.Status != "Confirmed" || model.Status != "Completed")
             {
                 TempData["ErrorMessage"] = "Invalid status change. Only 'Confirmed' appointments can be changed to 'Completed'.";
+
                 // 重定向回当前筛选结果，并保持编辑状态
                 return RedirectToAction(nameof(Appointment), new { status = model.FilterStatus, groomerid = model.FilterGroomerId, date = model.FilterDate?.ToString("yyyy-MM-dd"), editId = model.EditAppointmentId });
             }
@@ -2292,7 +2317,7 @@ public class HomeController : Controller
 
             // ========== SMART ID GENERATION ==========
             var allStaffIds = await _db.Staffs
-       .Select(s => s.UserId)
+  .Select(s => s.UserId)
      .OrderBy(id => id)
           .ToListAsync();
 
@@ -2676,7 +2701,7 @@ public class HomeController : Controller
             if (dbService == null)
                 return Json(new { success = false, message = "Service not found." });
 
-            // Remove junction rows first
+            // Remove related junction rows first to avoid FK constraint errors
             if (dbService.ServiceServiceCategories != null && dbService.ServiceServiceCategories.Any())
             {
                 _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);

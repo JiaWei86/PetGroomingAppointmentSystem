@@ -827,6 +827,7 @@ public class HomeController : Controller
 
             var appointmentIds = new List<string>();
             var errors = new List<string>();
+            int totalPointsEarned = 0; // ✅ 追踪总积分
 
             foreach (var petId in request.PetIds)
             {
@@ -862,8 +863,9 @@ public class HomeController : Controller
                     _db.Appointments.Add(appointment);
                     _db.SaveChanges();
 
-                    // ✅ ADD LOYALTY POINTS (10 points per confirmed appointment)
+                    // ✅ ADD LOYALTY POINTS (10 points per pet booked)
                     customer.LoyaltyPoint += 10;
+                    totalPointsEarned += 10; // Track total points for this booking session
                     _db.Customers.Update(customer);
                     _db.SaveChanges();
 
@@ -885,14 +887,15 @@ public class HomeController : Controller
             }
 
             var message = appointmentIds.Count == request.PetIds.Count
-                ? "All appointments booked successfully!"
-                : $"Successfully booked {appointmentIds.Count} of {request.PetIds.Count} appointments. Errors: {string.Join("; ", errors)}";
+                ? $"All appointments booked successfully! You earned {totalPointsEarned} loyalty points."
+                : $"Successfully booked {appointmentIds.Count} of {request.PetIds.Count} appointments. You earned {totalPointsEarned} loyalty points. Errors: {string.Join("; ", errors)}";
 
             return Ok(new
             {
                 success = true,
                 message = message,
                 appointmentIds = appointmentIds,
+                loyaltyPointsEarned = totalPointsEarned, // ✅ 返回获得的积分
                 partialFailure = appointmentIds.Count < request.PetIds.Count
             });
         }
@@ -1480,7 +1483,7 @@ public class HomeController : Controller
                 return NotFound(new { success = false, message = "Appointment not found" });
 
             // Check if already cancelled
-            if (appointment.Status == "cancelled")
+            if (appointment.Status == "Cancelled")
                 return BadRequest(new { success = false, message = "Appointment is already cancelled" });
 
             // Check 24-hour rule
