@@ -16,7 +16,19 @@ public interface IEmailService
         string email, 
         string phone, 
         string loginUrl);
-    
+
+    /// <summary>
+    /// Send customer credentials email when admin creates a customer
+    /// </summary>
+    Task<bool> SendCustomerCredentialsEmailAsync(
+        string toEmail,
+        string customerName,
+        string customerId,
+        string temporaryPassword,
+        string phone,
+        string loginUrl);
+
+
     /// <summary>
     /// Send password reset email to customer
     /// </summary>
@@ -26,4 +38,5 @@ public interface IEmailService
     /// Send generic email
     /// </summary>
     Task SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true);
+
 }
