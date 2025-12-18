@@ -1527,6 +1527,17 @@ public class HomeController : Controller
         public required string AppointmentId { get; set; }
     }
 
+    // Request model for appointment booking
+    public class AppointmentRequest
+    {
+        public string Date { get; set; }
+        public string Time { get; set; }
+        public string ServiceId { get; set; }
+        public List<string> PetIds { get; set; }
+        public string Groomer { get; set; }
+        public string Notes { get; set; }
+    }
+
     [HttpGet]
     public IActionResult DownloadReceiptTxt(string appointmentId)
     {
@@ -1601,20 +1612,123 @@ public class HomeController : Controller
             return BadRequest(ex.Message);
         }
     }
-}
 
-public class AppointmentRequest
-{
-    public required string Date { get; set; }
-    public required string Time { get; set; }
-    public required string ServiceId { get; set; }
-    public List<string> PetIds { get; set; } = new();
-    public string? Groomer { get; set; }
-    public string? Notes { get; set; }
-}
+    [HttpGet]  
+    public IActionResult GetMonthAppointments(int year, int month)
+    {
+        try
+        {
+            var userId = HttpContext.Session.GetString("CustomerId");
+            Console.WriteLine($"GetMonthAppointments - userId from session: {userId}");
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                Console.WriteLine("GetMonthAppointments - UserId is empty");
+                return Json(new { success = false, appointments = new object[] { } });
+            }
 
-public class RescheduleRequest
-{
-    public required string NewDate { get; set; }
-    public required string NewTime { get; set; }
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            Console.WriteLine($"GetMonthAppointments - Querying: userId={userId}, range={startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}");
+
+            var appointments = _db.Appointments
+                .Where(a => a.CustomerId == userId &&
+                            a.AppointmentDateTime.HasValue &&
+                            a.AppointmentDateTime.Value.Year == year &&
+                            a.AppointmentDateTime.Value.Month == month)
+                .AsEnumerable()
+                .Select(a => new
+                {
+                    date = a.AppointmentDateTime.Value.ToString("yyyy-MM-dd"),
+                    status = a.Status?.ToLower() ?? "unknown"
+                })
+                .ToList();
+
+            Console.WriteLine($"GetMonthAppointments - Found {appointments.Count} appointments");
+            foreach (var apt in appointments)
+            {
+                Console.WriteLine($"  {apt.date}: {apt.status}");
+            }
+
+            return Json(new { success = true, appointments = appointments });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetMonthAppointments Exception: {ex.GetType().Name} - {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            return Json(new { success = false, error = ex.Message, appointments = new object[] { } });
+        }
+    }
+
+    // 添加这个新方法来获取特定日期的预约
+    [HttpGet]
+    public async Task<IActionResult> GetAppointmentsByDate(string date)
+    {
+        try
+        {
+            var customerId = GetCurrentCustomerId(); 
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return Json(new { success = false, message = "Please login first" });
+            }
+
+            // ✅ FIX: Parse the date parameter to DateTime for database comparison
+            if (!DateTime.TryParse(date, out var parsedDate))
+            {
+                return Json(new { success = false, message = "Invalid date format" });
+            }
+
+            // ✅ FIX: Use DateTime comparison instead of ToString()
+            var appointments = await _db.Appointments
+                .Where(a => a.CustomerId == customerId && 
+                            a.AppointmentDateTime.HasValue &&
+                            a.AppointmentDateTime.Value.Year == parsedDate.Year &&
+                            a.AppointmentDateTime.Value.Month == parsedDate.Month &&
+                            a.AppointmentDateTime.Value.Day == parsedDate.Day)
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Include(a => a.Staff)
+                .OrderBy(a => a.AppointmentDateTime)
+                .ToListAsync();
+
+            // ✅ FIX: Do the string formatting in memory, not in the database query
+            var result = appointments.Select(a => new
+            {
+                id = a.AppointmentId,
+                time = a.AppointmentDateTime?.ToString("HH:mm"),
+                petName = a.Pet?.Name,
+                serviceName = a.Service?.Name,
+                groomerName = a.Staff?.Name,
+                status = a.Status,
+                specialRequest = a.SpecialRequest
+            }).ToList();
+
+            return Json(new { success = true, appointments = result });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetAppointmentsByDate Error: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // =================================================================
+
+    // 👇 NEW: Helper method to get current customer ID from both Claims and Session
+    private string GetCurrentCustomerId()
+    {
+        // First, try to get from Claims (for token-based auth)
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        // If not found in claims, try Session
+        if (string.IsNullOrEmpty(userId))
+        {
+            userId = HttpContext.Session.GetString("CustomerId");
+        }
+        
+        return userId;
+    }
+
+    // =================================================================
 }

@@ -122,11 +122,10 @@ html, body {
 }
 
 .appt-row {
-    display: flex;
-    gap: 28px;
-    align-items: flex-start;
-    justify-content: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 0.8fr 0.9fr 0.9fr;  /* 👈 改为 1fr 使日历和表单宽度相同，更紧凑 */
+    gap: 8px;
+    align-items: start;
 }
 
 /* Cards - Clean, minimal */
@@ -138,6 +137,8 @@ html, body {
     border: 1px solid #f0f0f0;
     transition: var(--transition);
     width: 100%;
+    margin-bottom: 40px;
+    margin-left: 50px;
 }
 
 .calendar-card {
@@ -293,7 +294,7 @@ html, body {
 }
 
 /* Day Status Colors */
-.day--visited .day-dot {
+/* .day--visited .day-dot {
     background: #333;
 }
 
@@ -307,14 +308,22 @@ html, body {
 
 .day--confirmed .day-dot {
     background: var,--success;
-}
+} */
 
 .day--rateus .day-dot {
-    background: var(--accent);
+    background: #8e44ad;
 }
 
-.day--unavailable .day-dot {
-    background: #d1d5db;
+.day--confirmed .day-dot {
+    background: #10b981;
+}
+
+.day--cancelled .day-dot {
+    background: #ef4444;
+}
+
+.day--completed .day-dot {
+    background: #3b82f6;
 }
 
 /* Calendar Footer */
@@ -376,28 +385,20 @@ html, body {
 }
 
 /* Legend color assignments */
-.legend-item:nth-child(1) .legend-color {
+.legend-row .legend-item:nth-child(1) .legend-color {
     background: #8e44ad;
 }
 
-.legend-item:nth-child(2) .legend-color {
-    background: #000;
-}
-
-.legend-item:nth-child(3) .legend-color {
+.legend-row .legend-item:nth-child(2) .legend-color {
     background: #10b981;
 }
 
-.legend-row:nth-child(2) .legend-item:nth-child(1) .legend-color {
-    background: #9e9e9e;
+.legend-row .legend-item:nth-child(3) .legend-color {
+    background: #ef4444;
 }
 
-.legend-row:nth-child(2) .legend-item:nth-child(2) .legend-color {
-    background: var(--accent);
-}
-
-.legend-row:nth-child(2) .legend-item:nth-child(3) .legend-color {
-    background: #84d0c8;
+.legend-row .legend-item:nth-child(4) .legend-color {
+    background: #3b82f6;
 }
 
 /* Form - Clean */
@@ -768,9 +769,9 @@ select.form-control:focus {
 /* Toasts - Centered */
 .appt-toast {
     position: fixed;
-    top: 50%;
-    left: 88%;
-    transform: translate(-50%, -50%) translateX(500px);
+    top: 120px;  /* 👈 改为距顶部 120px */
+    left: 50%;  /* 👈 改为 50%（水平居中） */
+    transform: translateX(-50%) translateX(0);  /* 👈 移除之前的 translateX(500px) */
     max-width: 450px;
     width: 90%;
     background: white;
@@ -787,7 +788,7 @@ select.form-control:focus {
 
 .appt-toast.show {
     opacity: 1;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
 }
 
 .appt-toast--success {
@@ -937,4 +938,290 @@ select.form-control:focus {
 
     #serviceDetailsSection[style*="display: block"] {
         animation: slideIn 0.3s ease-out;
+   }
+
+/* Appointment Cards Styling */
+.appointments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.appointment-card {
+    background: linear-gradient(135deg, #f8fafb 0%, #f0f3f7 100%);
+    border-left: 4px solid #10b981;
+    padding: 14px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.appointment-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.appointment-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff8c42;
+    margin-bottom: 6px;
+}
+
+.appointment-pet {
+    font-size: 14px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+.appointment-service {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.appointment-groomer {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.appointment-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.appointment-status.confirmed {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.appointment-status.completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.appointment-status.cancelled {
+    background-color: #fee2e2;
+    color: #7f1d1d;
+}
+
+.appointment-notes {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e3e6ea;
+    font-style: italic;
+}
+
+/* ============================================
+   LAYOUT: Grid 3-column layout
+   ============================================ */
+.appt-row {
+    display: grid;
+    grid-template-columns: 0.8fr 0.6fr 0.9fr;  /* 👈 改为 1fr 使日历和表单宽度相同，更紧凑 */
+    gap: 8px;
+    align-items: start;
+}
+
+/* ============================================
+   LEFT SIDE: Appointments Details Card
+   ============================================ */
+.appointments-details-card {
+    grid-column: 1;
+    max-height: fit-content;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 12px;  /* 👈 右边间距 */
+    margin-bottom: 40px;  /* 👈 底部间距（不粘footer） */
+}
+
+.appointments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: linear-gradient(135deg, #FFA162 0%, #F5680B 100%); /* 👈 改为红橙色 */
+    color: white;
+    flex-shrink: 0;
+}
+
+.appointments-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: white;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.appointments-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    flex: 1;
+}
+
+.appointment-detail-card {
+    background: linear-gradient(135deg, #f8fafb 0%, #f0f3f7 100%);
+    border-left: 4px solid #10b981;
+    padding: 14px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.appointment-detail-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.appointment-detail-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ff8c42;
+    margin-bottom: 6px;
+}
+
+.appointment-detail-pet {
+    font-size: 14px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+.appointment-detail-service {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.appointment-detail-groomer {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.appointment-detail-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.appointment-detail-status.confirmed {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.appointment-detail-status.completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.appointment-detail-status.cancelled {
+    background-color: #fee2e2;
+    color: #7f1d1d;
+}
+
+.appointment-detail-notes {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e3e6ea;
+    font-style: italic;
+}
+
+/* ============================================
+   CENTER: Calendar Card
+   ============================================ */
+.calendar-card {
+    grid-column: 2;
+}
+
+/* ============================================
+   RIGHT: Form Card
+   ============================================ */
+.form-card {
+    grid-column: 3;
+}
+
+/* ============================================
+   RESPONSIVE: Tablet & Mobile
+   ============================================ */
+@media (max-width: 1200px) {
+    .appt-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
     }
+    
+    .appointments-details-card {
+        grid-column: 1;
+        grid-row: 1 / 3;
+    }
+    
+    .calendar-card {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    
+    .form-card {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .appt-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .appointments-details-card {
+        grid-column: 1;
+        grid-row: auto;
+        max-height: 300px;
+    }
+    
+    .calendar-card {
+        grid-column: 1;
+    }
+    
+    .form-card {
+        grid-column: 1;
+    }
+}
