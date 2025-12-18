@@ -818,6 +818,9 @@ public class HomeController : Controller
             var errors = new List<string>();
             int totalPointsEarned = 0;
 
+            // ✅ Track groomer assignments for this booking to prevent duplicates within the same time slot
+            var groomerAssignmentsForThisPeriod = new Dictionary<string, Models.Staff>();
+
             foreach (var petId in request.PetIds)
             {
                 try
@@ -827,6 +830,13 @@ public class HomeController : Controller
                     if (pet == null)
                     {
                         errors.Add($"Pet {petId} not found or doesn't belong to you");
+                        continue;
+                    }
+
+                    // ✅ NEW: Check if this pet already has an appointment at this time with any service
+                    if (DoesPetHaveConflictingAppointment(petId, appointmentDateTime, service.DurationTime ?? 0))
+                    {
+                        errors.Add($"Pet '{pet.Name}' already has an appointment at {appointmentDateTime:MMM dd, HH:mm}. A pet cannot have multiple services at the same time.");
                         continue;
                     }
 
@@ -840,6 +850,23 @@ public class HomeController : Controller
                         {
                             // ✅ Use specific groomer selected by customer
                             assignedStaff = _db.Staffs.FirstOrDefault(s => s.UserId == groomerId);
+
+                            // ✅ Check for time conflict with this specific groomer
+                            if (assignedStaff != null)
+                            {
+                                if (!IsGroomerAvailable(assignedStaff.UserId, appointmentDateTime, service.DurationTime ?? 0))
+                                {
+                                    errors.Add($"Groomer '{assignedStaff.Name}' is not available at {appointmentDateTime:MMM dd, HH:mm}. They already have an appointment during this time.");
+                                    continue;
+                                }
+
+                                // ✅ Check if this groomer was already assigned in this batch
+                                if (groomerAssignmentsForThisPeriod.ContainsKey(assignedStaff.UserId))
+                                {
+                                    errors.Add($"Groomer '{assignedStaff.Name}' cannot be assigned to multiple pets in the same time slot.");
+                                    continue;
+                                }
+                            }
                         }
                     }
 
@@ -852,9 +879,30 @@ public class HomeController : Controller
 
                         if (availableStaff.Count > 0)
                         {
-                            // ✅ Randomly select one groomer
-                            var random = new Random();
-                            assignedStaff = availableStaff[random.Next(availableStaff.Count)];
+                            // ✅ Find available groomers (not already booked at this time + not already assigned in this batch)
+                            var validGroomers = availableStaff
+                                .Where(s => 
+                                    IsGroomerAvailable(s.UserId, appointmentDateTime, service.DurationTime ?? 0) &&
+                                    !groomerAssignmentsForThisPeriod.ContainsKey(s.UserId)
+                                )
+                                .ToList();
+
+                            if (validGroomers.Count > 0)
+                            {
+                                // ✅ Randomly select one groomer
+                                var random = new Random();
+                                assignedStaff = validGroomers[random.Next(validGroomers.Count)];
+                            }
+                            else
+                            {
+                                errors.Add($"No available groomers for {appointmentDateTime:MMM dd, HH:mm}. All groomers are busy.");
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            errors.Add("No groomers available in the system");
+                            continue;
                         }
                     }
 
@@ -872,13 +920,19 @@ public class HomeController : Controller
                         DurationTime = service.DurationTime,
                         SpecialRequest = request.Notes ?? string.Empty,
                         Status = "Confirmed",
-                        StaffId = assignedStaff?.UserId,  // ✅ Use randomly assigned groomer
+                        StaffId = assignedStaff?.UserId,  // ✅ Use assigned groomer
                         CreatedAt = DateTime.Now
                     };
 
                     // Add to database
                     _db.Appointments.Add(appointment);
                     _db.SaveChanges();
+
+                    // ✅ Track this groomer for the current batch
+                    if (!groomerAssignmentsForThisPeriod.ContainsKey(assignedStaff.UserId))
+                    {
+                        groomerAssignmentsForThisPeriod[assignedStaff.UserId] = assignedStaff;
+                    }
 
                     // ✅ ADD LOYALTY POINTS (10 points per pet booked)
                     customer.LoyaltyPoint += 10;
@@ -899,7 +953,8 @@ public class HomeController : Controller
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Failed to create any appointments: " + string.Join("; ", errors)
+                    message = "Failed to create any appointments: " + string.Join("; ", errors),
+                    errors = errors
                 });
             }
 
@@ -925,6 +980,104 @@ public class HomeController : Controller
                 success = false,
                 message = $"Server error: {ex.InnerException?.Message ?? ex.Message}"
             });
+        }
+    }
+
+    // ✅ NEW HELPER: Check if a pet already has a conflicting appointment at the same time
+    private bool DoesPetHaveConflictingAppointment(string petId, DateTime appointmentDateTime, int durationMinutes)
+    {
+        var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+
+        // Check if pet has any appointments that overlap with this time slot
+        var hasConflict = _db.Appointments.Any(a =>
+            a.PetId == petId &&
+            a.Status != "Cancelled" &&  // Ignore cancelled appointments
+            a.AppointmentDateTime.HasValue &&
+            a.AppointmentDateTime < appointmentEndTime &&  // Appointment starts before this one ends
+            a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime  // Appointment ends after this one starts
+        );
+
+        return hasConflict;  // Return true if conflict found
+    }
+
+    // ✅ EXISTING HELPER: Check if groomer is available at the given time
+    private bool IsGroomerAvailable(string groomerId, DateTime appointmentDateTime, int durationMinutes)
+    {
+        var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+
+        // Check if groomer has any appointments that overlap with this time slot
+        var hasConflict = _db.Appointments.Any(a =>
+            a.StaffId == groomerId &&
+            a.Status != "Cancelled" &&  // Ignore cancelled appointments
+            a.AppointmentDateTime.HasValue &&
+            a.AppointmentDateTime < appointmentEndTime &&  // Appointment starts before this one ends
+            a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime  // Appointment ends after this one starts
+        );
+
+        return !hasConflict;  // Return true if NO conflict found
+    }
+
+    [HttpGet]
+    public IActionResult GetAppointmentSchedule()
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "User not logged in" });
+            }
+
+            // Get the current month and year
+            var now = DateTime.Now;
+            var currentMonth = now.Month;
+            var currentYear = now.Year;
+
+            // Get the first day of the current month
+            var startDate = new DateTime(currentYear, currentMonth, 1);
+
+            // Get the first day of the next month
+            var endDate = startDate.AddMonths(1);
+
+            // Get appointments for the current month
+            var appointments = _db.Appointments
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Where(a => a.CustomerId == userId &&
+                            a.AppointmentDateTime >= startDate &&
+                            a.AppointmentDateTime < endDate)
+                .OrderBy(a => a.AppointmentDateTime)
+                .ToList();
+
+            // Group appointments by date
+            var groupedAppointments = appointments
+                .GroupBy(a => a.AppointmentDateTime.Value.Date)
+                .Select(g => new
+                {
+                    date = g.Key.ToString("yyyy-MM-dd"),
+                    appointments = g.Select(a => new
+                    {
+                        a.AppointmentId,
+                        a.AppointmentDateTime,
+                        a.Status,
+                        petName = a.Pet.Name,
+                        serviceName = a.Service.Name,
+                        groomerName = a.Staff != null ? a.Staff.Name : "Not assigned"
+                    }).ToList()
+                })
+                .ToList();
+
+            return Json(new { success = true, appointments = groupedAppointments });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetAppointmentSchedule Error: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
         }
     }
 
@@ -1748,4 +1901,72 @@ public class HomeController : Controller
     }
 
     // =================================================================
+
+    // ✅ NEW: Check groomer availability for specific date and time
+    [HttpGet]
+    public IActionResult CheckGroomerAvailability(string date, string time, int durationMinutes)
+    {
+        try
+        {
+            // ✅ CRITICAL: Parse date and time correctly
+            if (!DateTime.TryParse($"{date} {time}", out var appointmentDateTime))
+            {
+                Console.WriteLine($"Failed to parse date/time: {date} {time}");
+                return BadRequest(new { success = false, message = "Invalid date or time format" });
+            }
+
+            Console.WriteLine($"Checking availability for: {appointmentDateTime:yyyy-MM-dd HH:mm}, Duration: {durationMinutes} min");
+
+            var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+            Console.WriteLine($"Time range: {appointmentDateTime:HH:mm} - {appointmentEndTime:HH:mm}");
+
+            // Get all groomer IDs
+            var allGroomerIds = _db.Staffs
+                .Where(s => s.Role == "staff")
+                .Select(s => s.UserId)
+                .ToList();
+
+            Console.WriteLine($"Total groomers: {allGroomerIds.Count}");
+
+            // Filter out groomers with conflicts
+            var availableGroomerIds = new List<string>();
+
+            foreach (var groomerId in allGroomerIds)
+            {
+                // ✅ IMPORTANT: Only check appointments on the SAME DATE
+                var hasConflict = _db.Appointments.Any(a =>
+                    a.StaffId == groomerId &&
+                    a.Status != "Cancelled" &&
+                    a.AppointmentDateTime.HasValue &&
+                    // ✅ KEY: Only check same date (ignore time zone issues)
+                    a.AppointmentDateTime.Value.Year == appointmentDateTime.Year &&
+                    a.AppointmentDateTime.Value.Month == appointmentDateTime.Month &&
+                    a.AppointmentDateTime.Value.Day == appointmentDateTime.Day &&
+                    // ✅ Check time overlap
+                    a.AppointmentDateTime < appointmentEndTime &&
+                    a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime
+                );
+
+                if (!hasConflict)
+                {
+                    availableGroomerIds.Add(groomerId);
+                    Console.WriteLine($"  ✅ Groomer {groomerId} is AVAILABLE");
+                }
+                else
+                {
+                    Console.WriteLine($"  ❌ Groomer {groomerId} has conflict");
+                }
+            }
+
+            Console.WriteLine($"Available groomers: {availableGroomerIds.Count}");
+
+            return Json(new { success = true, availableGroomerIds = availableGroomerIds });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"CheckGroomerAvailability Error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 }
