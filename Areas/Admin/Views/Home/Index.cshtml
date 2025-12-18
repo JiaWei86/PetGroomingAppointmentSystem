@@ -110,16 +110,6 @@
         </div>
 
         <div class="calendar-grid-wrapper">
-            <div class="calendar-weekdays">
-                <div class="calendar-day-header">SUN</div>
-                <div class="calendar-day-header">MON</div>
-                <div class="calendar-day-header">TUE</div>
-                <div class="calendar-day-header">WED</div>
-                <div class="calendar-day-header">THU</div>
-                <div class="calendar-day-header">FRI</div>
-                <div class="calendar-day-header">SAT</div>
-            </div>
-
             <div id="calendar"></div>
         </div>
     </div>
@@ -305,6 +295,12 @@
 
             let calendarHTML = '';
 
+            // Add weekday headers directly into the grid
+            const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            weekdays.forEach(day => {
+                calendarHTML += `<div class="calendar-day-header">${day}</div>`;
+            });
+
             for (let i = 0; i < firstDay; i++) {
                 calendarHTML += '<div class="calendar-day empty"></div>';
             }
@@ -316,15 +312,17 @@
                 const isToday = dateStr === todayStr;
                 const isSelected = dateStr === selectedStr;
 
-                let classes = 'calendar-day';
+                let classes = 'day-content'; // Use 'day-content' as the base class
                 if (isToday) classes += ' today';
                 if (isSelected) classes += ' selected';
                 if (hasAppointments) classes += ' has-appointments';
 
                 calendarHTML += `
-                    <div class="${classes}" onclick="selectDate('${dateStr}')">
-                        <span class="day-number">${day}</span>
-                        ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                    <div class="calendar-day" onclick="selectDate('${dateStr}')">
+                        <div class="${classes}">
+                            <span class="day-number">${day}</span>
+                            ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                        </div>
                     </div>
                 `;
             }

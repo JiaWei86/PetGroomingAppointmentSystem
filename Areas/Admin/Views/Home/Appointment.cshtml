@@ -321,6 +321,20 @@
 
     <form method="get" class="form-grid filter-form" id="filterForm">
         <div class="form-group">
+            <label for="filterAppointmentId">Appointment ID</label>
+            <input type="text" id="filterAppointmentId" name="filterAppointmentId" class="form-control"
+                   value="@Model.FilterAppointmentId" placeholder="e.g., AP001" />
+        </div>
+
+        <div class="form-group">
+            <label for="filterCustomerName">Customer Name</label>
+            <input type="text" id="filterCustomerName" name="filterCustomerName" class="form-control"
+                   value="@Model.FilterCustomerName" placeholder="Search by name..." />
+        </div>
+
+
+
+        <div class="form-group">
             <label for="filterStatus">Status</label>
             <select id="filterStatus" name="status" class="form-control">
                 <option value="" selected="@(string.IsNullOrEmpty(Model.FilterStatus))">All Statuses</option>
@@ -1202,7 +1216,7 @@
                         altInput: true,
                         altFormat: 'F j, Y h:i K',
                         minDate: 'today',
-                        minuteIncrement: 15,
+                        minuteIncrement: 30,
                         minTime: '09:00',
                         maxTime: '16:30',
                         disable: [function (date) { return date.getDay() === 1; }],

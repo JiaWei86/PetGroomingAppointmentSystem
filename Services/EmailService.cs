@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
@@ -48,6 +48,8 @@ namespace PetGroomingAppointmentSystem.Services
             }
         }
 
+
+
         public async Task SendVerificationCodeEmailAsync(string toEmail, string toName, string verificationCode)
         {
             var subject = "Verification Code";
@@ -67,6 +69,82 @@ namespace PetGroomingAppointmentSystem.Services
                 </html>";
 
             await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
+        }
+
+        public async Task<bool> SendCustomerCredentialsEmailAsync(
+            string toEmail,
+            string customerName,
+            string customerId,
+            string temporaryPassword,
+            string phone,
+            string loginUrl)
+        {
+            try
+            {
+                var subject = "Welcome to Hajimi House Pet Grooming - Your Account Details";
+                var htmlBody = $@"
+                    <html>
+                    <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                        <div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
+                            <h2 style='color: #ff9500; text-align: center;'>🐾 Welcome to Hajimi House Pet Grooming!</h2>
+                            
+                            <p>Dear <strong>{customerName}</strong>,</p>
+                            
+                            <p>Your customer account has been successfully created. Below are your login credentials:</p>
+                            
+                            <div style='background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                                <table style='width: 100%; border-collapse: collapse;'>
+                                    <tr>
+                                        <td style='padding: 8px; font-weight: bold; width: 40%;'>Customer ID:</td>
+                                        <td style='padding: 8px;'>{customerId}</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 8px; font-weight: bold;'>Email:</td>
+                                    <td style='padding: 8px;'>{toEmail}</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 8px; font-weight: bold;'>Phone:</td>
+                                    <td style='padding: 8px;'>{phone}</td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 8px; font-weight: bold;'>Temporary Password:</td>
+                                    <td style='padding: 8px; color: #ff9500; font-family: monospace; font-size: 16px;'>{temporaryPassword}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;'>
+                            <p style='margin: 0; color: #856404;'>
+                                <strong>⚠️ Important:</strong> You will be required to change your password upon your first login.
+                            </p>
+                        </div>
+                        
+                        <p><strong>To login:</strong> Use your <strong>Phone Number</strong> and <strong>Temporary Password</strong></p>
+                        
+                        <div style='text-align: center; margin: 30px 0;'>
+                            <a href='{loginUrl}' style='background-color: #ff9500; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;'>
+                                Login Now
+                            </a>
+                        </div>
+                        
+                        <hr style='border: none; border-top: 1px solid #ddd; margin: 30px 0;' />
+                        
+                        <p style='color: #999; font-size: 12px; text-align: center;'>
+                            Hajimi House Pet Grooming System<br />
+                            This is an automated email. Please do not reply.
+                        </p>
+                    </div>
+                </body>
+                </html>";
+
+                await SendEmailAsync(toEmail, subject, htmlBody, isHtml: true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EMAIL ERROR] SendCustomerCredentialsEmailAsync failed: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)

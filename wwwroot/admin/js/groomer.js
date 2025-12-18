@@ -196,8 +196,7 @@ function initializeGroomerFieldValidation() {
 
  if (nameInput) {
  nameInput.addEventListener('blur', function() { validateName(this.value); });
- nameInput.addEventListener('input', debounce(function() { validateName(this.value); },200));
- nameInput.addEventListener('input', function() { if (this.value.length >0) clearFieldError('groomerName','error-Name'); });
+ nameInput.addEventListener('input', debounce(function() { validateName(this.value); }, 200));
  }
 
  if (icInput) {
@@ -220,7 +219,7 @@ function initializeGroomerFieldValidation() {
 
  if (experienceInput) {
  experienceInput.addEventListener('blur', function() { validateExperience(this.value); });
- experienceInput.addEventListener('input', function() { if (this.value.length >0) clearFieldError('experienceYear','error-ExperienceYear'); });
+ experienceInput.addEventListener('input', debounce(function() { validateExperience(this.value) }, 200));
  }
 
  if (positionInput) {
@@ -276,18 +275,98 @@ function clearFieldError(inputId, errorId) {
 
 // ====== Validation functions (client + optional server AJAX) ======
 async function validateName(value) {
- const errorSpan = document.getElementById('error-Name');
- const input = document.getElementById('groomerName');
- if (!input) return true;
+    const errorSpan = document.getElementById('error-Name');
+    const input = document.getElementById('groomerName');
+    if (!input) return true;
 
- if (!value || value.trim().length <2) {
- setFieldInvalid(errorSpan, input, 'Name must be at least2 characters long.');
- return false;
- }
+    // Clear previous error before new validation
+    clearFieldError('groomerName', 'error-Name');
 
- setFieldValid(errorSpan, input, 'Valid');
- return true;
+    if (!value || value.trim().length < 2) {
+        setFieldInvalid(errorSpan, input, 'Name must be at least 2 characters long.');
+        return false;
+    }
+
+    // Server-side validation for characters
+    try {
+        const resp = await fetch('/Admin/Home/ValidateGroomerField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                FieldName: 'Name',
+                FieldValue: value,
+                StaffId: '' // 'add' mode
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'Invalid characters in name.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Name validation ajax error', e);
+        // Fallback to client-side valid message if server check fails
+        setFieldValid(errorSpan, input, 'Valid (local)');
+        return true; // Don't block submission if server is down
+    }
 }
+
+
+function validateAgeVsExperience() {
+    const icInput = document.getElementById('groomerIC');
+    const experienceInput = document.getElementById('experienceYear');
+    const errorSpan = document.getElementById('error-ExperienceYear');
+
+    if (!icInput || !experienceInput || !errorSpan) return true; // Can't validate
+
+    const icValue = icInput.value;
+    const experienceValue = experienceInput.value;
+
+    if (!icValue || !experienceValue) return true; // Not enough info
+
+    const icRegex = /^\d{6}-\d{2}-\d{4}$/;
+    if (!icRegex.test(icValue)) return true; // IC not valid yet
+
+    const experience = parseInt(experienceValue, 10);
+    if (isNaN(experience) || experience < 0) return true; // Experience not valid yet
+
+    try {
+        const rawIC = icValue.replace(/-/g, '');
+        const yy = parseInt(rawIC.substr(0, 2), 10);
+        const currentCentury = Math.floor(new Date().getFullYear() / 100) * 100; // e.g., 2000
+        const currentYY = new Date().getFullYear() % 100; // e.g., 25 for 2025
+        
+        // If YY is greater than current YY, it's likely previous century
+        const year = (yy > currentYY) ? (currentCentury - 100 + yy) : (currentCentury + yy);
+
+        const mm = parseInt(rawIC.substr(2, 2), 10);
+        const dd = parseInt(rawIC.substr(4, 2), 10);
+        
+        const birthDate = new Date(year, mm - 1, dd);
+        if (isNaN(birthDate.getTime()) || birthDate.getFullYear() !== year || birthDate.getMonth() + 1 !== mm || birthDate.getDate() !== dd) {
+             return true; // Invalid date components
+        }
+
+        let age = new Date().getFullYear() - birthDate.getFullYear();
+        const m = new Date().getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && new Date().getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        // A person can start gaining professional experience around age 16.
+        if (experience > (age - 16)) {
+            setFieldInvalid(errorSpan, experienceInput, `Experience of ${experience} years is unrealistic for someone aged ${age}.`);
+            return false;
+        }
+        return true;
+    } catch {
+        return true; // Don't block if parsing fails
+    }
+}
+
 
 async function validateIC(value) {
  const errorSpan = document.getElementById('error-IC');
@@ -308,10 +387,14 @@ async function validateIC(value) {
  const dd = parseInt(raw.substr(4,2),10);
  const today = new Date();
 
- // Assume 2000s century
- let year = 2000 + yy;
+        const currentCentury = Math.floor(new Date().getFullYear() / 100) * 100; // e.g., 2000
+        const currentYY = new Date().getFullYear() % 100; // e.g., 25 for 2025
+        
+        // If YY is greater than current YY, it's likely previous century
+        const year = (yy > currentYY) ? (currentCentury - 100 + yy) : (currentCentury + yy);
+ 
  const birth = new Date(year, mm -1, dd);
- if (isNaN(birth.getTime())) {
+ if (isNaN(birth.getTime()) || birth.getFullYear() !== year || birth.getMonth() + 1 !== mm || birth.getDate() !== dd) {
  setFieldInvalid(errorSpan, input, 'Invalid birth date inside IC.');
  return false;
  }
@@ -325,9 +408,13 @@ async function validateIC(value) {
  if (m <0 || (m ===0 && today.getDate() < birth.getDate())) age--;
 
  if (age <18 || age >60) {
- setFieldInvalid(errorSpan, input, `Working age must be between 18 and 60 years. Current age: ${age} years.`);
+ setFieldInvalid(errorSpan, input, `Working age must be between 18 and 60. Current age: ${age}.`);
  return false;
  }
+ 
+  // After validating age, check against experience
+  validateAgeVsExperience();
+
 
  // server-side uniqueness check
  try {
@@ -342,7 +429,7 @@ async function validateIC(value) {
       });
  const data = await resp.json();
       if (data.isValid) {
- setFieldValid(errorSpan, input, 'Valid');
+ setFieldValid(errorSpan, input, `Valid (Age: ${age})`);
  return true;
  } else {
           setFieldInvalid(errorSpan, input, data.errorMessage || 'IC validation failed.');
@@ -436,24 +523,46 @@ async function validatePhone(value) {
 }
 
 function validateExperience(value) {
- const errorSpan = document.getElementById('error-ExperienceYear');
- const input = document.getElementById('experienceYear');
- if (!input) return true;
- const num = parseInt(value);
- if (isNaN(num) || num <0 || num >50) {
- setFieldInvalid(errorSpan, input, 'Experience must be between 0 and 50 years.');
- return false;
- } else {
- setFieldValid(errorSpan, input, 'Valid');
- return true;
- }
+    const errorSpan = document.getElementById('error-ExperienceYear');
+    const input = document.getElementById('experienceYear');
+    if (!input) return true;
+
+    // This field is not required, so if it's empty, it's valid.
+    if (value === '' || value === null) {
+        clearFieldError('experienceYear', 'error-ExperienceYear');
+        return true;
+    }
+    
+    const num = parseInt(value, 10);
+
+    if (isNaN(num)) {
+        setFieldInvalid(errorSpan, input, 'Experience must be a number.');
+        return false;
+    }
+    if (num < 0) {
+        setFieldInvalid(errorSpan, input, 'Experience cannot be negative.');
+        return false;
+    }
+    if (num > 50) {
+        setFieldInvalid(errorSpan, input, 'Experience must be between 0 and 50 years.');
+        return false;
+    }
+
+    // Run the cross-validation with age
+    if (!validateAgeVsExperience()) {
+        return false; // Error is already set by the helper
+    }
+    
+    setFieldValid(errorSpan, input, 'Valid');
+    return true;
 }
+
 
 function validatePosition(value) {
  const errorSpan = document.getElementById('error-Position');
  const input = document.getElementById('position');
  if (!input) return true;
- const validPositions = ['Senior Groomer', 'Junior Groomer', 'Groomer Assistant', 'Shop Assistant', 'Cat Groomer'];
+ const validPositions = ['Senior Groomer', 'Junior Groomer', 'Groomer Assistant'];
  if (!value || !validPositions.includes(value)) {
  setFieldInvalid(errorSpan, input, 'Please select a valid position.');
  return false;

@@ -342,6 +342,7 @@
       <div class="form-group">
         <label for="groomerName">Full Name <span style="color: red;">*</span></label>
         <input type="text" id="groomerName" name="Name" placeholder="e.g., John Smith" required />
+        <small class="error-message" id="error-Name"></small>
       </div>
 
       <!-- IC (Identity Card) -->
@@ -384,8 +385,6 @@
           <option value="Senior Groomer">Senior Groomer</option>
           <option value="Junior Groomer">Junior Groomer</option>
           <option value="Groomer Assistant">Groomer Assistant</option>
-          <option value="Shop Assistant">Shop Assistant</option>
-          <option value="Cat Groomer">Cat Groomer (Specialist)</option>
         </select>
         <small class="error-message" id="error-Position"></small>
       </div>
@@ -498,8 +497,6 @@
                                         ("Senior Groomer", "Senior Groomer"),
                                         ("Junior Groomer", "Junior Groomer"),
                                         ("Groomer Assistant", "Groomer Assistant"),
-                                        ("Shop Assistant", "Shop Assistant"),
-                                        ("Cat Groomer", "Cat Groomer (Specialist)"),
                                         };
                       }
                       @foreach (var (value, text) in positions)

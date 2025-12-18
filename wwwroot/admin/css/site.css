@@ -33,7 +33,6 @@ body {
     color: var(--text-color);
     line-height: 1.6;
     font-size: 16px;
-    overflow-x: hidden;
 }
 
 #app-container {
@@ -131,7 +130,7 @@ body {
     display: flex;
     flex-direction: column;
     background-color: var(--background-color);
-    overflow-x: hidden; /* ADD THIS */
+    overflow-x: auto; /* Allow horizontal scrolling for the main content area */
     max-width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
     width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
 }

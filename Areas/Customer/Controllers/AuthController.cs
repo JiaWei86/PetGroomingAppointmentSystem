@@ -446,9 +446,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                Console.WriteLine($"\n\n{'='*60}");
+                Console.WriteLine($"\n\n{'=' * 60}");
                 Console.WriteLine($"CheckPhoneNumber CALLED");
-                Console.WriteLine($"{'='*60}");
+                Console.WriteLine($"{'=' * 60}");
                 Console.WriteLine($"Input phoneNumber: '{phoneNumber}'");
                 Console.WriteLine($"Input type: {phoneNumber?.GetType().Name ?? "NULL"}");
                 Console.WriteLine($"Input length: {phoneNumber?.Length ?? 0}");
@@ -474,7 +474,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 // Get ALL users from database
                 var allUsers = _dbContext.Users.ToList();
                 Console.WriteLine($"\n[DATABASE CHECK] Found {allUsers.Count} total users in database");
-                
+
                 if (allUsers.Count == 0)
                 {
                     Console.WriteLine($"WARNING: No users in database!");
@@ -502,7 +502,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 if (directMatch)
                 {
                     Console.WriteLine($"✓ MATCH FOUND! Returning available: false");
-                    Console.WriteLine($"{'='*60}\n");
+                    Console.WriteLine($"{'=' * 60}\n");
                     return Json(new { available = false });
                 }
 
@@ -527,7 +527,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 Console.WriteLine($"\nCleaned match result: {cleanedMatch}");
                 Console.WriteLine($"Final available result: {!cleanedMatch}");
-                Console.WriteLine($"{'='*60}\n");
+                Console.WriteLine($"{'=' * 60}\n");
 
                 return Json(new { available = !cleanedMatch });
             }
@@ -535,7 +535,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             {
                 Console.WriteLine($"[EXCEPTION] {ex.Message}");
                 Console.WriteLine($"[EXCEPTION] {ex.StackTrace}");
-                Console.WriteLine($"{'='*60}\n");
+                Console.WriteLine($"{'=' * 60}\n");
                 return Json(new { available = false, error = ex.Message });
             }
         }

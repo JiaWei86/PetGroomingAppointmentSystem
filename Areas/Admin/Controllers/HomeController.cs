@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering; // Add this using directive
 using Microsoft.EntityFrameworkCore;
+using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
+using PetGroomingAppointmentSystem.Areas.Admin.Services;
+using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
 using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
-using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 using PetGroomingAppointmentSystem.Services; 
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
 using System;
@@ -600,12 +603,47 @@ public class HomeController : Controller
     // POST: Create Customer
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateCustomer(Models.Customer customer, IFormFile PhotoUpload)
+    public async Task<IActionResult> CreateCustomer(RegisterViewModel model, IFormFile PhotoUpload)
     {
-        // ✅ Smart ID Generation - Check ALL customers (including those from registration)
+        // Remove Password validation for admin-created customers (password is auto-generated)
+        ModelState.Remove("Password");
+        ModelState.Remove("ConfirmPassword");
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+            TempData["ErrorMessage"] = string.Join(" ", errors);
+            return RedirectToAction(nameof(Customer));
+        }
+
+        // Format and validate phone
+        string formattedPhone = _phoneService.FormatPhoneNumber(model.PhoneNumber);
+
+        // Check for duplicate phone
+        if (await _db.Customers.AnyAsync(c => c.Phone == formattedPhone))
+        {
+            TempData["ErrorMessage"] = "This phone number is already registered.";
+            return RedirectToAction(nameof(Customer));
+        }
+
+        // Check for duplicate email
+        if (await _db.Customers.AnyAsync(c => c.Email == model.Email))
+        {
+            TempData["ErrorMessage"] = "This email address is already registered.";
+            return RedirectToAction(nameof(Customer));
+        }
+
+        // Check for duplicate IC
+        if (await _db.Customers.AnyAsync(c => c.IC == model.IC))
+        {
+            TempData["ErrorMessage"] = "This IC number is already registered.";
+            return RedirectToAction(nameof(Customer));
+        }
+
+        // ✅ Smart ID Generation
         var allCustomerIds = await _db.Customers
             .Select(c => c.UserId)
-            .OrderBy(id => id)
+            .Where(id => id != null && id.StartsWith("C"))
             .ToListAsync();
 
         string newCustomerId;
@@ -616,42 +654,44 @@ public class HomeController : Controller
         }
         else
         {
-            // Extract numeric parts and find gaps
             var usedNumbers = allCustomerIds
-                .Select(id => int.Parse(id.Substring(1)))
+                .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
+                .Where(n => n > 0)
                 .OrderBy(n => n)
                 .ToList();
 
-            // Check for gaps starting from 1
             int nextNumber = 1;
-            bool foundGap = false;
-
             foreach (var num in usedNumbers)
             {
-                if (num != nextNumber)
-                {
-                    // Found a gap! Use this number
-                    foundGap = true;
-                    break;
-                }
+                if (num != nextNumber) break;
                 nextNumber++;
             }
 
-            // If no gap found, use max + 1
-            if (!foundGap)
-            {
-                nextNumber = usedNumbers.Max() + 1;
-            }
-
-            newCustomerId = "C" + nextNumber.ToString("D3");
+            if (nextNumber <= usedNumbers.Max())
+                newCustomerId = "C" + nextNumber.ToString("D3");
+            else
+                newCustomerId = "C" + (usedNumbers.Max() + 1).ToString("D3");
         }
 
-        customer.UserId = newCustomerId;
-        customer.Role = "customer";
-        customer.CreatedAt = DateTime.Now;
-        customer.RegisteredDate = DateTime.Now;
-        customer.Status = "active";
-        customer.LoyaltyPoint = 0;
+        // ✅ Generate temporary password
+        string temporaryPassword = _passwordService.GenerateRandomPassword(12);
+
+        // Create customer from RegisterViewModel
+        var customer = new Models.Customer
+        {
+            UserId = newCustomerId,
+            Name = model.Name,
+            IC = model.IC,
+            Email = model.Email,
+            Phone = formattedPhone,
+            Password = temporaryPassword,
+            Role = "customer",
+            Status = "pending_password",
+            CreatedAt = DateTime.Now,
+            RegisteredDate = DateTime.Now,
+            LoyaltyPoint = 0,
+            Photo = "/uploads/placeholder.png"
+        };
 
         // ✅ Upload photo to S3 instead of local storage
         if (PhotoUpload != null && PhotoUpload.Length > 0)
@@ -676,16 +716,46 @@ public class HomeController : Controller
                 customer.Photo = "/uploads/placeholder.png";
             }
         }
-        else
+
+        // Save to database
+        try
         {
-            customer.Photo = "/uploads/placeholder.png";
+            _db.Customers.Add(customer);
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception dbEx)
+        {
+            TempData["ErrorMessage"] = $"Failed to create customer: {dbEx.Message}";
+            return RedirectToAction(nameof(Customer));
         }
 
-        _db.Customers.Add(customer);
-        await _db.SaveChangesAsync();
+        // Send email with credentials
+        try
+        {
+            var loginUrl = $"{Request.Scheme}://{Request.Host}/Customer/Auth/Login";
+
+            bool emailSent = await _emailService.SendCustomerCredentialsEmailAsync(
+                toEmail: customer.Email,
+                customerName: customer.Name,
+                customerId: newCustomerId,
+                temporaryPassword: temporaryPassword,
+                phone: customer.Phone,
+                loginUrl: loginUrl
+            );
+
+            if (emailSent)
+                TempData["SuccessMessage"] = $"✅ Customer {customer.Name} created successfully! Credentials sent to {customer.Email}.";
+            else
+                TempData["SuccessMessage"] = $"✅ Customer {customer.Name} created! ⚠️ Email failed - Temp Password: {temporaryPassword}";
+        }
+        catch (Exception)
+        {
+            TempData["SuccessMessage"] = $"✅ Customer {customer.Name} created! ⚠️ Email failed - Temp Password: {temporaryPassword}";
+        }
 
         return RedirectToAction(nameof(Customer));
     }
+
 
     // POST: Edit Customer
     [HttpPost]
@@ -957,7 +1027,7 @@ public class HomeController : Controller
 
 
     // ========== APPOINTMENT ==========
-    public async Task<IActionResult> Appointment(string status, string groomerid, string date, string editId)
+    public async Task<IActionResult> Appointment(string status, string groomerid, string date, string editId, string filterAppointmentId, string filterCustomerName)
  {
  ViewData["ActivePage"] = "Appointment";
  // Base query
@@ -967,6 +1037,18 @@ public class HomeController : Controller
  .Include(a => a.Staff)
  .Include(a => a.Service)
  .AsQueryable();
+
+ // Apply Appointment ID filter
+ if (!string.IsNullOrEmpty(filterAppointmentId))
+ {
+ query = query.Where(a => a.AppointmentId.Contains(filterAppointmentId));
+ }
+
+ // Apply Customer Name filter
+ if (!string.IsNullOrEmpty(filterCustomerName))
+ {
+ query = query.Where(a => a.Customer.Name.Contains(filterCustomerName));
+ }
 
  // Apply status filter if it's not "All"
  if (!string.IsNullOrEmpty(status))
@@ -991,26 +1073,36 @@ public class HomeController : Controller
 
  var appointments = await query.OrderByDescending(a => a.AppointmentDateTime).ToListAsync();
 
-        // Load lookup data for the ViewModel
-        var staffList = await _db.Staffs
-            .Select(s => new SelectListItem { Value = s.UserId, Text = s.Name })
-            .ToListAsync();
-
-        var customerList = await _db.Customers
-            .OrderBy(c => c.Name)
-            .Select(c => new SelectListItem { Value = c.UserId, Text = c.Name + " (" + c.Phone + ")" })
-            .ToListAsync();
-
         // Create and populate the ViewModel
         var viewModel = new AppointmentViewModel
         {
             Appointments = appointments,
-            StaffList = staffList,
-            CustomerList = customerList,
             FilterStatus = status,
             FilterGroomerId = groomerid,
-            FilterDate = DateTime.TryParse(date, out var parsedFilterDate) ? parsedFilterDate : (DateTime?)null
+            FilterDate = DateTime.TryParse(date, out var parsedFilterDate) ? parsedFilterDate : (DateTime?)null,
+            FilterAppointmentId = filterAppointmentId,
+            FilterCustomerName = filterCustomerName
         };
+
+        // Load lookup data for the ViewModel
+        viewModel.StaffList = await _db.Staffs
+            .Select(s => new SelectListItem { Value = s.UserId, Text = s.Name })
+            .ToListAsync();
+
+        viewModel.CustomerList = await _db.Customers
+            .OrderBy(c => c.Name)
+            .Select(c => new SelectListItem { Value = c.UserId, Text = c.Name + " (" + c.Phone + ")" })
+            .ToListAsync();
+
+        // If a customer is pre-selected (e.g., due to validation error), load their pets
+        if (!string.IsNullOrEmpty(viewModel.CustomerId))
+        {
+            viewModel.PetList = await _db.Pets
+                .Where(p => p.CustomerId == viewModel.CustomerId)
+                .Select(p => new SelectListItem { Value = p.PetId, Text = p.Name })
+                .ToListAsync();
+        }
+
         ViewBag.EditingId = editId;
 
         return View(viewModel);
@@ -1045,29 +1137,14 @@ public class HomeController : Controller
                 var newAppointments = new List<Appointment>();
                 var appointmentStartTime = model.AppointmentDateTime;
 
-
-                // 如果是单一美容师，先检查总时长是否会超过下班时间 (4:30 PM)
-                if (model.StaffId != "any" && !string.IsNullOrEmpty(model.StaffId) && model.PetId.Count > 1)
+                // 检查预约时间是否在当前时间之前
+                if (appointmentStartTime < DateTime.Now)
                 {
-                    double totalDuration = 0;
-                    foreach (var petId in model.PetId)
-                    {
-                        if (model.PetServiceMap.TryGetValue(petId, out var serviceId))
-                        {
-                            var service = await _db.Services.FindAsync(serviceId);
-                            if (service?.DurationTime.HasValue ?? false)
-                            {
-                                totalDuration += service.DurationTime.Value;
-                            }
-                        }
-                    }
-                    var finalEndTime = appointmentStartTime.AddMinutes(totalDuration);
-                    if (finalEndTime.TimeOfDay > new TimeSpan(16, 30, 0))
-                    {
-                        TempData["ErrorMessage"] = $"The total duration for all services exceeds the closing time of 4:30 PM. The estimated finish time is {finalEndTime:hh:mm tt}.";
-                        return RedirectToAction(nameof(Appointment));
-                    }
+                    TempData["ErrorMessage"] = "You cannot create an appointment for a time that has already passed.";
+                    return RedirectToAction(nameof(Appointment));
                 }
+
+
 
                 // 如果是为每只宠物单独分配美容师
                 if (model.GroomerMode == "individual" && model.PetGroomerMap != null)
@@ -1420,6 +1497,12 @@ public class HomeController : Controller
         }
 
         var appointmentStartTime = model.AppointmentDateTime;
+
+        // 检查预约时间是否在当前时间之前
+        if (appointmentStartTime < DateTime.Now)
+        {
+            return Json(new { isValid = false, field = "AppointmentDateTime", message = "不能为已经过去的时间创建预约。" });
+        }
 
         // --- Single Groomer Validation ---
         // This now handles both "one" mode for multiple pets and the default mode for a single pet

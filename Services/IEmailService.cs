@@ -15,6 +15,17 @@ namespace PetGroomingAppointmentSystem.Services
             string email,
             string phone,
             string loginUrl);
+        /// <summary>
+        /// Send customer credentials email when admin creates a customer
+        /// </summary>
+        Task<bool> SendCustomerCredentialsEmailAsync(
+            string toEmail,
+            string customerName,
+            string customerId,
+            string temporaryPassword,
+            string phone,
+            string loginUrl);
+
 
         /// <summary>
         /// Send password reset email to customer
