@@ -1,111 +1,472 @@
-﻿@{
+﻿@model PetGroomingAppointmentSystem.Areas.Staff.ViewModels.CalendarAppointmentModel
+@{
     ViewData["Title"] = "Appointment";
     ViewData["ActivePage"] = "Appointment";
 }
+@section Styles {
+    <link rel="stylesheet" href="~/admin/css/responsive.css" />
+    <style>
+        .appointment-wrapper {
+            min-height: calc(100vh - 70px);
+            margin-top: 70px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #f9fafb 100%);
+            padding: 40px 20px;
+        }
 
+        .appointment-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
 
-<!-- Calendar Section -->
-<div class="calendar-section">
-    <div class="calendar-container">
-        <div class="calendar-header">
-            <h3 class="panel-title">
-                <i class="material-icons">calendar_month</i>
-                Appointment Calendar
-            </h3>
-            <div class="calendar-nav">
-                <button id="prevMonth" class="btn-nav">
-                    <i class="material-icons">chevron_left</i>
-                </button>
-                <h3 id="monthYear" class="calendar-title"></h3>
-                <button id="nextMonth" class="btn-nav">
-                    <i class="material-icons">chevron_right</i>
-                </button>
+        .appointment-container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 56px rgba(0, 0, 0, 0.15);
+        }
+
+        .appointment-header {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .appointment-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .appointment-header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .appointment-header-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .appointment-header-subtitle {
+            font-size: 15px;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .appointment-body {
+            padding: 40px;
+        }
+
+        .calendar-section {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 28px;
+            align-items: start;
+        }
+
+        .appointment-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-status-update {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #10b981;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .btn-status-update:hover {
+            background-color: #059669;
+        }
+
+        .btn-status-update:disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .appointment-item.completed {
+            opacity: 0.7;
+            background-color: #f0fdf4;
+        }
+
+        .appointment-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .appointment-status.confirmed {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .appointment-status.completed {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .appointment-status-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @@keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .calendar-day.all-completed {
+            background-color: #dcfce7;
+            border-color: #10b981;
+        }
+
+        .calendar-day.all-completed .day-number {
+            color: #166534;
+            font-weight: 600;
+        }
+
+    </style>
+}
+
+<div class="appointment-wrapper">
+    <div class="appointment-container">
+        <div class="appointment-header">
+            <div class="appointment-header-content">
+                <h1 class="appointment-header-title">📅 Appointment Schedule</h1>
             </div>
         </div>
-        <div id="calendar" class="calendar-grid"></div>
-    </div>
 
-    <div class="appointments-sidebar">
-        <div class="sidebar-header">
-            <h3 class="sidebar-title">
-                <i class="material-icons">event_available</i>
-                Daily Schedule
-            </h3>
-            <span id="selectedDate" class="selected-date-badge">Today</span>
+        <div class="appointment-body">
+            <!-- Calendar Section -->
+            <div class="calendar-section">
+                @Html.AntiForgeryToken()
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <h2>Appointment Calendar</h2>
+                        <div class="calendar-nav">
+                            <button id="prevMonth" class="btn-nav">&laquo;</button>
+                            <span id="monthYear" class="month-year"></span>
+                            <button id="nextMonth" class="btn-nav">&raquo;</button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid-wrapper">
+                        <div class="calendar-weekdays">
+                            <div class="calendar-day-header">SUN</div>
+                            <div class="calendar-day-header">MON</div>
+                            <div class="calendar-day-header">TUE</div>
+                            <div class="calendar-day-header">WED</div>
+                            <div class="calendar-day-header">THU</div>
+                            <div class="calendar-day-header">FRI</div>
+                            <div class="calendar-day-header">SAT</div>
+                        </div>
+
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+
+                <div class="appointments-sidebar">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title">
+                            <i class="material-icons">event</i>
+                            <span>Appointments</span>
+                        </div>
+                        <span id="selectedDate" class="selected-date-badge">Today</span>
+                    </div>
+
+                    <div id="appointmentsList">
+                        <p class="no-appointments">No appointments scheduled</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="appointmentsList" class="appointments-list"></div>
     </div>
 </div>
 
 <script>
     // ========================================
-    // DASHBOARD DATA (Page-Specific)
+    // STAFF CALENDAR DATA
     // ========================================
 
-    // Chart data
-    window.dashboardChartData = {
-        week: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            data: [12, 19, 15, 25, 22, 18, 20]
-        },
-        month: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            data: [65, 78, 82, 95]
-        },
-        day: {
-            labels: ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'],
-            data: [2, 4, 3, 5, 4, 6, 3, 2, 1]
+    // Dynamically inject appointment data from the ViewModel
+    // Status is now fetched directly from the database via the controller
+    const appointmentDataJson = '@Html.Raw(Json.Serialize(Model?.AppointmentsForCalendar ?? new List<PetGroomingAppointmentSystem.Models.ViewModels.CalendarAppointmentModel>()))';
+    const appointmentData = appointmentDataJson ? JSON.parse(appointmentDataJson) : [];
+    
+    // DEBUG: Log the data to inspect structure
+    console.log('Appointment Data:', appointmentData);
+    if (appointmentData.length > 0) {
+        console.log('First appointment:', appointmentData[0]);
+        console.log('Status value:', appointmentData[0].status);
+        console.log('Status type:', typeof appointmentData[0].status);
+    }
+</script>
+
+<script>
+    // ========================================
+    // STAFF CALENDAR MODULE
+    // ========================================
+    const DashboardCalendar = (() => {
+        let currentDate = new Date();
+        let selectedDate = new Date();
+        let appointments = [];
+
+        const getLocalDateString = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const init = (appointmentData) => {
+            appointments = appointmentData;
+            renderCalendar();
+            renderAppointments(getLocalDateString(selectedDate));
+
+            document.getElementById('prevMonth')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            document.getElementById('nextMonth')?.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+        };
+
+        const renderCalendar = () => {
+            const calendar = document.getElementById('calendar');
+            const monthYear = document.getElementById('monthYear');
+            if (!calendar || !monthYear) return;
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            monthYear.textContent = new Date(year, month).toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const todayStr = getLocalDateString(new Date());
+            const selectedStr = getLocalDateString(selectedDate);
+
+            let calendarHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                calendarHTML += '<div class="calendar-day empty"></div>';
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = getLocalDateString(date);
+                const dateAppointments = appointments.filter(apt => apt.date === dateStr);
+                const hasAppointments = dateAppointments.length > 0;
+                const allCompleted = hasAppointments && dateAppointments.every(apt => apt.status && apt.status.toLowerCase() === 'completed');
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedStr;
+
+                let classes = 'calendar-day';
+                if (isToday) classes += ' today';
+                if (isSelected) classes += ' selected';
+                if (hasAppointments) classes += ' has-appointments';
+                if (allCompleted) classes += ' all-completed';
+
+                calendarHTML += `
+                    <div class="${classes}" onclick="selectDate('${dateStr}')">
+                        <span class="day-number">${day}</span>
+                        ${hasAppointments ? '<span class="appointment-dot"></span>' : ''}
+                    </div>
+                `;
+            }
+
+            calendar.innerHTML = calendarHTML;
+        };
+
+        const renderAppointments = (dateStr) => {
+            const appointmentsList = document.getElementById('appointmentsList');
+            const selectedDateBadge = document.getElementById('selectedDate');
+            if (!appointmentsList) return;
+
+            const dateAppointments = appointments.filter(apt => apt.date === dateStr);
+
+            if (selectedDateBadge) {
+                const date = new Date(dateStr + 'T00:00:00');
+                const todayStr = getLocalDateString(new Date());
+
+                if (dateStr === todayStr) {
+                    selectedDateBadge.textContent = 'Today';
+                } else {
+                    selectedDateBadge.textContent = date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                }
+            }
+
+            if (dateAppointments.length === 0) {
+                appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+                return;
+            }
+
+            appointmentsList.innerHTML = dateAppointments.map(apt => `
+                <div class="appointment-item ${apt.status}">
+                    <div class="appointment-time">${apt.time}</div>
+                    <div class="appointment-details">
+                        <div class="appointment-pet">${apt.petName}</div>
+                        <div class="appointment-service">${apt.serviceType}</div>
+                        <div class="appointment-groomer">with ${apt.groomerName}</div>
+                    </div>
+                    <div class="appointment-status-wrapper">
+                        <span class="appointment-status ${apt.status}">${capitalizeStatus(apt.status)}</span>
+                        ${apt.status && apt.status.toLowerCase() === 'confirmed' ? `
+                            <button class="btn-status-update" onclick="updateAppointmentStatus('${apt.id}', 'Completed', this)" title="Mark as completed">
+                                ✓ Complete
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        const selectDate = (dateStr) => {
+            selectedDate = new Date(dateStr + 'T00:00:00');
+            renderCalendar();
+            renderAppointments(dateStr);
+        };
+
+        return { init, selectDate, renderAppointments, renderCalendar };
+    })();
+
+    const capitalizeStatus = (status) => {
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    };
+
+    window.selectDate = (dateStr) => DashboardCalendar.selectDate(dateStr);
+
+    window.updateAppointmentStatus = async (appointmentId, newStatus, buttonElement) => {
+        try {
+            const button = buttonElement;
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.innerHTML = '<span class="loading-spinner"></span>';
+
+            // Get CSRF token from the hidden input
+            const csrfTokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (!csrfTokenElement) {
+                alert('Error: CSRF token not found. Please refresh the page.');
+                button.disabled = false;
+                button.innerHTML = originalText;
+                return;
+            }
+
+            const csrfToken = csrfTokenElement.value;
+
+            const response = await fetch('@Url.Action("UpdateAppointmentStatus", "Home")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': csrfToken
+                },
+                body: JSON.stringify({
+                    appointmentId: appointmentId,
+                    newStatus: newStatus
+                })
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+
+            // Parse response as JSON
+            let data = {};
+            try {
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse response as JSON:', e);
+                alert('Error: Invalid response from server. Please check the browser console for details.');
+                button.disabled = false;
+                button.innerHTML = originalText;
+                return;
+            }
+
+            console.log('Response data:', data);
+
+            if (!data.success) {
+                alert('Error: ' + (data.message || 'Failed to update appointment.'));
+                button.disabled = false;
+                button.innerHTML = originalText;
+                return;
+            }
+
+            // Success - show message
+            alert(data.message || 'Appointment updated successfully');
+
+            // Update the appointment in the local array
+            const appointment = appointmentData.find(apt => apt.id === appointmentId);
+            if (appointment) {
+                appointment.status = data.newStatus || newStatus.toLowerCase();
+            }
+
+            // Get the currently selected date
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const currentDateStr = `${year}-${month}-${day}`;
+
+            // Re-render the calendar and appointments using the public methods
+            DashboardCalendar.renderCalendar();
+            DashboardCalendar.renderAppointments(currentDateStr);
+        } catch (error) {
+            console.error('Error updating appointment:', error);
+            alert('Error updating appointment: ' + error.message);
+            const button = buttonElement;
+            button.disabled = false;
+            button.innerHTML = originalText;
         }
     };
 
-    // Appointment data
-    const appointmentData = [
-        {
-            id: 1,
-            date: new Date().toISOString().split('T')[0],
-            time: "09:00",
-            petName: "Buddy",
-            groomerName: "Anna Lee",
-            serviceType: "Full Groom",
-            status: "confirmed"
-        },
-        {
-            id: 2,
-            date: new Date().toISOString().split('T')[0],
-            time: "10:30",
-            petName: "Whiskers",
-            groomerName: "Mark Chen",
-            serviceType: "Bath",
-            status: "confirmed"
-        },
-        {
-            id: 3,
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: "14:00",
-            petName: "Max",
-            groomerName: "Anna Lee",
-            serviceType: "Nail Trim",
-            status: "pending"
-        },
-        {
-            id: 4,
-            date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            time: "11:00",
-            petName: "Luna",
-            groomerName: "Mark Chen",
-            serviceType: "Full Groom",
-            status: "confirmed"
-        }
-    ];
-
     // ========================================
-    // INITIALIZE DASHBOARD
+    // INITIALIZE CALENDAR
     // ========================================
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize chart
-        DashboardChart.init(window.dashboardChartData);
-
-        // Initialize calendar
         DashboardCalendar.init(appointmentData);
     });
 </script>
