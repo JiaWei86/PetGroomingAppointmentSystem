@@ -21,6 +21,14 @@
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="Index">Home</a></li>
                                     <li><a asp-area="Customer" asp-controller="Home" asp-action="About">About Us</a></li>
                                     <li>
+                                        <a asp-area="Customer"
+                                           asp-controller="Home"
+                                           asp-action="Index"
+                                           asp-fragment="services">
+                                            Services
+                                        </a>
+                                    </li>
+                                    <li>
                                         @if (!string.IsNullOrEmpty(customerName))
                                         {
                                             <div class="nav-user-dropdown" style="display: inline-block; position: relative;">
