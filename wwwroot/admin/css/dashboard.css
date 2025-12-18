@@ -1,73 +1,32 @@
 ﻿/* Calendar + Appointments + Chart styles used only on Admin Home/Index */
 
+/* ========================================
+   Layout Grids
+   ======================================== */
 .calendar-section {
     display: grid;
-    grid-template-columns: 1fr 360px; /* Changed from minmax(720px, 1fr) */
+    grid-template-columns: 1fr 360px;
     gap: 28px;
-    padding: 0 35px 35px; /* 添加左右边距 35px，与上面的图表区域一致 */
+    padding: 0 35px 35px;
     align-items: start;
+    overflow-x: auto; /* Allow horizontal scrolling if content overflows */
     max-width: 100%;
     box-sizing: border-box;
 }
 
-.calendar-header,
-.sidebar-header {
-    min-height: 56px;
-}
-
-.calendar-container {
-    background-color: var(--card-background);
-    padding: 24px; /* 增加内边距从 20px 到 24px */
-    min-height: 520px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    min-width: 0;
-    overflow: hidden;
-}
-
-.calendar-grid-wrapper {
-    width: 100%;
-    overflow: hidden; /* ADD THIS - ensures content stays within */
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px; /* Reduced from 8px */
-}
-
-/* #calendar 使用 grid 布局 */
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px; /* Reduced from 8px */
-}
-
-/* 每一天的格子 */
-.calendar-day {
-    aspect-ratio: 1;
-    min-height: 65px; /* Reduced from 70px */
-    max-height: 75px; /* Reduced from 80px */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px; /* Reduced from 10px */
-    padding: 6px; /* Reduced from 8px */
-    cursor: pointer;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative;
-    display: grid;
-    place-items: center;
+.chart-and-info-grid {
+    display: flex;
+    gap: 24px;
+    padding: 0 35px 35px;
+    max-width: 100%;
+    overflow-x: auto; /* Allow horizontal scrolling if content overflows */
     box-sizing: border-box;
+    min-width: 0;
 }
 
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
+/* ========================================
+   Calendar
+   ======================================== */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -75,6 +34,16 @@
     margin-bottom: 20px; /* 增加底部间距 */
     padding-bottom: 12px;
     border-bottom: 2px solid rgba(217, 119, 6, 0.1);
+}
+
+.calendar-container {
+    background-color: var(--card-background);
+    padding: 24px;
+    min-height: 520px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    min-width: 0;
+    overflow-x: auto; /* Allow horizontal scrolling for the calendar itself */
 }
 
 /* 月份导航 */
@@ -121,11 +90,15 @@
         transform: translateY(0);
     }
 
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
+.calendar-grid-wrapper {
+    width: 100%;
+    overflow: hidden;
+}
+
+#calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
+    gap: 8px;
 }
 
 .calendar-day-header {
@@ -133,407 +106,97 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 800; /* 更粗一点，接近标题效果 */
-    font-size: 0.8rem; /* 字稍微放大一点 */
+    font-weight: 800;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    color: var(--primary-color); /* 深橙色 */
-    letter-spacing: 0.08em;
-}
-
-/* #calendar 使用 grid 布局 */
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px; /* Reduced from 8px */
-}
-
-/* 每一天的格子 */
-.calendar-day {
-    aspect-ratio: 1;
-    min-height: 65px; /* Reduced from 70px */
-    max-height: 75px; /* Reduced from 80px */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px; /* Reduced from 10px */
-    padding: 6px; /* Reduced from 8px */
-    cursor: pointer;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative;
-    /* 🔑 关键：统一成「中心点盒模型」 */
-    display: grid;
-    place-items: center;
-    box-sizing: border-box; /* ADD THIS */
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px; /* 增加底部间距 */
-    padding-bottom: 12px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-/* 月份导航 */
-.calendar-nav {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.month-year {
-    font-size: 18px;
-    font-weight: 600;
     color: var(--primary-color);
-    min-width: 180px;
-    text-align: center;
-}
-
-/* 月份导航箭头按钮 */
-.btn-nav {
-    padding: 8px 12px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 36px;
-}
-
-.btn-nav:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
-}
-
-.btn-nav:active {
-    transform: translateY(0);
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-day-header {
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800; /* 更粗一点，接近标题效果 */
-    font-size: 0.8rem; /* 字稍微放大一点 */
-    text-transform: uppercase;
-    color: var(--primary-color); /* 深橙色 */
     letter-spacing: 0.08em;
+    text-align: center;
+    padding: 8px 0;
 }
 
-/* #calendar 使用 grid 布局 */
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* Changed from 12px to 8px */
-}
-
-/* 每一天的格子 */
+/* This is now the outer grid cell, used for positioning */
 .calendar-day {
-    aspect-ratio: 1;
-    min-height: 65px; /* Reduced from 70px */
-    max-height: 75px; /* Reduced from 80px */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px; /* Reduced from 10px */
-    padding: 6px; /* Reduced from 8px */
     cursor: pointer;
+    padding-left: 4px; /* Adjust this value to move the box right */
+}
+
+/* This is the new inner box that holds all the visual styles */
+.day-content {
+    aspect-ratio: 1;
+    min-height: 65px;
+    max-height: 75px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px;
     background-color: #ffffff;
     transition: all 0.3s ease;
     position: relative;
-    /* 🔑 关键：统一成「中心点盒模型」 */
-    display: grid;
-    place-items: center;
-    box-sizing: border-box; /* ADD THIS */
+    box-sizing: border-box;
+    height: 100%; /* Make it fill the parent .calendar-day */
+    width: 100%;
 }
 
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px; /* 增加底部间距 */
-    padding-bottom: 12px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-/* 月份导航 */
-.calendar-nav {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.month-year {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary-color);
-    min-width: 180px;
-    text-align: center;
-}
-
-/* 月份导航箭头按钮 */
-.btn-nav {
-    padding: 8px 12px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 36px;
-}
-
-.btn-nav:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
-}
-
-.btn-nav:active {
-    transform: translateY(0);
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-day-header {
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800; /* 更粗一点，接近标题效果 */
-    font-size: 0.8rem; /* 字稍微放大一点 */
-    text-transform: uppercase;
-    color: var(--primary-color); /* 深橙色 */
-    letter-spacing: 0.08em;
-}
-
-/* #calendar 使用 grid 布局 */
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px; /* Reduced from 8px */
-}
-
-/* 每一天的格子 */
-.calendar-day {
-    aspect-ratio: 1;
-    min-height: 65px; /* Reduced from 70px */
-    max-height: 75px; /* Reduced from 80px */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px; /* Reduced from 10px */
-    padding: 6px; /* Reduced from 8px */
-    cursor: pointer;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative;
-    /* 🔑 关键：统一成「中心点盒模型」 */
-    display: grid;
-    place-items: center;
-    box-sizing: border-box; /* ADD THIS */
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px; /* 增加底部间距 */
-    padding-bottom: 12px;
-    border-bottom: 2px solid rgba(217, 119, 6, 0.1);
-}
-
-/* 月份导航 */
-.calendar-nav {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.month-year {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary-color);
-    min-width: 180px;
-    text-align: center;
-}
-
-/* 月份导航箭头按钮 */
-.btn-nav {
-    padding: 8px 12px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 36px;
-}
-
-.btn-nav:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
-}
-
-.btn-nav:active {
-    transform: translateY(0);
-}
-
-/* 星期标题行 - 必须是 grid */
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px; /* ADD THIS - match #calendar gap */
-}
-
-.calendar-day-header {
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800; /* 更粗一点，接近标题效果 */
-    font-size: 0.8rem; /* 字稍微放大一点 */
-    text-transform: uppercase;
-    color: var(--primary-color); /* 深橙色 */
-    letter-spacing: 0.08em;
-}
-
-/* #calendar 使用 grid 布局 */
-#calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px; /* Reduced from 8px */
-}
-
-/* 每一天的格子 */
-.calendar-day {
-    aspect-ratio: 1;
-    min-height: 65px; /* Reduced from 70px */
-    max-height: 75px; /* Reduced from 80px */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px; /* Reduced from 10px */
-    padding: 6px; /* Reduced from 8px */
-    cursor: pointer;
-    background-color: #ffffff;
-    transition: all 0.3s ease;
-    position: relative;
-    /* 🔑 关键：统一成「中心点盒模型」 */
-    display: grid;
-    place-items: center;
-    box-sizing: border-box; /* ADD THIS */
-}
-
-.calendar-day:hover {
+.day-content:hover {
     border-color: var(--primary-color);
     box-shadow: 0 4px 16px rgba(217, 119, 6, 0.2);
     transform: translateY(-2px);
 }
 
-.calendar-day.empty {
+/* Empty days are now controlled by the outer container */
+.day-content.empty {
     background-color: #f9fafb;
     border-color: transparent;
     cursor: default;
     pointer-events: none;
 }
 
-.calendar-day.today {
+.day-content.today {
     border-color: #8b5cf6 !important;
     background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%) !important;
     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15) !important;
 }
 
-.calendar-day.today .day-number {
+.day-content.today .day-number {
     color: #8b5cf6 !important;
-    font-weight: 800 !important;
+    font-weight: 800 !important; /* Thicker font for today */
     font-size: 16px !important; /* 增大字体 */
 }
 
-.calendar-day.has-appointments {
+.day-content.has-appointments {
     border-color: var(--primary-color);
     background: linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
 }
 
-.calendar-day.has-appointments .day-number {
+.day-content.has-appointments .day-number {
     color: var(--primary-color);
     font-weight: 700;
 }
 
 .day-number {
     font-weight: 600;
-    font-size: 15px; /* 增大日期数字 */
+    font-size: 15px;
     color: var(--text-color);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     transition: all 0.3s ease;
-    position: relative;
-    z-index: 1;
 }
 
 .appointment-dot {
     position: absolute;
-    bottom: 8px; /* 增加距离底部的位置 */
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
-    width: 6px; /* 稍微增大小点 */
+    width: 6px;
     height: 6px;
     background-color: var(--primary-color);
     border-radius: 50%;
     animation: pulse 2s infinite;
 }
 
-.calendar-day.today .appointment-dot {
+.day-content.today .appointment-dot {
     background-color: #8b5cf6;
 }
 
@@ -549,7 +212,7 @@
     }
 }
 
-.calendar-day.selected {
+.day-content.selected {
     background: linear-gradient(135deg, var(--primary-color) 0%, #b45309 100%) !important;
     color: #ffffff !important;
     border-color: var(--primary-color) !important;
@@ -557,20 +220,20 @@
     transform: scale(1.03);
 }
 
-    .calendar-day.selected .day-number {
+    .day-content.selected .day-number {
         color: #ffffff !important;
         font-weight: 700;
     }
 
-    .calendar-day.selected .appointment-dot {
+    .day-content.selected .appointment-dot {
         background-color: #fbbf24 !important;
     }
 
-    .calendar-day.selected:hover {
+    .day-content.selected:hover {
         transform: scale(1.03);
     }
 
-.calendar-day.today.selected {
+.day-content.today.selected {
     background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
     color: #ffffff !important;
     border-color: #8b5cf6 !important;
@@ -578,37 +241,43 @@
     transform: scale(1.05);
 }
 
-    .calendar-day.today.selected .day-number {
+    .day-content.today.selected .day-number {
         color: #ffffff !important;
         font-weight: 800;
     }
 
-    .calendar-day.today.selected .appointment-dot {
+    .day-content.today.selected .appointment-dot {
         background-color: #fbbf24 !important;
         box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
     }
 
-    .calendar-day.today.selected:hover {
+    .day-content.today.selected:hover {
         transform: scale(1.05);
         box-shadow: 0 8px 24px rgba(139, 92, 246, 0.5) !important;
     }
 
-/* Appointments sidebar */
+/* ========================================
+   Appointments Sidebar
+   ======================================== */
 .appointments-sidebar {
     background-color: var(--card-background);
-    padding: 24px; /* 调整内边距与 calendar-container 一致 */
+    padding: 24px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     min-height: 520px;
     min-width: 0;
     width: 100%;
 }
+.calendar-header,
+.sidebar-header {
+    min-height: 56px;
+}
 
 .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px; /* 与 calendar-header 一致 */
+    margin-bottom: 20px;
     padding-bottom: 12px;
     border-bottom: 2px solid rgba(217, 119, 6, 0.1);
 }
@@ -641,7 +310,7 @@
     flex: 1;
     overflow-y: auto;
     padding-right: 8px;
-    max-height: 400px; /* 添加最大高度以启用滚动 */
+    max-height: 400px;
 }
 
     #appointmentsList::-webkit-scrollbar {
@@ -752,16 +421,9 @@
     font-size: 14px;
 }
 
-/* Chart & loyalty area on dashboard */
-.chart-and-info-grid {
-    display: flex;
-    gap: 24px;
-    padding: 0 35px 35px;
-    max-width: 100%;
-    box-sizing: border-box;
-    min-width: 0;
-}
-
+/* ========================================
+   Chart & Info Panels
+   ======================================== */
 .chart-panel,
 .info-panel {
     background-color: var(--card-background);
@@ -949,7 +611,9 @@
     width: 100% !important;
 }
 
-/* Responsive for chart+calendar area only on dashboard */
+/* ========================================
+   Responsive Design
+   ======================================== */
 @media (max-width: 1200px) {
     .calendar-section {
         grid-template-columns: 1fr 320px; /* Smaller sidebar on medium screens */
