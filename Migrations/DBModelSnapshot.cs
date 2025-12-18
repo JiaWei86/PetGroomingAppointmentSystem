@@ -216,6 +216,9 @@ namespace PetGroomingAppointmentSystem.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LoyaltyPointCost")
                         .HasColumnType("int");
 
