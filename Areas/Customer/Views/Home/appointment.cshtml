@@ -787,6 +787,16 @@ ViewData["Title"] = "Book an Appointment";
 
                 petGroomerCards.appendChild(petGroomerCard);
             });
+
+            // ✅ NEW: Re-check groomer availability if time is already selected
+            const selectedTime = elements.timeSelect.value;
+            if (selectedTime) {
+                const date = elements.selectedDateText.value;
+                const selectedService = document.querySelector('input[name="service"]:checked');
+                if (date && selectedService) {
+                    refreshGroomerAvailability(date, selectedTime, selectedService.value);
+                }
+            }
         }
 
         // ✅ NEW: Get groomer selections for each pet
@@ -824,19 +834,96 @@ ViewData["Title"] = "Book an Appointment";
             showToast(elements.successToast);
         }
 
+        // ✅ FIXED: Render structured errors beautifully - Handle both string and object arrays
+        function renderErrorsList(errors) {
+            console.log('renderErrorsList called with:', errors);  // ✅ Debug
+            
+            if (!Array.isArray(errors) || errors.length === 0) {
+                console.log('No errors or not an array');
+                return `<div class="error-message-text">An error occurred</div>`;
+            }
+
+            let html = '<div class="errors-container">';
+            
+            errors.forEach((error, index) => {
+                console.log(`Processing error ${index}:`, error);  // ✅ Debug
+                
+                // ✅ HANDLE BOTH STRING AND OBJECT ERRORS
+                if (typeof error === 'string') {
+                    // Simple string error message
+                    html += `
+                        <div class="error-item error">
+                            <span class="error-icon">⚠️</span>
+                            <div class="error-content">
+                                <div class="error-message">${error}</div>
+                            </div>
+                        </div>
+                    `;
+                } else if (typeof error === 'object' && error !== null) {
+                    // Complex error object with properties
+                    const petName = error.petName || '';
+                    const groomerName = error.groomerName || '';
+                    const dateTime = error.dateTime || '';
+                    const errorType = error.type || 'error';
+                    const message = error.message || '';
+                    
+                    let iconEmoji = '⚠️';
+                    if (errorType === 'pet_time_conflict') iconEmoji = '📅';
+                    else if (errorType === 'groomer_unavailable') iconEmoji = '👨‍💼';
+                    else if (errorType === 'groomer_duplicate_assignment') iconEmoji = '👥';
+                    else if (errorType === 'no_groomer_available') iconEmoji = '😟';
+                    else if (errorType === 'pet_not_found') iconEmoji = '🐾';
+
+                    html += `
+                        <div class="error-item ${errorType}">
+                            <span class="error-icon">${iconEmoji}</span>
+                            <div class="error-content">
+                                <div class="error-message">${message}</div>
+                                ${petName ? `<div class="error-detail">🐾 <strong>${petName}</strong></div>` : ''}
+                                ${groomerName ? `<div class="error-detail">👨‍💼 <strong>${groomerName}</strong></div>` : ''}
+                                ${dateTime ? `<div class="error-detail error-time">⏰ ${dateTime}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+            console.log('Generated HTML:', html);  // ✅ Debug
+            return html;
+        }
+
         function showErrorToast(message, isLoginError = false) {
-            elements.errorMsg.textContent = message;
+            console.log('showErrorToast called with:', message, 'isLoginError:', isLoginError);  // ✅ Debug
+            
             const loginPrompt = document.getElementById('loginPrompt');
 
             if (isLoginError) {
                 loginPrompt.style.display = 'block';
                 CONFIG.TOAST_DURATION = 6000;
+                elements.errorMsg.innerHTML = `<div class="error-message-text">${message}</div>`;
             } else {
                 loginPrompt.style.display = 'none';
-                CONFIG.TOAST_DURATION = 3500;
+                
+                if (typeof message === 'string') {
+                    console.log('Message is string');
+                    elements.errorMsg.innerHTML = `<div class="error-message-text">${message}</div>`;
+                    CONFIG.TOAST_DURATION = 3500;
+                } else if (Array.isArray(message)) {
+                    console.log('Message is array, calling renderErrorsList');
+                    // ✅ Message is an array of error objects - format them nicely
+                    elements.errorMsg.innerHTML = renderErrorsList(message);
+                    CONFIG.TOAST_DURATION = 5000;  // Longer for multiple errors
+                } else {
+                    console.log('Message is neither string nor array');
+                    elements.errorMsg.innerHTML = `<div class="error-message-text">An unexpected error occurred</div>`;
+                    CONFIG.TOAST_DURATION = 3500;
+                }
             }
-
-            showToast(elements.errorToast, isLoginError ? 6000 : 3500);
+            
+            console.log('Toast HTML set to:', elements.errorMsg.innerHTML);  // ✅ Debug
+            console.log('Toast duration:', CONFIG.TOAST_DURATION);  // ✅ Debug
+            showToast(elements.errorToast, CONFIG.TOAST_DURATION);
         }
 
         elements.successClose.addEventListener('click', () => hideToast(elements.successToast));
@@ -905,29 +992,28 @@ ViewData["Title"] = "Book an Appointment";
             renderServiceDetails();  // Show services for this category
         });
 
+        // ✅ FIXED: Handle errors from both success and failure responses
         elements.submitBtn.addEventListener('click', async () => {
             if (!validateForm()) return;
 
-            const selectedPets = getSelectedPets();
-            const selectedService = document.querySelector('input[name="service"]:checked');
-            
-            // ✅ NEW: Get per-pet groomer mappings
-            const petGroomerMappings = getPetGroomerMappings();
-
-            const appointmentData = {
-                date: elements.selectedDateText.value,
-                time: elements.timeSelect.value,
-                serviceId: selectedService.value,
-                petIds: selectedPets.map(p => p.id),
-                petGroomerMappings: petGroomerMappings,  // ✅ Use pet-specific mappings
-                // ✅ REMOVED: groomer: elements.groomerSelect.value || 'any',
-                notes: elements.notes.value.trim()
-            };
-
             try {
-                elements.submitBtn.disabled = true;
-                const originalText = elements.submitBtn.innerHTML;
-                elements.submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Submitting...';
+                // ✅ NEW: Disable entire form during submission
+                const formElements = elements.apptForm.querySelectorAll('input, select, textarea, button');
+                formElements.forEach(el => el.disabled = true);
+
+                const selectedPets = getSelectedPets();
+                const selectedService = document.querySelector('input[name="service"]:checked');
+                
+                const petGroomerMappings = getPetGroomerMappings();
+
+                const appointmentData = {
+                    date: elements.selectedDateText.value,
+                    time: elements.timeSelect.value,
+                    serviceId: selectedService.value,
+                    petIds: selectedPets.map(p => p.id),
+                    petGroomerMappings: petGroomerMappings,
+                    notes: elements.notes.value.trim()
+                };
 
                 const response = await fetch('/Customer/Home/SaveAppointment', {
                     method: 'POST',
@@ -938,54 +1024,37 @@ ViewData["Title"] = "Book an Appointment";
                 });
 
                 const result = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response result:', result);
+                console.log('Errors array:', result.errors);  // ✅ Debug log
 
+                // ✅ FIXED: Check for errors FIRST, regardless of response.ok status
+                if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
+                    console.log('Found errors array, displaying structured errors');
+                    showErrorToast(result.errors);  // Pass error array directly
+                    formElements.forEach(el => el.disabled = false);
+                    return;
+                }
+
+                // Then check for success
                 if (result.success) {
                     showSuccessToast();
-
                     setTimeout(() => {
-                        // ✅ REDIRECT TO HISTORY PAGE AFTER SUCCESSFUL BOOKING
                         window.location.href = '@Url.Action("History", "Home", new { area = "Customer" })';
                     }, 1500);
                 } else {
+                    // Fallback to message if no errors array
                     showErrorToast(result.message || 'Failed to save appointment');
-                    elements.submitBtn.disabled = false;
-                    elements.submitBtn.innerHTML = originalText;
+                    formElements.forEach(el => el.disabled = false);
                 }
             } catch (error) {
-                console.error('Error:', error);
+                // ✅ Re-enable form on error
+                formElements.forEach(el => el.disabled = false);
+                console.error('Fetch error:', error);
                 showErrorToast('An error occurred while saving the appointment');
-                elements.submitBtn.disabled = false;
-                elements.submitBtn.innerHTML = originalText;
             }
         });
 
-        // // // // // Load available groomers
-        // // // // async function loadGroomers() {
-        // // // //     try {
-        // // // //         const response = await fetch('/Customer/Home/GetAvailableGroomers');
-        // // // //         if (!response.ok) {
-        // // // //             console.error('Failed to fetch groomers');
-        // // // //             return;
-        // // // //         }
-
-        // // // //         const data = await response.json();
-        // // // //         if (data.success && data.groomers && data.groomers.length > 0) {
-        // // // //             const groomerSelect = document.getElementById('groomerSelect');
-
-        // // // //             data.groomers.forEach(groomer => {
-        // // // //                 const option = document.createElement('option');
-        // // // //                 option.value = groomer.id;  // S001, S002, etc.
-        // // // //                 option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
-        // // // //                 groomerSelect.appendChild(option);
-        // // // //             });
-        // // // //         }
-        // // // //     } catch (error) {
-        // // // //         console.error('Error loading groomers:', error);
-        // // // //     }
-        // // // // }
-
-        // // // // // // Call this function when the page loads or when the form initializes
-        // // // // // loadGroomers();
 
         // ✅ LOAD SERVICES FROM BACKEND - FILTER BY SELECTED SERVICE IF PROVIDED
         async function loadServices() {
@@ -1073,7 +1142,7 @@ ViewData["Title"] = "Book an Appointment";
             renderCalendar();
         }
 
-        // ✅ UPDATED: Ensure pets are loaded AND rendered correctly
+        // ✅ UPDATED: 确保宠物数据加载和渲染正确
         function loadPetsFromDatabase() {
             console.log('Starting to load pets...');
             console.log('Current category:', elements.categorySelect.value);
@@ -1111,6 +1180,142 @@ ViewData["Title"] = "Book an Appointment";
                     userPets = [];
                     renderPetCards();
                 });
+        }
+
+        // ✅ UPDATED: Add event listener to service selection
+        document.addEventListener('change', function(e) {
+            if (e.target.className === 'service-radio') {
+                console.log('Service selected:', e.target.value);
+                
+                // Refresh groomer availability when service changes
+                const selectedTime = elements.timeSelect.value;
+                if (selectedTime) {
+                    const date = elements.selectedDateText.value;
+                    if (date) {
+                        refreshGroomerAvailability(date, selectedTime, e.target.value);
+                    }
+                }
+            }
+        });
+
+        // ✅ NEW: Show real-time groomer availability when time changes
+        elements.timeSelect.addEventListener('change', async function() {
+            const selectedTime = this.value;
+            console.log('Time selected:', selectedTime);  // ✅ Debug
+            
+            if (!selectedTime) {
+                console.log('No time selected, skipping');
+                return;
+            }
+
+            const date = elements.selectedDateText.value;
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            
+            console.log('Date:', date, 'Service:', selectedService);  // ✅ Debug
+            
+            if (!date || !selectedService) {
+                console.log('Missing date or service');
+                return;
+            }
+
+            // Refresh groomer dropdowns to show availability
+            await refreshGroomerAvailability(date, selectedTime, selectedService.value);
+        });
+
+        async function refreshGroomerAvailability(date, time, serviceId) {
+            try {
+                console.log('Refreshing groomer availability for:', { date, time, serviceId });  // ✅ Debug
+                
+                // Find service duration
+                let durationMinutes = 30; // default
+                
+                for (let category in servicesByCategory) {
+                    const service = servicesByCategory[category].find(s => s.id === serviceId);
+                    if (service && service.duration) {
+                        const durationStr = service.duration.match(/\d+/);
+                        if (durationStr) {
+                            durationMinutes = parseInt(durationStr[0]);
+                        }
+                    }
+                }
+                
+                console.log('Service duration minutes:', durationMinutes);  // ✅ Debug
+
+                const queryString = new URLSearchParams({
+                    date: date,
+                    time: time,
+                    durationMinutes: durationMinutes
+                }).toString();
+
+                const url = `/Customer/Home/CheckGroomerAvailability?${queryString}`;
+                console.log('Fetching:', url);  // ✅ Debug
+                
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Availability response:', data);  // ✅ Debug
+
+                if (data.success && data.availableGroomerIds) {
+                    // ✅ Wait a bit for DOM to update if dropdowns were just created
+                    setTimeout(() => {
+                        updateGroomerDropdowns(data.availableGroomerIds);
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error checking groomer availability:', error);
+            }
+        }
+
+        function updateGroomerDropdowns(availableGroomerIds) {
+            console.log('Updating dropdowns with available groomers:', availableGroomerIds);
+            
+            const selects = document.querySelectorAll('.pet-groomer-card select');
+            console.log('Found', selects.length, 'groomer dropdowns');
+            
+            if (selects.length === 0) {
+                console.warn('No groomer dropdowns found! Pets may not be selected yet.');
+                return;
+            }
+            
+            selects.forEach(select => {
+                Array.from(select.options).forEach((option, idx) => {
+                    if (idx === 0) return; // Keep "Any Available" always enabled
+                    
+                    const groomerId = option.value;
+                    const isAvailable = availableGroomerIds.includes(groomerId);
+                    
+                    console.log(`Option ${groomerId}: available=${isAvailable}`);
+                    
+                    // ✅ CRITICAL: Update both disabled state AND text
+                    option.disabled = !isAvailable;
+                    
+                    // ✅ Store original text in data attribute on first run
+                    if (!option.dataset.originalText) {
+                        option.dataset.originalText = option.textContent;
+                    }
+                    
+                    // ✅ Update display text
+                    if (!isAvailable) {
+                        option.textContent = `${option.dataset.originalText} (Not available)`;
+                        // ✅ Set inline style for disabled appearance
+                        option.style.color = '#999';
+                        option.style.backgroundColor = '#f5f5f5';
+                    } else {
+                        option.textContent = option.dataset.originalText;
+                        // ✅ Reset to normal appearance
+                        option.style.color = '';
+                        option.style.backgroundColor = '';
+                    }
+                });
+
+                // ✅ NEW: Add visual feedback to the select itself
+                const hasDisabledOptions = Array.from(select.options).some(o => o.disabled && o.value !== '');
+                if (hasDisabledOptions) {
+                    select.classList.add('has-unavailable-groomers');
+                } else {
+                    select.classList.remove('has-unavailable-groomers');
+                }
+            });
         }
     })();
 </script>

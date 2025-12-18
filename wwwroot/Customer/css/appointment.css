@@ -1226,7 +1226,6 @@ select.form-control:focus {
     }
 
 
-
     /* ============================================
    PET GROOMER ASSIGNMENT SECTION
    ============================================ */
@@ -1333,4 +1332,167 @@ select.form-control:focus {
     font-size: 12px;
     color: #9ca3af;
     margin-top: 4px;
+}
+
+/* ✅ NEW: Enhanced Error Display Styles */
+.errors-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.error-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background-color: #fef2f2;
+    border-left: 4px solid #ef4444;
+    border-radius: 6px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.error-item .error-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+.error-item .error-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.error-item .error-message {
+    font-size: 13px;
+    color: #7f1d1d;
+    font-weight: 500;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.error-item .error-detail {
+    font-size: 12px;
+    color: #b91c1c;
+    margin-top: 6px;
+    padding: 4px 8px;
+    background-color: rgba(239, 68, 68, 0.05);
+    border-radius: 3px;
+    line-height: 1.3;
+}
+
+.error-item .error-detail strong {
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+.error-item .error-time {
+    background-color: rgba(239, 68, 68, 0.08);
+    border-left: 2px solid #fca5a5;
+    padding-left: 6px;
+}
+
+/* Different error types - Color coding */
+.error-item.pet_time_conflict {
+    border-left-color: #f97316;
+}
+
+.error-item.groomer_unavailable {
+    border-left-color: #8b5cf6;
+}
+
+.error-item.groomer_duplicate_assignment {
+    border-left-color: #ec4899;
+}
+
+.error-item.no_groomer_available {
+    border-left-color: #06b6d4;
+}
+
+.error-item.pet_not_found {
+    border-left-color: #ef4444;
+}
+
+.error-message-text {
+    padding: 8px 0;
+    color: #7f1d1d;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Toast improvements */
+#apptErrorToast {
+    max-height: 500px;
+}
+
+#errorToastMsg {
+    max-width: 100%;
+    overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.errors-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.errors-container::-webkit-scrollbar-track {
+    background: rgba(239, 68, 68, 0.05);
+    border-radius: 3px;
+}
+
+.errors-container::-webkit-scrollbar-thumb {
+    background: #ef4444;
+    border-radius: 3px;
+}
+
+.errors-container::-webkit-scrollbar-thumb:hover {
+    background: #dc2626;
+}
+
+/* ✅ NEW: Groomer availability styles */
+.pet-groomer-card select.has-unavailable-groomers {
+    border: 2px solid #fbbf24;
+    background-color: #fffbeb;
+}
+
+.pet-groomer-card select.has-unavailable-groomers::after {
+    content: " ⚠️";
+}
+
+/* ✅ Style for disabled options (works in some browsers) */
+.pet-groomer-card select option:disabled {
+    background: linear-gradient(#f5f5f5, #f5f5f5);
+    color: #999;
+}
+
+/* ✅ Style when option is selected but disabled */
+.pet-groomer-card select option[disabled]:checked {
+    background: #ff6b6b;
+    color: white;
+}
+
+/* ✅ Normal option styling */
+.pet-groomer-card select option {
+    background-color: white;
+    color: #333;
+    padding: 8px;
+}
+
+/* ✅ Hover effect for enabled options */
+.pet-groomer-card select option:not(:disabled) {
+    background-color: #f0f9ff;
 }
