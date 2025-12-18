@@ -19,7 +19,16 @@
 
         <div class="appt-bg">
             <div class="appt-row">
-                <!-- Calendar card -->
+                <!-- 👈 NEW: Appointments Details Card (LEFT Side) -->
+                <div class="card appointments-details-card" id="appointmentsDetailsCard" style="display:none;">
+                    <div class="appointments-header">
+                        <h3>📅 Appointments</h3>
+                        <button id="closeDetailsCard" class="close-btn">✕</button>
+                    </div>
+                    <div id="appointmentsDetailsList" class="appointments-details-list"></div>
+                </div>
+
+                <!-- Calendar card (CENTER) -->
                 <div class="card calendar-card" role="region" aria-label="appointments calendar">
                     <div class="cal-head">
                         <div class="cal-title" id="monthTitle">Month Year</div>
@@ -50,19 +59,16 @@
                     <div class="legend" aria-hidden="true">
                         <div class="legend-row">
                             <div class="legend-item"><span class="legend-color rateus"></span><span class="muted">Rate Us</span></div>
-                            <div class="legend-item"><span class="legend-color visited"></span><span class="muted">Visited</span></div>
                             <div class="legend-item"><span class="legend-color confirmed"></span><span class="muted">Confirmed</span></div>
-                        </div>
-                        <div class="legend-row">
-                            <div class="legend-item"><span class="legend-color noshow"></span><span class="muted">No Show</span></div>
-                            <div class="legend-item"><span class="legend-color pending"></span><span class="muted">Pending</span></div>
-                            <div class="legend-item"><span class="legend-color unavailable"></span><span class="muted">Unavailable</span></div>
+                            <div class="legend-item"><span class="legend-color cancelled"></span><span class="muted">Cancelled</span></div>
+                            <div class="legend-item"><span class="legend-color completed"></span><span class="muted">Completed</span></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Form card -->
+                <!-- Form Panel (RIGHT) -->
                 <div class="card form-card" id="formPanel" aria-live="polite">
+                    <!-- Form Placeholder -->
                     <div id="formPlaceholder" class="muted">Select a date (today or a future date) to show the booking form.</div>
 
                     <form id="apptForm" style="display:none;" onsubmit="return false;" class="appt-form">
@@ -198,6 +204,8 @@
             'cat': []
         };
 
+        let appointmentsByDate = {}; // Store fetched appointments
+
         // DOM Elements
         const elements = {
             daysGrid: document.getElementById('daysGrid'),
@@ -234,6 +242,57 @@
         }
         function isClosedDay(dateObj) {
             return CONFIG.CLOSED_DAYS.includes(dateObj.getDay());
+        }
+
+        // Fetch appointments for the month from database
+        async function fetchMonthAppointments(year, month) {
+            try {
+                const response = await fetch(`/Customer/Home/GetMonthAppointments?year=${year}&month=${month}`);
+                const data = await response.json();
+                
+                if (data.success && data.appointments) {
+                    appointmentsByDate = {};
+                    data.appointments.forEach(appt => {
+                        appointmentsByDate[appt.date] = appt.status;
+                    });
+                }
+                return true;
+            } catch (error) {
+                console.error('Error fetching appointments:', error);
+                return false;
+            }
+        }
+
+        // Get statuses for month - show actual appointments + random Rate Us on past dates only
+        async function getMonthStatuses(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth() + 1;
+            
+            await fetchMonthAppointments(year, month);
+            
+            const statuses = {};
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // 第一步：添加数据库中的实际appointment状态
+            for (const [date, status] of Object.entries(appointmentsByDate)) {
+                statuses[date] = status;
+            }
+            
+            // 第二步：只在过去和现在的日期随机添加紫色Rate Us点
+            for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
+                const dateStr = `${year}-${pad(month)}-${pad(day)}`;
+                const cellDate = new Date(year, month - 1, day);
+                
+                // 只在过去或今天的日期添加紫色Rate Us
+                if (cellDate <= today && !statuses[dateStr] && !isClosedDay(cellDate)) {
+                    if (Math.random() < 0.3) {
+                        statuses[dateStr] = 'rateus';
+                    }
+                }
+            }
+            
+            return statuses;
         }
 
         function generateTimeSlots() {
@@ -349,7 +408,7 @@
         });
 
         // Calendar Rendering
-        function renderCalendar() {
+        async function renderCalendar() {
             elements.daysGrid.innerHTML = '';
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             elements.monthTitle.textContent = `${monthNames[calendarState.getMonth()]} ${calendarState.getFullYear()}`;
@@ -360,7 +419,9 @@
             const startDay = firstDay.getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const prevDays = new Date(year, month, 0).getDate();
-            const statuses = getMonthStatuses(calendarState);
+            
+            // 等待获取appointment数据
+            const statuses = await getMonthStatuses(calendarState);
 
             for (let i = 0; i < 42; i++) {
                 const cell = document.createElement('div');
@@ -401,6 +462,7 @@
                 const key = `${y}-${m}-${d}`;
                 const status = statuses[key];
 
+                // 只在有状态时添加dot和class
                 if (status) {
                     cell.classList.add(`day--${status}`);
                     const dot = document.createElement('span');
@@ -420,19 +482,7 @@
             }
         }
 
-        function getMonthStatuses(dateObj) {
-            const y = dateObj.getFullYear();
-            const m = pad(dateObj.getMonth() + 1);
-            return {
-                [`${y}-${m}-05`]: 'visited',
-                [`${y}-${m}-12`]: 'pending',
-                [`${y}-${m}-18`]: 'noshow',
-                [`${y}-${m}-24`]: 'confirmed',
-                [`${y}-${m}-02`]: 'rateus',
-                [`${y}-${m}-27`]: 'unavailable'
-            };
-        }
-
+        // 修改 selectDate 函数
         function selectDate(dateObj) {
             if (isClosedDay(dateObj)) {
                 showErrorToast('Sorry, we are closed on Mondays. Please select another date.');
@@ -449,17 +499,127 @@
             });
 
             elements.selectedDateText.value = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+            
+            // 👇 检查该日期是否有预约并显示在左边卡片
+            checkAndDisplayAppointmentsForDate(dateObj);
+            
             populateTimeSlots();
             elements.apptForm.style.display = 'block';
             elements.formPlaceholder.style.display = 'none';
             elements.apptForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function hideForm() {
-            elements.apptForm.style.display = 'none';
-            elements.formPlaceholder.style.display = 'flex';
-            const selected = elements.daysGrid.querySelector('.day--selected');
-            if (selected) selected.classList.remove('day--selected');
+        // 👇 NEW: 检查并显示该日期的预约详情（左边卡片）
+        function checkAndDisplayAppointmentsForDate(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = pad(dateObj.getMonth() + 1);
+            const d = pad(dateObj.getDate());
+            const key = `${y}-${m}-${d}`;
+
+            // 检查该日期是否有预约数据
+            if (appointmentsByDate[key]) {
+                // 如果是"rateus"，不显示详情（这是随机占位符）
+                if (appointmentsByDate[key] === 'rateus') {
+                    showAppointmentsDetailsCard(key, true);  // 👈 传递 true 表示没有预约
+                    return;
+                }
+
+                // 显示预约详情卡片
+                showAppointmentsDetailsCard(key, false);
+            } else {
+                // 该日期没有预约 - 也显示卡片，但显示"No Appointments"
+                showAppointmentsDetailsCard(key, true);
+            }
+        }
+
+        // 👇 UPDATED: 显示该日期的预约列表卡片（左边）
+        function showAppointmentsDetailsCard(dateKey, isNoAppointments = false) {
+            const detailsCard = document.getElementById('appointmentsDetailsCard');
+            const detailsList = document.getElementById('appointmentsDetailsList');
+
+            if (!detailsCard || !detailsList) return;
+
+            // 如果没有预约，直接显示"No Appointments"
+            if (isNoAppointments) {
+                detailsList.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                            <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                        </svg>
+                        <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                        <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                    </div>
+                `;
+                detailsCard.style.display = 'flex';
+                return;
+            }
+
+            // 从数据库获取该日期的预约详情
+            fetch(`/Customer/Home/GetAppointmentsByDate?date=${dateKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('GetAppointmentsByDate response:', data);
+                    
+                    if (data.success && data.appointments && data.appointments.length > 0) {
+                        // 生成预约卡片HTML
+                        let html = '';
+                        data.appointments.forEach(appt => {
+                            const statusClass = (appt.status || '').toLowerCase();
+                            html += `
+                                <div class="appointment-detail-card">
+                                    <div class="appointment-detail-time">${appt.time}</div>
+                                    <div class="appointment-detail-pet">${appt.petName}</div>
+                                    <div class="appointment-detail-service">${appt.serviceName}</div>
+                                    <div class="appointment-detail-groomer">Groomer: ${appt.groomerName || 'Not assigned'}</div>
+                                    <span class="appointment-detail-status ${statusClass}">${appt.status}</span>
+                                    ${appt.specialRequest ? `<div class="appointment-detail-notes">${appt.specialRequest}</div>` : ''}
+                                </div>
+                            `;
+                        });
+
+                        detailsList.innerHTML = html;
+                        detailsCard.style.display = 'flex';
+                    } else {
+                        // 没有找到预约，显示"No Appointments"
+                        detailsList.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                                    <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                                </svg>
+                                <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                                <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                            </div>
+                        `;
+                        detailsCard.style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching appointments:', error);
+                    detailsList.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                                <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                            </svg>
+                            <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                        </div>
+                    `;
+                    detailsCard.style.display = 'flex';
+                });
+        }
+
+        // 👇 NEW: 隐藏预约列表卡片
+        function hideAppointmentsDetailsCard() {
+            const detailsCard = document.getElementById('appointmentsDetailsCard');
+            if (detailsCard) {
+                detailsCard.style.display = 'none';
+            }
+        }
+
+        // 👇 NEW: 关闭按钮处理
+        const closeDetailsCardBtn = document.getElementById('closeDetailsCard');
+        if (closeDetailsCardBtn) {
+            closeDetailsCardBtn.addEventListener('click', hideAppointmentsDetailsCard);
         }
 
         // Pet Cards Rendering - Filter by selected service category
