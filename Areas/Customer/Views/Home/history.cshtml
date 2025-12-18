@@ -214,18 +214,27 @@
 </div>
 
 <!-- Modal for Confirmation -->
-<div id="confirmModal" class="modal confirm-modal" style="display:none;">
-    <div class="modal-overlay"></div>
+<div id="confirmModal" class="modal" style="display:none;">
+    <div class="modal-overlay" onclick="CloseConfirmModal()"></div>
     <div class="modal-content confirm-modal">
-        <div class="modal-header">
-            <h2 id="confirmTitle">⚠️ Confirm Action</h2>
+        <div class="confirm-header">
+            <div class="confirm-icon">⚠️</div>
+            <h2 id="confirmTitle">Cancel Appointment?</h2>
         </div>
-        <div class="modal-body" id="confirmMessage" style="padding:20px;text-align:center;font-size:16px;color:#333;">
-            Are you sure?
+        
+        <div class="confirm-body">
+            <p id="confirmMessage">Are you sure you want to cancel this appointment? This action cannot be undone.</p>
         </div>
-        <div class="modal-actions confirm-actions" style="display:flex;gap:10px;justify-content:center;padding:20px;border-top:1px solid #eee;">
-            <button class="btn btn-secondary" onclick="CloseConfirmModal()">No, Keep It</button>
-            <button class="btn btn-danger" onclick="ConfirmAction()">Yes, Cancel It</button>
+        
+        <div class="confirm-footer">
+            <button type="button" class="btn btn-outline" onclick="CloseConfirmModal()">
+                <span class="btn-icon">✕</span>
+                No, Keep It
+            </button>
+            <button type="button" class="btn btn-danger" id="confirmActionBtn" onclick="ConfirmCancelAppointment()">
+                <span class="btn-icon">✓</span>
+                Yes, Cancel It
+            </button>
         </div>
     </div>
 </div>
@@ -345,6 +354,7 @@
 <script>
 let currentRescheduleId = null;
 let pendingCancelId = null;
+let isModalOpen = false;
 
 // ===== PAGINATION & DATA MANAGEMENT =====
 const appointmentState = {
@@ -791,6 +801,8 @@ function QuickCancelAppointment(appointmentId) {
 // Cancel from Modal
 function CancelAppointment(appointmentId) {
     pendingCancelId = appointmentId;
+    isModalOpen = true;
+    DisableViewButtons();
     ShowConfirmModal(
         '❌ Cancel Appointment?',
         'Are you sure you want to cancel this appointment? This action cannot be undone.',
@@ -803,7 +815,8 @@ function CancelAppointment(appointmentId) {
 function ShowConfirmModal(title, message, confirmBtnText, callback) {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
-    document.querySelector('.confirm-actions .btn-danger').textContent = confirmBtnText;
+    const confirmBtn = document.getElementById('confirmActionBtn');
+    confirmBtn.textContent = confirmBtnText;
     document.getElementById('confirmModal').style.display = 'flex';
 }
 
@@ -811,6 +824,26 @@ function ShowConfirmModal(title, message, confirmBtnText, callback) {
 function CloseConfirmModal() {
     document.getElementById('confirmModal').style.display = 'none';
     pendingCancelId = null;
+    isModalOpen = false;
+    EnableViewButtons();
+}
+
+// ✅ Disable View Buttons
+function DisableViewButtons() {
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.title = 'Please close the cancel confirmation first';
+    });
+}
+
+// ✅ Enable View Buttons
+function EnableViewButtons() {
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => {
+        btn.disabled = false;
+        btn.title = '';
+    });
 }
 
 // Confirm Cancel Action
@@ -830,7 +863,7 @@ function ConfirmCancelAppointment() {
             setTimeout(() => {
                 // Close detail modal if open
                 const detailModal = document.getElementById('detailModal');
-                if (detailModal.style.display !== 'none') {
+                if (detailModal && detailModal.style.display !== 'none') {
                     detailModal.style.display = 'none';
                 }
                 LoadAppointmentHistory();
@@ -952,22 +985,66 @@ function DownloadReceipt(appointmentId, format) {
     link.click();
 }
 
-// Helper toast functions
+// Helper toast functions - 改进版本（在中间偏上显示）
 function showSuccessToast(message) {
     const toast = document.createElement('div');
     toast.className = 'alert alert-success';
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#4CAF50;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    toast.style.cssText = `
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+        padding: 20px 40px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        text-align: center;
+        min-width: 300px;
+        animation: toastSlideIn 0.3s ease;
+    `;
+    
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function showErrorToast(message) {
     const toast = document.createElement('div');
     toast.className = 'alert alert-danger';
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#f44336;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    toast.style.cssText = `
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+        padding: 20px 40px;
+        background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        text-align: center;
+        min-width: 300px;
+        animation: toastSlideIn 0.3s ease;
+    `;
+    
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 </script>
