@@ -1085,8 +1085,8 @@ select.form-control:focus {
 }
 
 .appointments-details-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
     padding: 16px;
     flex: 1;
