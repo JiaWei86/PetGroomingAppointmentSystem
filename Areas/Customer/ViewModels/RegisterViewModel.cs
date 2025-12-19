@@ -1,4 +1,5 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
@@ -13,6 +14,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
         [Required(ErrorMessage = "Full name cannot be empty")]
         [StringLength(200, MinimumLength = 3, ErrorMessage = "Name must be between 3-200 characters")]
         [RegularExpression(@"^[a-zA-Z\s]+$", ErrorMessage = "Name must contain only letters and spaces")]
+        [ValidName]
         public string Name { get; set; }
 
         [Required(ErrorMessage = "IC number cannot be empty")]
@@ -24,6 +26,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
         [Required(ErrorMessage = "Email cannot be empty")]
         [EmailAddress(ErrorMessage = "Please enter a valid email address")]
         [StringLength(150, ErrorMessage = "Email must not exceed 150 characters")]
+        [ValidEmail]
         public string Email { get; set; }
 
         [Required(ErrorMessage = "Password cannot be empty")]
@@ -42,12 +45,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
     /// <summary>
     /// Custom validation attribute for Malaysian IC number
     /// Format: YYMMDD-SS-GGGG
-    /// YYMMDD: Birth date (Year-Month-Day) - YY must not be more than current year and not older than 100 years
+    /// YYMMDD: Birth date (Year-Month-Day)
     /// SS: State code (01-16)
     /// GGGG: Sequential number
     /// </summary>
     public class ValidMalaysianICAttribute : ValidationAttribute
     {
+        private static readonly Regex ICFormatRegex = new(@"^\d{6}-\d{2}-\d{4}$", RegexOptions.Compiled);
+
         private static readonly Dictionary<string, string> MalaysianStates = new()
         {
             { "01", "Johor" },
@@ -68,8 +73,8 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
             { "16", "Putrajaya" }
         };
 
-        // Days in each month (non-leap year)
-        private static readonly int[] DaysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+        // Days in each month (including leap year February)
+        private static readonly int[] DaysInMonthLeap = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
         public override string FormatErrorMessage(string name)
         {
@@ -81,54 +86,58 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
             if (value is not string ic || string.IsNullOrEmpty(ic))
                 return true; // Let [Required] handle empty values
 
-            // Remove dashes to get just the digits
-            string icDigits = ic.Replace("-", "");
-
-            if (icDigits.Length != 12)
+            // Check basic format
+            if (!ICFormatRegex.IsMatch(ic))
                 return false;
 
-            // Extract parts
-            string yearPart = icDigits.Substring(0, 2);   // YY
-            string monthPart = icDigits.Substring(2, 2);  // MM
-            string dayPart = icDigits.Substring(4, 2);    // DD
-            string statePart = icDigits.Substring(6, 2);  // SS
+            // Extract date part (first 6 digits before the dash)
+            string datePart = ic.Substring(0, 6);
 
-            // Parse year
-            if (!int.TryParse(yearPart, out int year) || year < 0 || year > 99)
+            // Parse year, month, day
+            if (!int.TryParse(datePart.Substring(0, 2), out int year))
+                return false;
+            if (!int.TryParse(datePart.Substring(2, 2), out int month))
+                return false;
+            if (!int.TryParse(datePart.Substring(4, 2), out int day))
                 return false;
 
-            // Convert 2-digit year to 4-digit year
-            int fullYear = year <= int.Parse(DateTime.Now.Year.ToString().Substring(2))
-                ? 2000 + year
-                : 1900 + year;
-
-            // Check if year is not more than 100 years old
-            int currentYear = DateTime.Now.Year;
-            int age = currentYear - fullYear;
-            if (age < 0 || age > 100)
+            // Validate month (01-12)
+            if (month < 1 || month > 12)
                 return false;
-
-            // Parse month
-            if (!int.TryParse(monthPart, out int month) || month < 1 || month > 12)
-                return false;
-
-            // Parse day
-            if (!int.TryParse(dayPart, out int day) || day < 1)
-                return false;
-
-            // Check if it's a leap year
-            bool isLeapYear = IsLeapYear(fullYear);
-
-            // Get max days for the month
-            int maxDays = DaysInMonth[month - 1];
-            if (month == 2 && isLeapYear)
-                maxDays = 29;
 
             // Validate day against max days in month
-            if (day > maxDays)
+            if (day < 1 || day > DaysInMonthLeap[month - 1])
                 return false;
 
-            // Validate state code (01-16)
+            // Determine full year (assume 1900s for year >= 50, 2000s for year < 50)
+            int fullYear = year >= 50 ? 1900 + year : 2000 + year;
+
+            // Additional validation for February in non-leap years
+            if (month == 2 && day == 29)
+            {
+                // Check if leap year
+                bool isLeapYear = (fullYear % 4 == 0 && fullYear % 100 != 0) || (fullYear % 400 == 0);
+
+                if (!isLeapYear)
+                    return false;
+            }
+
+            // Validate that the date is not in the future
+            int currentFullYear = DateTime.Now.Year;
+            int currentMonth = DateTime.Now.Month;
+            int currentDay = DateTime.Now.Day;
+
+            if (fullYear > currentFullYear)
+                return false;
+
+            if (fullYear == currentFullYear && month > currentMonth)
+                return false;
+
+            if (fullYear == currentFullYear && month == currentMonth && day > currentDay)
+                return false;
+            
+            // ✅ 修复：州码应该从位置 7 开始（跳过日期部分和第一个连字符）
+            string statePart = ic.Substring(7, 2);
             if (!MalaysianStates.ContainsKey(statePart))
                 return false;
 
@@ -138,6 +147,36 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
         private static bool IsLeapYear(int year)
         {
             return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        }
+    }
+
+    /// <summary>
+    /// Custom validation attribute for name
+    /// </summary>
+    public class ValidNameAttribute : ValidationAttribute
+    {
+        public override bool IsValid(object value)
+        {
+            if (value == null)
+                return true;
+
+            string name = value.ToString().Trim();
+            return !string.IsNullOrEmpty(name);
+        }
+    }
+
+    /// <summary>
+    /// Custom validation attribute for email
+    /// </summary>
+    public class ValidEmailAttribute : ValidationAttribute
+    {
+        public override bool IsValid(object value)
+        {
+            if (value == null)
+                return true;
+
+            string email = value.ToString().Trim();
+            return !string.IsNullOrEmpty(email);
         }
     }
 }

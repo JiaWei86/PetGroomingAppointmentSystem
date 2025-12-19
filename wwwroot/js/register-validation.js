@@ -1,4 +1,4 @@
-// Validation rules configuration
+﻿// Validation rules configuration
 const validationRules = {
     phoneNumber: {
         pattern: /^01[0-9]-[0-9]{7,8}$/,
@@ -54,9 +54,293 @@ function validatePasswordStrength(password) {
     };
 }
 
-// Update password requirement indicators
+// Debounce helper
+function debounce(fn, wait) {
+    let t;
+    return function (...args) {
+        const ctx = this;
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(ctx, args), wait);
+    };
+}
+
+// ====== Helper UI functions ======
+function setFieldInvalid(errorSpan, input, message) {
+    if (errorSpan) {
+        errorSpan.textContent = message;
+        errorSpan.style.display = 'block';
+        errorSpan.style.color = '#dc3545';
+    }
+    if (input) input.style.borderColor = '#dc3545';
+}
+
+function setFieldValid(errorSpan, input, message) {
+    if (errorSpan) {
+        errorSpan.textContent = message || 'Valid';
+        errorSpan.style.display = 'block';
+        errorSpan.style.fontWeight = 'bold';
+        errorSpan.style.setProperty('color', '#28a745', 'important');
+    }
+    if (input) input.style.borderColor = '#28a745';
+}
+
+function clearFieldError(input, errorSpan) {
+    if (input) input.style.borderColor = '';
+    if (errorSpan) {
+        errorSpan.textContent = '';
+        errorSpan.style.display = 'none';
+        errorSpan.style.color = '';
+    }
+}
+
+// ====== Format functions ======
+function formatPhoneNumber(input) {
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 3) value = value.slice(0, 3) + '-' + value.slice(3);
+    if (value.length > 12) value = value.slice(0, 12);
+    input.value = value;
+}
+
+function formatICNumber(input) {
+    const originalValue = input.value;
+    const originalCursorPos = input.selectionStart;
+
+    const dashesBeforeCursorOld = (originalValue.substring(0, originalCursorPos).match(/-/g) || []).length;
+
+    let digits = originalValue.replace(/\D/g, '');
+
+    if (digits.length > 12) {
+        digits = digits.substring(0, 12);
+    }
+
+    let formattedValue = digits;
+    if (digits.length > 6) {
+        formattedValue = `${digits.substring(0, 6)}-${digits.substring(6, 8)}`;
+        if (digits.length > 8) {
+            formattedValue += `-${digits.substring(8)}`;
+        }
+    }
+
+    const dashesBeforeCursorNew = (formattedValue.substring(0, originalCursorPos).match(/-/g) || []).length;
+    const newCursorPos = originalCursorPos + (dashesBeforeCursorNew - dashesBeforeCursorOld);
+
+    input.value = formattedValue;
+    input.setSelectionRange(newCursorPos, newCursorPos);
+}
+
+// ====== Validation functions ======
+async function validatePhoneNumber(value) {
+    const errorSpan = document.getElementById('phoneNumberError');
+    const input = document.getElementById('phoneNumber');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
+    if (!value || !phoneRegex.test(value)) {
+        setFieldInvalid(errorSpan, input, 'Phone must be in format 01X-XXXXXXX or 01X-XXXXXXXX.');
+        return false;
+    }
+
+    try {
+        const resp = await fetch('/Customer/Auth/ValidateRegisterField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fieldName: 'phoneNumber',
+                fieldValue: value
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'Phone validation failed.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Phone validation error', e);
+        setFieldInvalid(errorSpan, input, 'Validation check failed.');
+        return false;
+    }
+}
+
+async function validateName(value) {
+    const errorSpan = document.getElementById('nameError');
+    const input = document.getElementById('name');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    if (!value || value.trim().length < 3) {
+        setFieldInvalid(errorSpan, input, 'Name must be at least 3 characters long.');
+        return false;
+    }
+
+    try {
+        const resp = await fetch('/Customer/Auth/ValidateRegisterField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fieldName: 'name',
+                fieldValue: value
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'Invalid name.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Name validation error', e);
+        setFieldInvalid(errorSpan, input, 'Validation check failed.');
+        return false;
+    }
+}
+
+async function validateIC(value) {
+    const errorSpan = document.getElementById('icError');
+    const input = document.getElementById('ic');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    const icRegex = /^\d{6}-\d{2}-\d{4}$/;
+    if (!value || !icRegex.test(value)) {
+        setFieldInvalid(errorSpan, input, 'IC must be in format xxxxxx-xx-xxxx.');
+        return false;
+    }
+
+    try {
+        const resp = await fetch('/Customer/Auth/ValidateRegisterField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fieldName: 'ic',
+                fieldValue: value
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'IC validation failed.');
+            return false;
+        }
+    } catch (e) {
+        console.error('IC validation error', e);
+        setFieldInvalid(errorSpan, input, 'Validation check failed.');
+        return false;
+    }
+}
+
+async function validateEmail(value) {
+    const errorSpan = document.getElementById('emailError');
+    const input = document.getElementById('email');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value || !emailRegex.test(value)) {
+        setFieldInvalid(errorSpan, input, 'Please enter a valid email address.');
+        return false;
+    }
+
+    try {
+        const resp = await fetch('/Customer/Auth/ValidateRegisterField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fieldName: 'email',
+                fieldValue: value
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'Email validation failed.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Email validation error', e);
+        setFieldInvalid(errorSpan, input, 'Validation check failed.');
+        return false;
+    }
+}
+
+async function validatePassword(value) {
+    const errorSpan = document.getElementById('passwordError');
+    const input = document.getElementById('password');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    if (!value || value.length < 8) {
+        setFieldInvalid(errorSpan, input, 'Password must be at least 8 characters.');
+        return false;
+    }
+
+    try {
+        const resp = await fetch('/Customer/Auth/ValidateRegisterField', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fieldName: 'password',
+                fieldValue: value
+            })
+        });
+        const data = await resp.json();
+        if (data.isValid) {
+            setFieldValid(errorSpan, input, 'Valid');
+            return true;
+        } else {
+            setFieldInvalid(errorSpan, input, data.errorMessage || 'Password validation failed.');
+            return false;
+        }
+    } catch (e) {
+        console.error('Password validation error', e);
+        setFieldInvalid(errorSpan, input, 'Validation check failed.');
+        return false;
+    }
+}
+
+function validateConfirmPassword(value) {
+    const errorSpan = document.getElementById('confirmPasswordError');
+    const input = document.getElementById('confirmPassword');
+    const passwordInput = document.getElementById('password');
+    if (!input) return true;
+
+    clearFieldError(input, errorSpan);
+
+    if (!value) {
+        // Don't show error if empty, just clear validation
+        return false;
+    }
+
+    if (value !== passwordInput.value) {
+        setFieldInvalid(errorSpan, input, 'Passwords do not match.');
+        return false;
+    }
+
+    setFieldValid(errorSpan, input, 'Passwords match');
+    return true;
+}
+
 function updatePasswordRequirements(password) {
-    const strength = validatePasswordStrength(password);
+    const strength = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    };
 
     const reqLength = document.getElementById('reqLength');
     const reqUppercase = document.getElementById('reqUppercase');
@@ -71,403 +355,117 @@ function updatePasswordRequirements(password) {
     return strength.length && strength.uppercase && strength.lowercase && strength.symbol;
 }
 
-// Malaysian IC validation
-function validateMalaysianIC(icNumber) {
-    const icDigits = icNumber.replace(/-/g, '');
-
-    if (icDigits.length !== 12) {
-        return false;
-    }
-
-    const yearStr = icDigits.substring(0, 2);
-    const monthStr = icDigits.substring(2, 4);
-    const dayStr = icDigits.substring(4, 6);
-    const stateStr = icDigits.substring(6, 8);
-
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-    const day = parseInt(dayStr, 10);
-
-    if (isNaN(year) || year < 0 || year > 99) {
-        return false;
-    }
-
-    const currentYear = new Date().getFullYear();
-    const currentYearStr = currentYear.toString();
-    const currentYearLastTwo = parseInt(currentYearStr.substring(2), 10);
-    const fullYear = year <= currentYearLastTwo ? 2000 + year : 1900 + year;
-
-    const age = currentYear - fullYear;
-    if (age < 0 || age > 100) {
-        return false;
-    }
-
-    if (isNaN(month) || month < 1 || month > 12) {
-        return false;
-    }
-
-    if (isNaN(day) || day < 1) {
-        return false;
-    }
-
-    let maxDays = DaysInMonth[month - 1];
-    if (month === 2 && isLeapYear(fullYear)) {
-        maxDays = 29;
-    }
-
-    if (day > maxDays) {
-        return false;
-    }
-
-    if (!MalaysianStates.hasOwnProperty(stateStr)) {
-        return false;
-    }
-
-    return true;
-}
-
-// Debounce helper
-function debounce(fn, wait) {
-    let t;
-    return function (...args) {
-        const ctx = this;
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(ctx, args), wait);
-    };
-}
-
-// Check phone availability via AJAX (SINGLE FUNCTION - NO DUPLICATES)
-async function checkPhoneAvailability() {
+// ====== Debounced validations ======
+const validatePhoneDebounced = debounce(() => {
     const phoneInput = document.getElementById('phoneNumber');
-    if (!phoneInput) return;
-
-    const errorDiv = document.getElementById('phoneNumberError');
-    const successDiv = document.getElementById('phoneNumberSuccess');
-    const icon = document.getElementById('phoneNumberIcon');
-    const formGroup = phoneInput.parentElement;
-
-    const phoneValue = phoneInput.value.trim();
-
-    // Empty field check
-    if (!phoneValue) {
-        if (errorDiv) errorDiv.classList.remove('show');
-        if (successDiv) successDiv.classList.remove('show');
-        if (icon) icon.classList.remove('show');
-        if (formGroup) {
-            formGroup.classList.remove('has-error', 'has-success');
-        }
-        return;
+    if (phoneInput && phoneInput.value.trim()) {
+        validatePhoneNumber(phoneInput.value);
     }
+}, 30);
 
-    // Format check first
-    const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
-    if (!phoneRegex.test(phoneValue)) {
-        console.log(`[Phone] Format invalid: ${phoneValue}`);
-        if (errorDiv) {
-            errorDiv.textContent = 'Phone must be in format 01X-XXXXXXX or 01X-XXXXXXXX.';
-            errorDiv.classList.add('show');
-        }
-        if (successDiv) successDiv.classList.remove('show');
-        if (icon) {
-            icon.classList.add('show', 'error');
-            icon.classList.remove('success');
-            icon.textContent = '✕';
-        }
-        if (formGroup) {
-            formGroup.classList.add('has-error');
-            formGroup.classList.remove('has-success');
-        }
-        return;
+const validateNameDebounced = debounce(() => {
+    const nameInput = document.getElementById('name');
+    if (nameInput && nameInput.value.trim()) {
+        validateName(nameInput.value);
     }
+}, 30);
 
-    // Show loading state
-    if (icon) {
-        icon.classList.add('show');
-        icon.textContent = '⏳';
-        icon.classList.remove('success', 'error');
+const validateICDebounced = debounce(() => {
+    const icInput = document.getElementById('ic');
+    if (icInput && icInput.value.trim()) {
+        validateIC(icInput.value);
     }
-    if (errorDiv) errorDiv.classList.remove('show');
-    if (successDiv) successDiv.classList.remove('show');
+}, 30);
 
-    try {
-        // Send WITHOUT dashes
-        const phoneWithoutDash = phoneValue.replace(/-/g, '');
-        console.log(`[Phone] Checking availability for: ${phoneWithoutDash}`);
-
-        const response = await fetch('/Customer/Auth/CheckPhoneNumber', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({ phoneNumber: phoneWithoutDash })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`[Phone] Server response:`, data);
-
-        // CRITICAL: Handle response - ALWAYS clear BOTH messages first, then show ONE
-        if (data.available === true) {
-            console.log(`[Phone] ✓ AVAILABLE - Phone is free to register`);
-
-            // MUST clear error first
-            if (errorDiv) {
-                errorDiv.textContent = '';
-                errorDiv.classList.remove('show');
-            }
-            
-            // Show success
-            if (successDiv) {
-                successDiv.textContent = '[OK] Valid phone number';
-                successDiv.classList.add('show');
-            }
-            if (icon) {
-                icon.classList.add('show', 'success');
-                icon.classList.remove('error');
-                icon.textContent = '✓';
-            }
-            if (formGroup) {
-                formGroup.classList.add('has-success');
-                formGroup.classList.remove('has-error');
-            }
-        } else if (data.available === false) {
-            console.log(`[Phone] ✗ NOT AVAILABLE - Phone already registered`);
-
-            // MUST clear success first
-            if (successDiv) {
-                successDiv.textContent = '';
-                successDiv.classList.remove('show');
-            }
-            
-            // Show error
-            if (errorDiv) {
-                errorDiv.textContent = 'Phone number already registered.';
-                errorDiv.classList.add('show');
-            }
-            if (icon) {
-                icon.classList.add('show', 'error');
-                icon.classList.remove('success');
-                icon.textContent = '✕';
-            }
-            if (formGroup) {
-                formGroup.classList.add('has-error');
-                formGroup.classList.remove('has-success');
-            }
-        } else {
-            console.warn(`[Phone] Unexpected response:`, data);
-        }
-    } catch (error) {
-        console.error('[Phone] Error:', error);
-        if (errorDiv) {
-            errorDiv.textContent = 'Error checking phone availability.';
-            errorDiv.classList.add('show');
-        }
-        if (successDiv) successDiv.classList.remove('show');
-        if (icon) {
-            icon.classList.remove('show');
-        }
+const validateEmailDebounced = debounce(() => {
+    const emailInput = document.getElementById('email');
+    if (emailInput && emailInput.value.trim()) {
+        validateEmail(emailInput.value);
     }
-}
+}, 30);
 
-// Debounced phone check
-const debouncedPhoneCheck = debounce(checkPhoneAvailability, 500);
-
-// Validate other fields (non-phone)
-function validateField(fieldId) {
-    const field = document.getElementById(fieldId);
-    if (!field) return null;
-
-    const errorDiv = document.getElementById(fieldId + 'Error');
-    const successDiv = document.getElementById(fieldId + 'Success');
-    const icon = document.getElementById(fieldId + 'Icon');
-    const rule = validationRules[fieldId];
-    const formGroup = field.parentElement;
-
-    // Empty field
-    if (!field.value || !field.value.trim()) {
-        if (errorDiv) errorDiv.classList.remove('show');
-        if (successDiv) successDiv.classList.remove('show');
-        if (icon) icon.classList.remove('show');
-        if (formGroup) {
-            formGroup.classList.remove('has-error', 'has-success');
-        }
-        return null;
+const validatePasswordDebounced = debounce(() => {
+    const passwordInput = document.getElementById('password');
+    if (passwordInput && passwordInput.value) {
+        validatePassword(passwordInput.value);
     }
+}, 30);
 
-    let isValid = false;
-    let errorMsg = '';
-
-    // Password confirmation check
-    if (fieldId === 'confirmPassword') {
-        const passwordField = document.getElementById('password');
-        isValid = (field.value === passwordField.value) && (field.value.length >= 8);
-        if (!isValid) {
-            errorMsg = rule.errorMessage;
-        }
-    }
-    // Password strength check
-    else if (fieldId === 'password') {
-        const strength = validatePasswordStrength(field.value);
-        isValid = strength.length && strength.uppercase && strength.lowercase && strength.symbol;
-        if (!isValid) {
-            errorMsg = rule.errorMessage;
-        }
-    }
-    // IC field special handling
-    else if (fieldId === 'ic') {
-        const formatValid = rule.pattern.test(field.value);
-        if (!formatValid) {
-            isValid = false;
-            errorMsg = rule.errorMessage;
-        } else {
-            isValid = validateMalaysianIC(field.value);
-            if (!isValid) {
-                errorMsg = 'IC number is invalid. Please check the birth date (YYMMDD) and state code (01-16).';
-            }
-        }
-    }
-    // Standard pattern validation
-    else if (rule && rule.pattern) {
-        isValid = rule.pattern.test(field.value);
-        if (!isValid) {
-            errorMsg = rule.errorMessage;
-        }
-    }
-
-    // Update UI
-    if (!isValid) {
-        if (errorDiv) {
-            errorDiv.textContent = errorMsg || 'Invalid input';
-            errorDiv.classList.add('show');
-        }
-        if (successDiv) successDiv.classList.remove('show');
-        if (icon) {
-            icon.classList.add('show', 'error');
-            icon.classList.remove('success');
-            icon.textContent = '✕';
-        }
-        if (formGroup) {
-            formGroup.classList.add('has-error');
-            formGroup.classList.remove('has-success');
-        }
-        return false;
-    } else {
-        if (errorDiv) errorDiv.classList.remove('show');
-        if (successDiv) {
-            successDiv.textContent = '[OK] Valid ' + fieldId.replace(/([A-Z])/g, ' $1').toLowerCase();
-            successDiv.classList.add('show');
-        }
-        if (icon) {
-            icon.classList.add('show', 'success');
-            icon.classList.remove('error');
-            icon.textContent = '✓';
-        }
-        if (formGroup) {
-            formGroup.classList.add('has-success');
-            formGroup.classList.remove('has-error');
-        }
-        return true;
-    }
-}
-
-// Initialize on page load
+// ====== Initialize on page load ======
 document.addEventListener('DOMContentLoaded', function () {
-    // Clear all validation on load
-    ['phoneNumber', 'name', 'ic', 'email', 'password', 'confirmPassword'].forEach(fieldId => {
-        const icon = document.getElementById(fieldId + 'Icon');
-        const errorDiv = document.getElementById(fieldId + 'Error');
-        const successDiv = document.getElementById(fieldId + 'Success');
-        const field = document.getElementById(fieldId);
-
-        if (icon) icon.classList.remove('show');
-        if (errorDiv) errorDiv.classList.remove('show');
-        if (successDiv) successDiv.classList.remove('show');
-        if (field && field.parentElement) {
-            field.parentElement.classList.remove('has-error', 'has-success');
-        }
-    });
-
     // ===== PHONE NUMBER INPUT =====
     const phoneNumberInput = document.getElementById('phoneNumber');
     if (phoneNumberInput) {
-        phoneNumberInput.addEventListener('input', function (e) {
-            // Auto-format as user types
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 0) {
-                if (value.length <= 3) {
-                    e.target.value = value;
-                } else if (value.length <= 10) {
-                    e.target.value = value.slice(0, 3) + '-' + value.slice(3);
-                } else {
-                    e.target.value = value.slice(0, 3) + '-' + value.slice(3, 11);
-                }
-            }
-            // Call debounced availability check
-            debouncedPhoneCheck();
+        phoneNumberInput.addEventListener('input', function () {
+            formatPhoneNumber(this);
+            validatePhoneDebounced();
+        });
+        phoneNumberInput.addEventListener('blur', function () {
+            if (this.value.trim()) validatePhoneNumber(this.value);
         });
     }
 
-    // ===== IC NUMBER INPUT =====
+    // ===== NAME INPUT =====
+    const nameInput = document.getElementById('name');
+    if (nameInput) {
+        nameInput.addEventListener('input', function () {
+            validateNameDebounced();
+        });
+        nameInput.addEventListener('blur', function () {
+            if (this.value.trim()) validateName(this.value);
+        });
+    }
+
+    // ===== IC INPUT =====
     const icInput = document.getElementById('ic');
     if (icInput) {
-        icInput.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 0) {
-                if (value.length <= 6) {
-                    e.target.value = value;
-                } else if (value.length <= 8) {
-                    e.target.value = value.slice(0, 6) + '-' + value.slice(6);
-                } else {
-                    e.target.value = value.slice(0, 6) + '-' + value.slice(6, 8) + '-' + value.slice(8, 12);
-                }
-            }
-            validateField('ic');
+        icInput.addEventListener('input', function () {
+            formatICNumber(this);
+            validateICDebounced();
         });
-
         icInput.addEventListener('blur', function () {
-            validateField('ic');
+            if (this.value.trim()) validateIC(this.value);
         });
     }
 
-    // ===== NAME, EMAIL, PASSWORD INPUTS =====
-    ['name', 'email', 'password'].forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('input', function () {
-                if (fieldId === 'password') {
-                    updatePasswordRequirements(this.value);
-                }
-                validateField(fieldId);
-            });
-        }
-    });
+    // ===== EMAIL INPUT =====
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.addEventListener('input', function () {
+            validateEmailDebounced();
+        });
+        emailInput.addEventListener('blur', function () {
+            if (this.value.trim()) validateEmail(this.value);
+        });
+    }
+
+    // ===== PASSWORD INPUT =====
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function () {
+            updatePasswordRequirements(this.value);
+            validatePasswordDebounced();
+        });
+        passwordInput.addEventListener('blur', function () {
+            if (this.value) validatePassword(this.value);
+        });
+    }
 
     // ===== CONFIRM PASSWORD INPUT =====
     const confirmPasswordInput = document.getElementById('confirmPassword');
     if (confirmPasswordInput) {
         confirmPasswordInput.addEventListener('input', function () {
-            validateField('confirmPassword');
-            const passwordField = document.getElementById('password');
-            if (passwordField && passwordField.value) {
-                validateField('password');
-            }
+            validateConfirmPassword(this.value);
         });
     }
 
-    // ===== PASSWORD VISIBILITY TOGGLES =====
+    // ===== PASSWORD VISIBILITY TOGGLE =====
     const passwordToggle = document.getElementById('passwordToggle');
-    const passwordInput = document.getElementById('password');
-
     if (passwordToggle && passwordInput) {
         passwordToggle.addEventListener('click', function (e) {
             e.preventDefault();
             const isPassword = passwordInput.type === 'password';
             passwordInput.type = isPassword ? 'text' : 'password';
-
             const icon = this.querySelector('i');
             if (icon) {
                 icon.classList.toggle('bi-eye-slash', !isPassword);
@@ -478,13 +476,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
     const confirmPasswordInput2 = document.getElementById('confirmPassword');
-
     if (confirmPasswordToggle && confirmPasswordInput2) {
         confirmPasswordToggle.addEventListener('click', function (e) {
             e.preventDefault();
             const isPassword = confirmPasswordInput2.type === 'password';
             confirmPasswordInput2.type = isPassword ? 'text' : 'password';
-
             const icon = this.querySelector('i');
             if (icon) {
                 icon.classList.toggle('bi-eye-slash', !isPassword);
@@ -499,40 +495,10 @@ document.addEventListener('DOMContentLoaded', function () {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const fields = ['phoneNumber', 'name', 'ic', 'email', 'password', 'confirmPassword'];
-            let allValid = true;
-
-            // Validate all fields
-            fields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                if (!field || !field.value.trim()) {
-                    allValid = false;
-                } else if (fieldId !== 'phoneNumber') { // Skip phone (has separate check)
-                    const result = validateField(fieldId);
-                    if (!result) {
-                        allValid = false;
-                    }
-                }
-            });
-
-            // Check phone separately (has server check)
-            const phoneErrorDiv = document.getElementById('phoneNumberError');
-            if (phoneErrorDiv && phoneErrorDiv.classList.contains('show')) {
-                allValid = false;
-            }
-
-            if (!allValid) {
-                const alertContainer = document.getElementById('alertContainer');
-                if (alertContainer) {
-                    alertContainer.innerHTML = '<div class="alert alert-danger">Please fix all errors before submitting</div>';
-                }
-                return;
-            }
-
             const submitBtn = document.getElementById('submitBtn');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner"></span>Registering...';
+                submitBtn.innerHTML = 'Registering...';
             }
 
             try {
@@ -552,8 +518,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     registerForm.reset();
                     setTimeout(() => {
-                        window.location.href = '/Customer/Auth/Login';
-                    }, 1000);
+                        // ✅ 使用服务器返回的重定向 URL（包含 registered 参数）
+                        window.location.href = data.redirectUrl;
+                    }, 1500);
                 } else {
                     if (alertContainer) {
                         alertContainer.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
@@ -571,27 +538,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         for (const [key, value] of Object.entries(data.errors)) {
                             const fieldId = fieldMap[key] || key.toLowerCase();
-                            const errorDiv = document.getElementById(fieldId + 'Error');
+                            const errorSpan = document.getElementById(fieldId + 'Error');
                             const field = document.getElementById(fieldId);
-
-                            if (errorDiv) {
-                                errorDiv.textContent = Array.isArray(value) ? value[0] : value;
-                                errorDiv.classList.add('show');
-                            }
-                            if (field) {
-                                field.parentElement.classList.add('has-error');
-                                field.parentElement.classList.remove('has-success');
-                            }
+                            setFieldInvalid(errorSpan, field, Array.isArray(value) ? value[0] : value);
                         }
                     }
                 }
             } catch (error) {
-                console.error('Form submission error:', error);
                 const alertContainer = document.getElementById('alertContainer');
                 if (alertContainer) {
                     alertContainer.innerHTML = '<div class="alert alert-danger">An error occurred during registration</div>';
                 }
-            } finally {
+                
                 const submitBtn = document.getElementById('submitBtn');
                 if (submitBtn) {
                     submitBtn.disabled = false;

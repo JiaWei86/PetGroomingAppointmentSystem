@@ -30,6 +30,10 @@ builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPa
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, PetGroomingAppointmentSystem.Areas.Admin.Services.ValidationService>();
 
+// ✅ 新增：Customer 区域的服务（你的代码）
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IPhoneService, PetGroomingAppointmentSystem.Services.PhoneService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IValidationService, PetGroomingAppointmentSystem.Services.ValidationService>();
+
 // Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddHttpClient<ChatbotService>();

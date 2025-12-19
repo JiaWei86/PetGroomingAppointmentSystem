@@ -4,6 +4,12 @@
     ViewData["Title"] = "Customer Login";
     Layout = null;
     bool isLocked = ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"];
+    
+    string rememberPhone = Context.Request.Cookies["RememberPhone"] ?? "";
+    bool hasRemembered = !string.IsNullOrEmpty(rememberPhone);
+    
+    // ✅ 修复：改为 Context.Request.Query
+    bool isRegistered = Context.Request.Query["registered"] == "true";
 }
 
 <!DOCTYPE html>
@@ -28,6 +34,17 @@
         }
 
             .error-message.show {
+                display: block;
+            }
+
+        .success-message {
+            color: #28a745;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+            .success-message.show {
                 display: block;
             }
 
@@ -204,6 +221,18 @@
             border: 1px solid #ffeeba;
         }
 
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
         .links-container {
             display: flex;
             justify-content: space-between;
@@ -233,6 +262,14 @@
                 <p>Enter your phone number and password</p>
             </div>
 
+            @* ✅ 显示注册成功消息 *@
+            @if (isRegistered)
+            {
+                <div class="alert alert-success">
+                    <strong>Success!</strong> Registration successful! Please login with your credentials.
+                </div>
+            }
+
             @if (ViewData["Error"] != null)
             {
                 <div class="alert alert-danger">
@@ -247,6 +284,13 @@
                 </div>
             }
 
+            @if (hasRemembered)
+            {
+                <div class="alert alert-info">
+                    <strong>Welcome back!</strong> Your phone number has been restored from your last login.
+                </div>
+            }
+
             <form id="loginForm" method="post">
                 <div class="form-group">
                     <label for="phoneNumber">PHONE NUMBER</label>
@@ -254,12 +298,14 @@
                            id="phoneNumber" 
                            name="phoneNumber" 
                            placeholder="Enter your phone number" 
-                           value="@Model?.PhoneNumber" 
+                           value="@(Model?.PhoneNumber ?? rememberPhone)" 
                            maxlength="13" 
+                           inputmode="numeric"
                            @(isLocked ? "disabled" : "") />
                     <div class="validation-icon" id="phoneNumberIcon"></div>
                     <div class="form-hint">Accepts: 012-3456789 or 0123456789</div>
                     <div class="error-message" id="phoneNumberError"></div>
+                    <div class="success-message" id="phoneNumberSuccess"></div>
                 </div>
 
                 <div class="form-group">
@@ -278,6 +324,7 @@
                     </button>
                     <div class="validation-icon" id="passwordIcon"></div>
                     <div class="error-message" id="passwordError"></div>
+                    <div class="success-message" id="passwordSuccess"></div>
                 </div>
 
                 <div class="checkbox-group">
@@ -285,6 +332,7 @@
                            id="rememberMe" 
                            name="rememberMe" 
                            value="true"
+                           @(hasRemembered ? "checked" : "")
                            @(isLocked ? "disabled" : "") />
                     <label for="rememberMe">Remember me for 30 days</label>
                 </div>
@@ -311,9 +359,13 @@
             document.getElementById('submitBtn').disabled = true;
         }
 
-        // Phone number formatting
+        // ✅ Phone number formatting ONLY
         document.getElementById('phoneNumber').addEventListener('input', function () {
             let phoneNum = this.value.replace(/\D/g, '');
+
+            if (phoneNum.length > 11) {
+                phoneNum = phoneNum.substring(0, 11);
+            }
 
             if (phoneNum.length === 10) {
                 this.value = phoneNum.substring(0, 3) + '-' + phoneNum.substring(3);
@@ -341,7 +393,7 @@
             }
         });
 
-        // Form validation
+        // ✅ Form submit validation
         const form = document.getElementById('loginForm');
         const phoneInput = document.getElementById('phoneNumber');
         const passwordInput = document.getElementById('password');
@@ -351,78 +403,61 @@
             return phoneRegex.test(phoneNumber);
         }
 
-        function validatePassword(password) {
-            return password.trim().length > 0;
+        function clearError(fieldName) {
+            const input = document.getElementById(fieldName);
+            const errorElement = document.getElementById(fieldName + 'Error');
+            const formGroup = input.parentElement;
+            
+            formGroup.classList.remove('has-error');
+            errorElement.classList.remove('show');
         }
 
-        function showError(input, errorElement, message) {
-            input.parentElement.classList.add('has-error');
+        function showError(fieldName, message) {
+            const input = document.getElementById(fieldName);
+            const errorElement = document.getElementById(fieldName + 'Error');
+            const formGroup = input.parentElement;
+            
+            formGroup.classList.add('has-error');
             errorElement.textContent = message;
             errorElement.classList.add('show');
         }
 
-        function clearError(input, errorElement) {
-            input.parentElement.classList.remove('has-error');
-            errorElement.classList.remove('show');
-        }
-
-        // Phone number validation
-        phoneInput.addEventListener('blur', function () {
-            const phoneNumberError = document.getElementById('phoneNumberError');
-            const phoneNumberIcon = document.getElementById('phoneNumberIcon');
-
-            if (this.value.trim() === '') {
-                showError(this, phoneNumberError, 'Phone number is required');
-                phoneNumberIcon.classList.remove('show');
-            } else if (!validatePhoneNumber(this.value)) {
-                showError(this, phoneNumberError, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX');
-                phoneNumberIcon.classList.add('show', 'error');
-                phoneNumberIcon.innerHTML = '✕';
-            } else {
-                clearError(this, phoneNumberError);
-                phoneNumberIcon.classList.add('show', 'success');
-                phoneNumberIcon.innerHTML = '✓';
+        // 清除错误状态
+        phoneInput.addEventListener('input', function () {
+            if (this.value !== '') {
+                clearError('phoneNumber');
             }
         });
 
-        // Password validation
-        passwordInput.addEventListener('blur', function () {
-            const passwordError = document.getElementById('passwordError');
-            const passwordIcon = document.getElementById('passwordIcon');
-
-            if (this.value.trim() === '') {
-                showError(this, passwordError, 'Password is required');
-                passwordIcon.classList.remove('show');
-            } else {
-                clearError(this, passwordError);
-                passwordIcon.classList.add('show', 'success');
-                passwordIcon.innerHTML = '✓';
+        passwordInput.addEventListener('input', function () {
+            if (this.value !== '') {
+                clearError('password');
             }
         });
 
-        // Form submit
+        // 表单提交时验证
         form.addEventListener('submit', function (e) {
-            const phoneNumberError = document.getElementById('phoneNumberError');
-            const passwordError = document.getElementById('passwordError');
-            const phoneNumberIcon = document.getElementById('phoneNumberIcon');
-            const passwordIcon = document.getElementById('passwordIcon');
-
             let isValid = true;
 
+            // 验证手机号
             if (!validatePhoneNumber(phoneInput.value)) {
-                showError(phoneInput, phoneNumberError, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX');
-                phoneNumberIcon.classList.add('show', 'error');
-                phoneNumberIcon.innerHTML = '✕';
+                const cleanedPhone = phoneInput.value.replace(/\D/g, '');
+                
+                if (cleanedPhone.length < 10) {
+                    showError('phoneNumber', `Phone number too short. ${cleanedPhone.length}/10 digits entered`);
+                } else {
+                    showError('phoneNumber', 'Invalid format. Use 01X-XXXXXXX or 01X-XXXXXXXX');
+                }
                 isValid = false;
             }
 
-            if (!validatePassword(passwordInput.value)) {
-                showError(passwordInput, passwordError, 'Password is required');
-                passwordIcon.classList.add('show', 'error');
-                passwordIcon.innerHTML = '✕';
+            // 验证密码
+            if (passwordInput.value.length === 0) {
+                showError('password', 'Password is required');
                 isValid = false;
             }
 
+            // 如果验证失败，阻止表单提交
             if (!isValid) {
                 e.preventDefault();
             }
