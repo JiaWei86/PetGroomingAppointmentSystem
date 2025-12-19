@@ -1061,5 +1061,46 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
             return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
         }
+
+        /// <summary>
+        /// Validates if phone number is registered (for login page real-time validation)
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidatePhoneNumberRegistered(string phoneNumber)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    return Json(new { isRegistered = false, message = "Phone number is required." });
+                }
+
+                // Format phone number
+                string formattedPhone = FormatPhoneNumber(phoneNumber);
+
+                // Validate format
+                if (!ValidatePhoneFormat(formattedPhone))
+                {
+                    return Json(new { isRegistered = false, message = "Invalid phone number format." });
+                }
+
+                // Check if phone number exists in database
+                var user = _dbContext.Customers
+                    .FirstOrDefault(u => u.Phone == formattedPhone && u.Role == "customer");
+
+                if (user != null)
+                {
+                    return Json(new { isRegistered = true, message = "Phone number is registered." });
+                }
+                else
+                {
+                    return Json(new { isRegistered = false, message = "Phone number hasn't registered." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { isRegistered = false, message = $"Validation error: {ex.Message}" });
+            }
+        }
     }
 }

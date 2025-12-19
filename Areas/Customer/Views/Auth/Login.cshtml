@@ -59,7 +59,6 @@
             transition: all 0.3s ease;
             border-color: #ced4da;
             background-color: #fff;
-            padding-right: 40px;
             width: 100%;
         }
 
@@ -79,39 +78,9 @@
             background-color: #f5fff9;
         }
 
-        .validation-icon {
-            position: absolute;
-            right: 12px;
-            top: 38px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: none;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            z-index: 2;
-        }
-
-            .validation-icon.show {
-                display: flex;
-            }
-
-            .validation-icon.error {
-                color: white;
-                background-color: #dc3545;
-            }
-
-            .validation-icon.success {
-                color: white;
-                background-color: #28a745;
-            }
-
         .password-toggle {
             position: absolute;
-            right: 45px;
+            right: 12px;
             top: 38px;
             background: none;
             border: none;
@@ -302,7 +271,6 @@
                            maxlength="13" 
                            inputmode="numeric"
                            @(isLocked ? "disabled" : "") />
-                    <div class="validation-icon" id="phoneNumberIcon"></div>
                     <div class="form-hint">Accepts: 012-3456789 or 0123456789</div>
                     <div class="error-message" id="phoneNumberError"></div>
                     <div class="success-message" id="phoneNumberSuccess"></div>
@@ -322,9 +290,7 @@
                             @(isLocked ? "disabled" : "")>
                         <i class="bi bi-eye-slash"></i>
                     </button>
-                    <div class="validation-icon" id="passwordIcon"></div>
                     <div class="error-message" id="passwordError"></div>
-                    <div class="success-message" id="passwordSuccess"></div>
                 </div>
 
                 <div class="checkbox-group">
@@ -349,6 +315,9 @@
 
     <script>
         const isLocked = @(isLocked ? "true" : "false");
+        let phoneValidationTimeout;
+        let isPhoneRegistered = false;
+        let isPasswordFilled = false;
 
         // Disable all form inputs when locked
         if (isLocked) {
@@ -359,7 +328,16 @@
             document.getElementById('submitBtn').disabled = true;
         }
 
-        // ✅ Phone number formatting ONLY
+        // ✅ 新增：页面加载时验证预填充的电话号码
+        window.addEventListener('load', function () {
+            const phoneInput = document.getElementById('phoneNumber');
+            if (phoneInput.value.length > 0) {
+                // 如果电话号码已预填充，立即验证
+                validatePhoneForLogin(phoneInput.value);
+            }
+        });
+
+        // ✅ Phone number formatting
         document.getElementById('phoneNumber').addEventListener('input', function () {
             let phoneNum = this.value.replace(/\D/g, '');
 
@@ -374,7 +352,76 @@
             } else {
                 this.value = phoneNum;
             }
+
+            // ✅ Real-time validation for phone number
+            clearTimeout(phoneValidationTimeout);
+            phoneValidationTimeout = setTimeout(() => {
+                validatePhoneForLogin(this.value);
+            }, 100);
         });
+
+        // ✅ Real-time validation for phone number on login
+        async function validatePhoneForLogin(phoneNumber) {
+            try {
+                const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
+                
+                const phoneInput = document.getElementById('phoneNumber');
+                const formGroup = phoneInput.parentElement;
+                const errorElement = document.getElementById('phoneNumberError');
+                const successElement = document.getElementById('phoneNumberSuccess');
+
+                // If format is incomplete, don't validate yet
+                if (!phoneRegex.test(phoneNumber)) {
+                    if (phoneNumber.length === 0) {
+                        // Empty field - clear errors
+                        formGroup.classList.remove('has-error', 'has-success');
+                        errorElement.classList.remove('show');
+                        successElement.classList.remove('show');
+                        isPhoneRegistered = false;
+                    }
+                    updateSubmitButtonState();
+                    return;
+                }
+
+                // Format is correct, check if registered
+                const response = await fetch('@Url.Action("ValidatePhoneNumberRegistered", "Auth", new { area = "Customer" })', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        phoneNumber: phoneNumber
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.isRegistered) {
+                    // Phone is registered - show success
+                    formGroup.classList.remove('has-error');
+                    formGroup.classList.add('has-success');
+                    
+                    successElement.textContent = 'Phone number is registered.';
+                    successElement.classList.add('show');
+                    errorElement.classList.remove('show');
+                    isPhoneRegistered = true;
+                } else {
+                    // Phone is not registered - show error
+                    formGroup.classList.remove('has-success');
+                    formGroup.classList.add('has-error');
+                    
+                    errorElement.textContent = "Phone number hasn't registered.";
+                    errorElement.classList.add('show');
+                    successElement.classList.remove('show');
+                    isPhoneRegistered = false;
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                isPhoneRegistered = false;
+            }
+
+            updateSubmitButtonState();
+        }
 
         // Password toggle
         document.getElementById('passwordToggle').addEventListener('click', function (e) {
@@ -393,7 +440,40 @@
             }
         });
 
-        // ✅ Form submit validation
+        // ✅ Clear password error on input & track password state
+        document.getElementById('password').addEventListener('input', function () {
+            isPasswordFilled = this.value.length > 0;
+            
+            if (this.value.length > 0) {
+                const formGroup = this.parentElement;
+                formGroup.classList.remove('has-error');
+                document.getElementById('passwordError').classList.remove('show');
+            }
+            
+            updateSubmitButtonState();
+        });
+
+        // ✅ 根据验证状态更新按钮
+        function updateSubmitButtonState() {
+            const submitBtn = document.getElementById('submitBtn');
+            const phoneInput = document.getElementById('phoneNumber');
+            const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
+
+            const isPhoneFormatValid = phoneRegex.test(phoneInput.value);
+            const canSubmit = isPhoneRegistered && isPasswordFilled && isPhoneFormatValid && !isLocked;
+
+            if (canSubmit) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        }
+
+        // Form submit validation
         const form = document.getElementById('loginForm');
         const phoneInput = document.getElementById('phoneNumber');
         const passwordInput = document.getElementById('password');
@@ -401,15 +481,6 @@
         function validatePhoneNumber(phoneNumber) {
             const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
             return phoneRegex.test(phoneNumber);
-        }
-
-        function clearError(fieldName) {
-            const input = document.getElementById(fieldName);
-            const errorElement = document.getElementById(fieldName + 'Error');
-            const formGroup = input.parentElement;
-            
-            formGroup.classList.remove('has-error');
-            errorElement.classList.remove('show');
         }
 
         function showError(fieldName, message) {
@@ -422,24 +493,11 @@
             errorElement.classList.add('show');
         }
 
-        // 清除错误状态
-        phoneInput.addEventListener('input', function () {
-            if (this.value !== '') {
-                clearError('phoneNumber');
-            }
-        });
-
-        passwordInput.addEventListener('input', function () {
-            if (this.value !== '') {
-                clearError('password');
-            }
-        });
-
-        // 表单提交时验证
+        // Form submit event
         form.addEventListener('submit', function (e) {
             let isValid = true;
 
-            // 验证手机号
+            // Validate phone number
             if (!validatePhoneNumber(phoneInput.value)) {
                 const cleanedPhone = phoneInput.value.replace(/\D/g, '');
                 
@@ -451,13 +509,19 @@
                 isValid = false;
             }
 
-            // 验证密码
+            // ✅ 检查电话号码是否已注册
+            if (!isPhoneRegistered) {
+                showError('phoneNumber', "Phone number hasn't registered.");
+                isValid = false;
+            }
+
+            // Validate password
             if (passwordInput.value.length === 0) {
                 showError('password', 'Password is required');
                 isValid = false;
             }
 
-            // 如果验证失败，阻止表单提交
+            // Prevent submit if validation fails
             if (!isValid) {
                 e.preventDefault();
             }
@@ -476,7 +540,6 @@
                         lockoutTimerElement.textContent = lockoutSeconds;
                         setTimeout(updateLockoutTimer, 1000);
                     } else {
-                        // ✅ 导航到登录页面 GET 请求，清除所有数据
                         window.location.href = '@Url.Action("Login", "Auth", new { area = "Customer" })';
                     }
                 }
