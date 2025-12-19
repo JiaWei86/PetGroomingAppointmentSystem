@@ -1022,7 +1022,29 @@ select.form-control:focus {
     border-top: 1px solid #e3e6ea;
     font-style: italic;
 }
+/* ✅ NEW: Appointment card header with time and pet type */
+.appointment-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
 
+.appointment-detail-time {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FF7043;
+}
+
+.appointment-detail-pet-type {
+    font-size: 13px;
+    font-weight: 600;
+    background-color: #f0f0f0;
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: #555;
+    white-space: nowrap;
+}
 /* ============================================
    LAYOUT: Grid 3-column layout
    ============================================ */
