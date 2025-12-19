@@ -228,7 +228,6 @@ ViewData["Title"] = "Book an Appointment";
             categorySelect: document.getElementById('categorySelect'),
             petCards: document.getElementById('petCards'),
             timeSelect: document.getElementById('timeSelect'),
-            // // // // // // // groomerSelect: document.getElementById('groomerSelect'),
             notes: document.getElementById('notes'),
             charCount: document.getElementById('charCount'),
             submitBtn: document.getElementById('submitBtn'),
@@ -513,9 +512,96 @@ ViewData["Title"] = "Book an Appointment";
             checkAndDisplayAppointmentsForDate(dateObj);
 
             populateTimeSlots();
+            
+            // ✅ CRITICAL: Reset time selection when date changes
+            elements.timeSelect.value = '';
+            
+            // ✅ Check if any pets are selected
+            const selectedPets = getSelectedPets();
+            if (selectedPets.length === 0) {
+                // No pets selected - hide groomer section
+                resetGroomerSelection();
+            } else {
+                // Pets are selected - re-render groomer dropdowns CLEANLY
+                // This will show all groomers without availability status
+                updatePetGroomerSelectionClean();
+            }
+            
             elements.apptForm.style.display = 'block';
             elements.formPlaceholder.style.display = 'none';
             elements.apptForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ✅ NEW: Clean re-render of groomer dropdowns without availability status
+        function updatePetGroomerSelectionClean() {
+            const selectedPets = getSelectedPets();
+            const petGroomerSection = document.getElementById('petGroomerSection');
+            const petGroomerCards = document.getElementById('petGroomerCards');
+
+            if (selectedPets.length === 0) {
+                petGroomerSection.style.display = 'none';
+                return;
+            }
+
+            petGroomerSection.style.display = 'block';
+            petGroomerCards.innerHTML = '';
+
+            selectedPets.forEach(pet => {
+                const petGroomerCard = document.createElement('div');
+                petGroomerCard.className = 'pet-groomer-card';
+                petGroomerCard.style.marginBottom = '15px';
+                petGroomerCard.style.padding = '10px';
+                petGroomerCard.style.border = '1px solid #e0e0e0';
+                petGroomerCard.style.borderRadius = '4px';
+
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.style.display = 'block';
+                label.style.marginBottom = '8px';
+                label.style.fontWeight = '600';
+                label.textContent = `${pet.name}'s Groomer`;
+
+                const select = document.createElement('select');
+                select.className = 'form-control';
+                select.setAttribute('data-pet-id', pet.id);
+                select.style.marginBottom = '5px';
+
+                const anyOption = document.createElement('option');
+                anyOption.value = '';
+                anyOption.textContent = 'Any Available';
+                select.appendChild(anyOption);
+
+                // Add all groomers without availability status
+                availableGroomers.forEach(groomer => {
+                    const option = document.createElement('option');
+                    option.value = groomer.id;
+                    option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
+                    // ✅ All groomers are ENABLED at this stage
+                    option.disabled = false;
+                    select.appendChild(option);
+                });
+
+                const hint = document.createElement('small');
+                hint.className = 'form-hint';
+                hint.textContent = 'Leave blank for automatic assignment';
+
+                petGroomerCard.appendChild(label);
+                petGroomerCard.appendChild(select);
+                petGroomerCard.appendChild(hint);
+
+                petGroomerCards.appendChild(petGroomerCard);
+            });
+        }
+
+        // ✅ NEW: Reset groomer selection when date changes
+        function resetGroomerSelection() {
+            const petGroomerSection = document.getElementById('petGroomerSection');
+            const petGroomerCards = document.getElementById('petGroomerCards');
+            
+            if (petGroomerSection && petGroomerCards) {
+                petGroomerSection.style.display = 'none';
+                petGroomerCards.innerHTML = '';
+            }
         }
 
         // 👇 NEW: 检查并显示该日期的预约详情（左边卡片）
@@ -574,9 +660,16 @@ ViewData["Title"] = "Book an Appointment";
                         let html = '';
                         data.appointments.forEach(appt => {
                             const statusClass = (appt.status || '').toLowerCase();
+                            // ✅ NEW: Determine pet type emoji and label
+                            const petTypeEmoji = appt.petType === 'dog' ? '🐶' : appt.petType === 'cat' ? '🐱' : '🐾';
+                            const petTypeLabel = appt.petType === 'dog' ? 'Dog' : appt.petType === 'cat' ? 'Cat' : 'Pet';
+                            
                             html += `
                                 <div class="appointment-detail-card">
-                                    <div class="appointment-detail-time">${appt.time}</div>
+                                    <div class="appointment-detail-header">
+                                        <div class="appointment-detail-time">${appt.time}</div>
+                                        <div class="appointment-detail-pet-type">${petTypeEmoji} ${petTypeLabel}</div>
+                                    </div>
                                     <div class="appointment-detail-pet">${appt.petName}</div>
                                     <div class="appointment-detail-service">${appt.serviceName}</div>
                                     <div class="appointment-detail-groomer">Groomer: ${appt.groomerName || 'Not assigned'}</div>
@@ -1026,7 +1119,7 @@ ViewData["Title"] = "Book an Appointment";
                 const result = await response.json();
                 console.log('Response status:', response.status);
                 console.log('Response result:', result);
-                console.log('Errors array:', result.errors);  // ✅ Debug log
+                console.log('Errors array:', result.errors);  // ✅ Debug
 
                 // ✅ FIXED: Check for errors FIRST, regardless of response.ok status
                 if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
@@ -1317,6 +1410,30 @@ ViewData["Title"] = "Book an Appointment";
                 }
             });
         }
-    })();
+
+        // ✅ CRITICAL FIX: Remove duplicate/broken event listener and add correct date change handler
+        
+        // When date is selected (via calendar click), refresh groomer availability
+        function onDateSelected(dateObj) {
+            // Get selected time if available
+            const selectedTime = elements.timeSelect.value;
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            
+            // If both time and service are selected, refresh groomer availability
+            if (selectedTime && selectedService) {
+                const date = elements.selectedDateText.value;
+                refreshGroomerAvailability(date, selectedTime, selectedService.value);
+            }
+        }
+
+        // ✅ CORRECT: When calendar date is selected, also refresh groomer availability
+        const originalSelectDate = selectDate;
+        selectDate = function(dateObj) {
+            originalSelectDate(dateObj);
+            
+            // No need to check groomer availability here since we reset it
+            // User will re-select time, which will trigger refreshGroomerAvailability
+        };
+    })();  // ✅ Close the IIFE properly
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

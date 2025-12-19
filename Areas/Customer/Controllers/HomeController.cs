@@ -1975,11 +1975,13 @@ public class HomeController : Controller
                 .ToListAsync();
 
             // ✅ FIX: Do the string formatting in memory, not in the database query
+            // ✅ UPDATED: Add petType to the response
             var result = appointments.Select(a => new
             {
                 id = a.AppointmentId,
                 time = a.AppointmentDateTime?.ToString("HH:mm"),
                 petName = a.Pet?.Name,
+                petType = a.Pet?.Type?.ToLower(), // ✅ NEW: Include pet type (dog/cat)
                 serviceName = a.Service?.Name,
                 groomerName = a.Staff?.Name,
                 status = a.Status,
@@ -2020,17 +2022,40 @@ public class HomeController : Controller
     {
         try
         {
-            // ✅ CRITICAL: Parse date and time correctly
-            if (!DateTime.TryParse($"{date} {time}", out var appointmentDateTime))
+            Console.WriteLine($"🔍 CheckGroomerAvailability called: date='{date}', time='{time}', duration={durationMinutes}");
+
+            // ✅ FIXED: Handle multiple date formats
+            DateTime appointmentDateTime;
+            
+            // Try parsing as ISO format first (yyyy-MM-dd)
+            if (!DateTime.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
             {
-                Console.WriteLine($"Failed to parse date/time: {date} {time}");
-                return BadRequest(new { success = false, message = "Invalid date or time format" });
+                // Fallback to general parse
+                if (!DateTime.TryParse(date, out parsedDate))
+                {
+                    Console.WriteLine($"❌ Failed to parse date: {date}");
+                    return BadRequest(new { success = false, message = "Invalid date format" });
+                }
             }
 
-            Console.WriteLine($"Checking availability for: {appointmentDateTime:yyyy-MM-dd HH:mm}, Duration: {durationMinutes} min");
+            // Parse time
+            if (!DateTime.TryParseExact(time, "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedTime))
+            {
+                // Fallback to general parse
+                if (!DateTime.TryParse(time, out parsedTime))
+                {
+                    Console.WriteLine($"❌ Failed to parse time: {time}");
+                    return BadRequest(new { success = false, message = "Invalid time format" });
+                }
+            }
+
+            // Combine date and time
+            appointmentDateTime = parsedDate.Date.Add(parsedTime.TimeOfDay);
+            
+            Console.WriteLine($"✅ Parsed appointmentDateTime: {appointmentDateTime:yyyy-MM-dd HH:mm}");
 
             var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
-            Console.WriteLine($"Time range: {appointmentDateTime:HH:mm} - {appointmentEndTime:HH:mm}");
+            Console.WriteLine($"⏱️ Time range: {appointmentDateTime:HH:mm} - {appointmentEndTime:HH:mm}");
 
             // Get all groomer IDs
             var allGroomerIds = _db.Staffs
@@ -2045,15 +2070,13 @@ public class HomeController : Controller
 
             foreach (var groomerId in allGroomerIds)
             {
-                // ✅ IMPORTANT: Only check appointments on the SAME DATE
+                // Check for conflicts on the SAME DATE
                 var hasConflict = _db.Appointments.Any(a =>
                     a.StaffId == groomerId &&
                     a.Status != "Cancelled" &&
                     a.AppointmentDateTime.HasValue &&
-                    // ✅ KEY: Only check same date (ignore time zone issues)
-                    a.AppointmentDateTime.Value.Year == appointmentDateTime.Year &&
-                    a.AppointmentDateTime.Value.Month == appointmentDateTime.Month &&
-                    a.AppointmentDateTime.Value.Day == appointmentDateTime.Day &&
+                    // ✅ CRITICAL: Only check SAME DATE
+                    a.AppointmentDateTime.Value.Date == appointmentDateTime.Date &&
                     // ✅ Check time overlap
                     a.AppointmentDateTime < appointmentEndTime &&
                     a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime
@@ -2062,21 +2085,21 @@ public class HomeController : Controller
                 if (!hasConflict)
                 {
                     availableGroomerIds.Add(groomerId);
-                    Console.WriteLine($"  ✅ Groomer {groomerId} is AVAILABLE");
+                    Console.WriteLine($"✅ Groomer {groomerId} is AVAILABLE on {appointmentDateTime:yyyy-MM-dd}");
                 }
                 else
                 {
-                    Console.WriteLine($"  ❌ Groomer {groomerId} has conflict");
+                    Console.WriteLine($"❌ Groomer {groomerId} has conflict on {appointmentDateTime:yyyy-MM-dd}");
                 }
             }
 
-            Console.WriteLine($"Available groomers: {availableGroomerIds.Count}");
+            Console.WriteLine($"📊 Available groomers: {availableGroomerIds.Count} out of {allGroomerIds.Count}");
 
             return Json(new { success = true, availableGroomerIds = availableGroomerIds });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"CheckGroomerAvailability Error: {ex.Message}");
+            Console.WriteLine($"❌ CheckGroomerAvailability Error: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return Json(new { success = false, message = ex.Message });
         }
@@ -2160,5 +2183,25 @@ public class HomeController : Controller
         public string AppointmentId { get; set; }
         public string NewDate { get; set; }
         public string NewTime { get; set; }
+    }
+
+    // ✅ NEW: Validate appointment is within business hours (9 AM - 4:30 PM)
+    private bool IsWithinBusinessHours(DateTime appointmentDateTime, int durationMinutes)
+    {
+        var timeOfDay = appointmentDateTime.TimeOfDay;
+        var endTimeOfDay = appointmentDateTime.AddMinutes(durationMinutes).TimeOfDay;
+        
+        var businessStart = new TimeSpan(9, 0, 0);      // 9:00 AM
+        var businessEnd = new TimeSpan(16, 30, 0);      // 4:30 PM
+
+        // 检查预约开始时间在营业时间内
+        if (timeOfDay < businessStart)
+            return false;
+        
+        // 检查预约结束时间不超过营业时间
+        if (endTimeOfDay > businessEnd)
+            return false;
+
+        return true;
     }
 }
