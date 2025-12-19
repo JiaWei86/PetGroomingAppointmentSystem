@@ -476,7 +476,8 @@
                         lockoutTimerElement.textContent = lockoutSeconds;
                         setTimeout(updateLockoutTimer, 1000);
                     } else {
-                        location.reload();
+                        // ✅ 导航到登录页面 GET 请求，清除所有数据
+                        window.location.href = '@Url.Action("Login", "Auth", new { area = "Customer" })';
                     }
                 }
 

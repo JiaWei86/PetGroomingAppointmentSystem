@@ -32,7 +32,22 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         public IActionResult Login()
         {
-            return View();
+            // ✅ 改进：完全清除所有错误状态
+            ViewData.Remove("Error");
+            ViewData.Remove("IsLocked");
+            ViewData.Remove("LockoutSeconds");
+            
+            // ✅ 关键改动：检查 "Remember Me" cookie 并填充 Model
+            var model = new LoginViewModel();
+            
+            // 如果有 "RememberPhone" cookie，读取它
+            if (Request.Cookies.TryGetValue("RememberPhone", out string rememberPhone))
+            {
+                model.PhoneNumber = rememberPhone;
+                model.RememberMe = true;  // 勾选 Remember Me 复选框
+            }
+            
+            return View(model);
         }
 
         [HttpPost]
@@ -53,11 +68,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // Clear expired lockouts before checking
+            // ✅ 关键：先清除过期的 lockout
             ClearExpiredLockouts(formattedPhoneNumber);
             var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
-            // Check if account is currently locked
+            // ✅ 检查 lockout 状态
             if (lockoutInfo.isLocked)
             {
                 var remainingSeconds = (int)(lockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
@@ -81,7 +96,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     ViewData["IsLocked"] = true;
                     ViewData["LockoutSeconds"] = (int)(updatedLockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
-                    ViewData["Error"] = "Too many login attempts. Please try again later.";
+                    ViewData["Error"] = "Too many login attempts. Please wait a moment and try again later.";
                 }
                 else
                 {
@@ -106,7 +121,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     Expires = DateTimeOffset.UtcNow.AddDays(30),
                     HttpOnly = true,
-                    Secure = true,
+                    Secure = HttpContext.Request.IsHttps,  // ✅ 改这里：HTTP 开发环境下为 false
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
                 });
             }
@@ -225,7 +240,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 }
                 else
                 {
-                    ViewData["Success"] = "If an account exists with that phone number and email, a verification code will be sent.";
+                    // ✅ 修改：显示错误，而不是成功消息
+                    ViewData["Error"] = "No account found with that phone number and email combination. Please verify and try again.";
+                    ViewData["Email"] = email;
+                    ViewData["Phone"] = formattedPhoneNumber;
                 }
 
                 return View();
@@ -571,6 +589,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             if (loginAttempts.ContainsKey(phoneNumber))
             {
                 var lockoutInfo = loginAttempts[phoneNumber];
+                // ✅ 改进：完全清除过期的lockout，重置尝试次数
                 if (DateTime.UtcNow > lockoutInfo.lockoutUntil)
                 {
                     loginAttempts.Remove(phoneNumber);
@@ -591,6 +610,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
             bool isLocked = attempts >= LOCKOUT_THRESHOLD && DateTime.UtcNow < lockoutUntil;
 
+            // ✅ 新增：如果lockout已过期，重置数据
+            if (DateTime.UtcNow > lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
+            {
+                loginAttempts.Remove(phoneNumber);
+                return (false, 0, DateTime.UtcNow);
+            }
+
             return (isLocked, attempts, lockoutUntil);
         }
 
@@ -601,29 +627,40 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             if (!loginAttempts.ContainsKey(phoneNumber))
             {
-                // ✅ 改为 15 秒而不是 15 分钟
+                // First failed attempt - set lockout to 15 seconds from now
                 loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
             }
             else
             {
-                var (attempts, _) = loginAttempts[phoneNumber];
-                attempts++;
-
-                if (attempts >= LOCKOUT_THRESHOLD)
+                var (attempts, currentLockoutUntil) = loginAttempts[phoneNumber];
+                
+                // ✅ 改进：如果lockout已过期，重置计数器
+                if (DateTime.UtcNow > currentLockoutUntil)
                 {
-                    // ✅ 改为 15 秒而不是 15 分钟
-                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddSeconds(15));
+                    // Lockout expired - reset to first attempt
+                    loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
                 }
                 else
                 {
-                    // ✅ 改为 15 秒而不是 15 分钟
-                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddSeconds(15));
+                    // Still within lockout period - increment
+                    attempts++;
+
+                    if (attempts >= LOCKOUT_THRESHOLD)
+                    {
+                        // Lock account for 15 seconds
+                        loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddSeconds(15));
+                    }
+                    else
+                    {
+                        // Update attempts but keep the existing lockout timer
+                        loginAttempts[phoneNumber] = (attempts, currentLockoutUntil);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Resets failed login attempts for a phone number after successful login
+        /// Resets failed login attempts for a phone number (on successful login)
         /// </summary>
         private void ResetFailedAttempts(string phoneNumber)
         {
@@ -648,11 +685,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             // 清除 session
             HttpContext.Session.Clear();
 
-            // ✅ 删除 Remember Me cookie
-            Response.Cookies.Delete("RememberPhone");
+            // ✅ 改动：不删除 RememberPhone cookie，这样下次登录时仍能显示"Welcome back!"
+            // Response.Cookies.Delete("RememberPhone", new Microsoft.AspNetCore.Http.CookieOptions
+            // {
+            //     HttpOnly = true,
+            //     Secure = true,
+            //     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
+            // });
 
-            // Redirect to Login page
-            return RedirectToAction("Index", "Home", new { area = "Customer" });
+            // Redirect to Login page (instead of Home)
+            return RedirectToAction("Login", "Auth", new { area = "Customer" });
         }
 
         /// <summary>
