@@ -251,6 +251,32 @@
                 .links-container a:hover {
                     text-decoration: underline;
                 }
+
+        /* ✅ reCAPTCHA 提示样式 */
+        .recaptcha-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .recaptcha-warning.show {
+            display: flex;
+        }
+
+        .recaptcha-warning i {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -332,7 +358,16 @@
                 @if (requireRecaptcha)
                 {
                     <div class="form-group" style="margin-top: 20px; border: 2px solid #ff8800; padding: 15px; border-radius: 8px; background-color: #fff9f0;">
-                        <div class="g-recaptcha" data-sitekey="@recaptchaSiteKey"></div>
+                        <div class="g-recaptcha" 
+                             data-sitekey="@recaptchaSiteKey"
+                             data-callback="onRecaptchaChange"
+                             data-expired-callback="onRecaptchaExpired"></div>
+                    </div>
+                    
+                    <!-- ✅ reCAPTCHA 提示信息 -->
+                    <div class="recaptcha-warning" id="recaptchaWarning">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span>Please complete the reCAPTCHA verification above to proceed</span>
                     </div>
                 }
 
@@ -364,7 +399,7 @@
         }
         
         const isLocked = @(isLocked ? "true" : "false");
-        const requireRecaptcha = @(requireRecaptcha ? "true" : "false");  // ✅ 添加这行
+        const requireRecaptcha = @(requireRecaptcha ? "true" : "false");
         let phoneValidationTimeout;
         let isPhoneRegistered = false;
         let isPasswordFilled = false;
@@ -384,6 +419,7 @@
             if (phoneInput.value.length > 0) {
                 validatePhoneForLogin(phoneInput.value);
             }
+            updateSubmitButtonState();
         });
 
         // ✅ Phone number formatting
@@ -506,10 +542,33 @@
         function updateSubmitButtonState() {
             const submitBtn = document.getElementById('submitBtn');
             const phoneInput = document.getElementById('phoneNumber');
+            const passwordInput = document.getElementById('password');
             const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
 
             const isPhoneFormatValid = phoneRegex.test(phoneInput.value);
-            const canSubmit = isPhoneRegistered && isPasswordFilled && isPhoneFormatValid && !isLocked;
+            
+            // ✅ 新增：检查 reCAPTCHA 状态
+            let isRecaptchaValid = true;
+            let isRecaptchaRequired = requireRecaptcha === "true";
+            
+            if (isRecaptchaRequired) {
+                const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+                isRecaptchaValid = recaptchaResponse && recaptchaResponse.value.length > 0;
+                
+                // ✅ 显示或隐藏 reCAPTCHA 警告
+                const recaptchaWarning = document.getElementById('recaptchaWarning');
+                if (recaptchaWarning) {
+                    if (!isRecaptchaValid && isPhoneFormatValid && isPasswordFilled && isPhoneRegistered) {
+                        // 只有当其他字段都填好了但 reCAPTCHA 还没完成时才显示
+                        recaptchaWarning.classList.add('show');
+                    } else {
+                        recaptchaWarning.classList.remove('show');
+                    }
+                }
+            }
+
+            // ✅ 现在包含 reCAPTCHA 检查
+            const canSubmit = isPhoneRegistered && isPasswordFilled && isPhoneFormatValid && isRecaptchaValid && !isLocked;
 
             if (canSubmit) {
                 submitBtn.disabled = false;
@@ -570,14 +629,8 @@
                 isValid = false;
             }
 
-            // ✅ 修复：检查 reCAPTCHA 是否被勾选（仅当需要 reCAPTCHA 时）
-            if (requireRecaptcha === "true") {
-                const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
-                if (!recaptchaResponse || recaptchaResponse.value.length === 0) {
-                    alert('Please complete the reCAPTCHA verification');
-                    isValid = false;
-                }
-            }
+            // ✅ reCAPTCHA 检查已由按钮的 disabled 状态处理
+            // 因为按钮在 reCAPTCHA 未完成时会被禁用，所以这里不再需要显示 alert
 
             // Prevent submit if validation fails
             if (!isValid) {
@@ -605,6 +658,23 @@
                 updateLockoutTimer();
             </text>
         }
+
+        // ✅ 监听 reCAPTCHA 完成事件
+        function onRecaptchaChange() {
+            console.log('reCAPTCHA completed');
+            updateSubmitButtonState();
+        }
+
+        // ✅ 监听 reCAPTCHA 过期事件
+        function onRecaptchaExpired() {
+            console.log('reCAPTCHA expired');
+            updateSubmitButtonState();
+        }
+
+        // ✅ 页面加载时也检查一次按钮状态
+        window.addEventListener('load', function () {
+            updateSubmitButtonState();
+        });
     </script>
 </body>
 </html>
