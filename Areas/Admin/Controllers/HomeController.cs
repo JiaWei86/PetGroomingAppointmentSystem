@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using System.IO;
+using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -15,13 +17,6 @@ using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
 using PetGroomingAppointmentSystem.Services; 
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
-using PetGroomingAppointmentSystem.Services;
-using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 
@@ -44,8 +39,7 @@ public class HomeController : Controller
         AdminServices.IPhoneService phoneService,  // Use alias
         AdminServices.IValidationService validationService,  // Use alias
         IS3StorageService s3Service,
-        IWebHostEnvironment webHostEnvironment) 
-        IS3StorageService s3Service)
+        IWebHostEnvironment webHostEnvironment)
     {
         _db = context;
         _emailService = emailService;
@@ -57,65 +51,16 @@ public class HomeController : Controller
     }
     public class FieldValidationRequest
     {
-        public required string StaffId { get; set; }
-        public required string FieldName { get; set; }
-        public required string IcValue { get; set; } // 新增：用于传递IC号码
-        public required string FieldValue { get; set; }
+        public string StaffId { get; set; } = string.Empty;
+        public string FieldName { get; set; } = string.Empty;
+        // IcValue is optional for many validation calls (only needed when validating experience against age)
+        public string IcValue { get; set; } = string.Empty;
+        public string FieldValue { get; set; } = string.Empty;
     }
 
 
     // ========== DASHBOARD
     public async Task<IActionResult> Index()
-    {
-        ViewData["ActivePage"] = "Dashboard";
-
-        var viewModel = new DashboardViewModel();
-        var now = DateTime.Now;
-
-        // --- 1. 填充统计卡片 (Stat Cards) ---
-
-        // 总预约数 (本月 vs 上月)
-        var firstDayOfCurrentMonth = new DateTime(now.Year, now.Month, 1);
-        var firstDayOfLastMonth = firstDayOfCurrentMonth.AddMonths(-1);
-        var lastDayOfLastMonth = firstDayOfCurrentMonth.AddDays(-1);
-
-        int currentMonthAppointments = await _db.Appointments
-        .CountAsync(a => a.AppointmentDateTime >= firstDayOfCurrentMonth && a.AppointmentDateTime < firstDayOfCurrentMonth.AddMonths(1));
-
-        int lastMonthAppointments = await _db.Appointments
-        .CountAsync(a => a.AppointmentDateTime >= firstDayOfLastMonth && a.AppointmentDateTime < firstDayOfCurrentMonth);
-
-        viewModel.TotalAppointments.Count = currentMonthAppointments;
-        if (lastMonthAppointments > 0)
-        {
-            viewModel.TotalAppointments.ChangePercentage = Math.Round(((decimal)(currentMonthAppointments - lastMonthAppointments) / lastMonthAppointments) * 100, 2);
-        }
-        else if (currentMonthAppointments > 0)
-        {
-            viewModel.TotalAppointments.ChangePercentage = 100; // 如果上月为0，本月有，则增长100%
-        }
-
-        // 活跃美容师数量
-        viewModel.ActiveGroomers.Count = await _db.Staffs.CountAsync(s => s.Role == "staff");
-
-        // 总顾客数量 (替换了原来的"待处理预约")
-        viewModel.PendingAppointments.Count = await _db.Customers.CountAsync();
-
-
-        // --- 2. 塡充忠诚度积分 (Loyalty Points) ---
-        // 注意: 以下是基于现有模型的模拟。您需要根据您的业务逻辑调整。
-        var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
-        var endOfWeek = startOfWeek.AddDays(7);
-
-        // 假设每次完成的预约都奖励10个积分
-        viewModel.LoyaltyPoints.AwardedThisWeek = await _db.Appointments
-        .CountAsync(a => a.Status == "Completed" && a.AppointmentDateTime >= startOfWeek && a.AppointmentDateTime < endOfWeek) * 10;
-
-        // 活跃会员数 (假设为总顾客数)
-        viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers.CountAsync();
-
-        // 假设每次使用礼品兑换都消耗500积分
-        viewModel.LoyaltyPoints.RedeemedThisWeek = 0; // 您需要一个礼品兑换记录表来计算这个值
  {
  ViewData["ActivePage"] = "Dashboard";
 
@@ -245,91 +190,49 @@ public class HomeController : Controller
 
         return View(viewModel);
     }
- var weeklyData = await _db.Appointments
- .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
- .GroupBy(a => a.AppointmentDateTime.Value.Date)
- .Select(g => new { Date = g.Key, Count = g.Count() })
- .ToListAsync();
-
- var weeklyDict = weeklyData.ToDictionary(x => x.Date, x => x.Count);
- viewModel.ChartData.Week = new ChartSeriesModel
- {
- Labels = last7Days.Select(d => d.ToString("ddd")).ToList(),
- Data = last7Days.Select(d => weeklyDict.ContainsKey(d) ? weeklyDict[d] : 0).ToList()
- };
-
- // 月视图 (本月按周)
- var weeksInMonth = Enumerable.Range(0, 4)
- .Select(i => $"Week {i + 1}")
- .ToList();
- var monthData = new List<int>();
- for (int i = 0; i < 4; i++)
- {
- var weekStart = firstDayOfCurrentMonth.AddDays(i * 7);
- var weekEnd = weekStart.AddDays(7);
- int weekCount = await _db.Appointments
- .CountAsync(a => a.AppointmentDateTime >= weekStart && a.AppointmentDateTime < weekEnd);
- monthData.Add(weekCount);
- }
- viewModel.ChartData.Month = new ChartSeriesModel { Labels = weeksInMonth, Data = monthData };
-
- // 日视图 (今天按小时)
- var todayStart = now.Date.AddHours(9); // 9 AM
- var todayEnd = now.Date.AddHours(17); // 5 PM
- var hourlyData = await _db.Appointments
- .Where(a => a.AppointmentDateTime >= todayStart && a.AppointmentDateTime < todayEnd)
- .GroupBy(a => a.AppointmentDateTime.Value.Hour)
- .Select(g => new { Hour = g.Key, Count = g.Count() })
- .ToListAsync();
-
- var hourlyDict = hourlyData.ToDictionary(x => x.Hour, x => x.Count);
- var dayLabels = new List<string>();
- var dayData = new List<int>();
- for (int hour = 9; hour <= 16; hour++)
- {
- dayLabels.Add(new DateTime(1, 1, 1, hour, 0, 0).ToString("h tt"));
- dayData.Add(hourlyDict.ContainsKey(hour) ? hourlyDict[hour] : 0);
- }
- viewModel.ChartData.Day = new ChartSeriesModel { Labels = dayLabels, Data = dayData };
-
-
- // --- 4. 填充日历预约 (Calendar Appointments) ---
- var calendarStartDate = firstDayOfCurrentMonth.AddMonths(-1);
- var calendarEndDate = firstDayOfCurrentMonth.AddMonths(2);
-
- viewModel.AppointmentsForCalendar = await _db.Appointments
- .Where(a => a.AppointmentDateTime >= calendarStartDate && a.AppointmentDateTime < calendarEndDate)
- .Include(a => a.Pet)
- .Include(a => a.Staff)
- .Include(a => a.Service)
- .Select(a => new CalendarAppointmentModel
- {
- Id = a.AppointmentId,
- Date = a.AppointmentDateTime.Value.ToString("yyyy-MM-dd"),
- Time = a.AppointmentDateTime.Value.ToString("HH:mm"),
- PetName = a.Pet.Name,
- GroomerName = a.Staff.Name,
- ServiceType = a.Service.Name,
- Status = a.Status.ToLower()
- })
- .ToListAsync();
-
-
- return View(viewModel);
- }
 
     /// <summary>
     /// AJAX endpoint for real-time field validation for the Groomer edit form.
     /// </summary>
     [HttpPost]
     // [ValidateAntiForgeryToken] // Removed for this specific AJAX call to simplify client-side logic.
-    public async Task<IActionResult> ValidateGroomerField([FromBody] FieldValidationRequest request)
+    public async Task<IActionResult> ValidateGroomerField()
     {
+        // Read and log raw request body and manually deserialize to avoid model-binding consumption issues
+        string _rawBody = null;
+        FieldValidationRequest request = null;
         try
         {
+            HttpContext.Request.EnableBuffering();
+            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true))
+            {
+                _rawBody = await reader.ReadToEndAsync();
+                Console.WriteLine($"[ValidateGroomerField] RawBody: {_rawBody}");
+                HttpContext.Request.Body.Position = 0;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_rawBody))
+            {
+                try
+                {
+                    request = System.Text.Json.JsonSerializer.Deserialize<FieldValidationRequest>(_rawBody, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ValidateGroomerField] JSON deserialize error: {ex.Message}");
+                }
+            }
+
+            // Log incoming request info to help debug AJAX validation issues
+            try
+            {
+                Console.WriteLine($"[ValidateGroomerField] ContentType={HttpContext.Request.ContentType}, ContentLength={HttpContext.Request.ContentLength}");
+                Console.WriteLine($"[ValidateGroomerField] Payload => StaffId='{request?.StaffId}', FieldName='{request?.FieldName}', FieldValue='{request?.FieldValue}', IcValue='{request?.IcValue}'");
+            }
+            catch { }
             if (request == null || string.IsNullOrWhiteSpace(request.FieldName) || string.IsNullOrWhiteSpace(request.FieldValue))
             {
-                return Json(new { isValid = false, errorMessage = "Invalid validation request." });
+                return Json(new { isValid = false, errorMessage = "Invalid validation request.", rawBody = _rawBody });
             }
 
             bool isDuplicate = false;
@@ -1021,7 +924,6 @@ public class HomeController : Controller
                 // Extract numeric part and find the maximum
                 nextNumber = existingPetIds
                     .Select(id => int.TryParse(id.Substring(1), out var n) ? n : 0)
-                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
                     .Where(n => n > 0)
                     .OrderBy(n => n)
                     .ToList()
@@ -1522,13 +1424,13 @@ public class HomeController : Controller
 
                         // ========== ADD LOYALTY POINTS FOR EACH APPOINTMENT ==========
                         // Award 10 loyalty points per service to the customer
-                        var customer = await _db.Customers.FindAsync(model.CustomerId);
-                        if (customer != null)
+                        var cust = await _db.Customers.FindAsync(model.CustomerId);
+                        if (cust != null)
                         {
                             // 10 points for each appointment created
                             int totalPointsToAdd = newAppointments.Count * 10;
-                            customer.LoyaltyPoint += totalPointsToAdd;
-                            _db.Customers.Update(customer);
+                            cust.LoyaltyPoint += totalPointsToAdd;
+                            _db.Customers.Update(cust);
                             await _db.SaveChangesAsync();
                         }
 
@@ -1610,78 +1512,7 @@ public class HomeController : Controller
     }
 
 
-    /// <summary>
-    /// AJAX endpoint for creating groomer with validation
-    /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateGroomerAjax(
-     [FromForm] Models.Staff staff,
-        [FromForm] IFormFile PhotoUpload)
-    {
-        try
-        {
-            // ========== VALIDATE INPUTS USING VALIDATION SERVICE =========
-            var validationErrors = await ValidateStaffAsync(staff);
 
-            if (validationErrors.Any())
-            {
-                return Json(new { success = false, errors = validationErrors });
-            }
-
-            // ========== SMART ID GENERATION ==========
-            var allStaffIds = await _db.Staffs
-  .Select(s => s.UserId)
-     .OrderBy(id => id)
-          .ToListAsync();
-
-            string newStaffId;
-
-            if (!allStaffIds.Any())
-            {
-                newStaffId = "S001";
-            }
-            else
-            {
-                var usedNumbers = allStaffIds
-                .Select(id => int.Parse(id.Substring(1)))
-                .OrderBy(n => n)
-           .ToList();
-
-                int nextNumber = 1;
-                bool foundGap = false;
-
-                foreach (var num in usedNumbers)
-                {
-                    if (num != nextNumber)
-                    {
-                        foundGap = true;
-                        break;
-                    }
-                    nextNumber++;
-                }
-
-                if (!foundGap)
-                {
-                    nextNumber = usedNumbers.Max() + 1;
-                }
-
-                bool isBusy = await _db.Appointments.AnyAsync(a =>
-                    a.StaffId == groomerId &&
-                    a.AppointmentDateTime < finalEndTime &&
-                    a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-
-                if (isBusy)
-                {
-                    var groomer = await _db.Staffs.FindAsync(groomerId);
-                    return Json(new { isValid = false, field = "StaffId", message = $"Groomer '{groomer?.Name}' is unavailable at this time." });
-                }
-            }
-        }
-        // --- "Any Groomer" validation is too complex for real-time and is best handled on final submission ---
-
-        return Json(new { isValid = true });
-    }
 
     // ========== LOYALTY POINT ==========
     public IActionResult LoyaltyPoint()
@@ -2079,65 +1910,10 @@ public class HomeController : Controller
         ViewData["ActivePage"] = "Pet";
         return View();
     }
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteAppointmentAjax([FromForm] string appointmentId)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(appointmentId))
-            {
-                return Json(new { success = false, message = "Invalid appointment id." });
-            }
-
-            var dbAppointment = await _db.Appointments.FindAsync(appointmentId);
-
-            if (dbAppointment == null)
-            {
-                return Json(new { success = false, message = "Appointment not found." });
-            }
-
-            _db.Appointments.Remove(dbAppointment);
-            await _db.SaveChangesAsync();
-
-            return Json(new { success = true, message = "Appointment deleted successfully." });
-        }
-        catch (Exception)
-        {
-            // Log the error in a real app
-            return Json(new { success = false, message = "Failed to delete appointment." });
-        }
-    }
 
 
-      [HttpGet]
-    public async Task<IActionResult> SearchCustomers(string term)
-    {
-        // When term is empty, return a default set of customers so opening the Select2 shows DB entries.
-        List<object> customers;
 
-        if (string.IsNullOrWhiteSpace(term))
-        {
-            customers = await _db.Customers
-                .Where(c => c.Status == "Active")
-                .OrderBy(c => c.Name)
-                .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
-                .Take(20)
-                .ToListAsync<object>();
-        }
-        else
-        {
-            customers = await _db.Customers
-                .Where(c => c.Name.Contains(term) || c.Phone.Contains(term) || c.Email.Contains(term))
-                .OrderBy(c => c.Name)
-                .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
-                .Take(50)
-                .ToListAsync<object>();
-        }
 
-        // Return Select2-friendly shape
-        return Json(new { results = customers });
-    }
     // ========== REPORTS ==========
 
     public IActionResult reports()
@@ -2146,35 +1922,7 @@ public class HomeController : Controller
         return View();
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetBookingDensity(int month, int year)
-    {
-        try
-        {
-            var startDate = new DateTime(year, month, 1);
-            var endDate = startDate.AddMonths(1);
 
-            var bookingCounts = await _db.Appointments
-                .Where(a => a.AppointmentDateTime >= startDate && a.AppointmentDateTime < endDate && a.Status != "Cancelled")
-                .GroupBy(a => a.AppointmentDateTime.Value.Date)
-                .Select(g => new {
-                    Date = g.Key,
-                    Count = g.Count()
-                })
-                .ToListAsync();
-
-            var countsDict = bookingCounts.ToDictionary(
-                item => item.Date.ToString("yyyy-MM-dd"),
-                item => item.Count
-            );
-
-            return Json(new { success = true, counts = countsDict });
-        }
-        catch (Exception)
-        {
-            return Json(new { success = false, message = "Could not retrieve booking data." });
-        }
-    }
 
     [HttpGet]
     public async Task<IActionResult> GenerateReportData(DateTime startDate, DateTime endDate, string reportType)
@@ -2373,21 +2121,7 @@ public class HomeController : Controller
         }
     }
 
-    [HttpGet]
-    public JsonResult GetServicesByPetType(string petType)
-    {
-    if (string.IsNullOrEmpty(petType))
-    {
-        return Json(new List<object>());
-    }
 
-    var services = _db.Services
-        .Where(s => s.Status == "Active" && s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == petType))
-        .Select(s => new { id = s.ServiceId, text = s.Name })
-        .ToList();
-
-    return Json(services);
-    }
 
 
     /// <summary>
@@ -3020,7 +2754,7 @@ public class HomeController : Controller
             Console.WriteLine($"Error in GetBookingDensity: {ex.Message}");
             return Json(new { success = false, message = "Could not retrieve booking density." });
         }
-
+    }
 
     public async Task<IActionResult> Profile()
     {
@@ -3161,8 +2895,6 @@ public class HomeController : Controller
 
         TempData["SuccessMessage"] = "Profile updated successfully.";
         return RedirectToAction("Profile");
-    }
-
     }
 
     // POST: Delete appointment (AJAX)
