@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using PetGroomingAppointmentSystem.Models.ViewModels;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Services;
 
@@ -15,10 +17,8 @@ public class ValidationService : IValidationService
     {
         "Senior Groomer",
         "Junior Groomer",
-"Groomer Assistant",
- "Shop Assistant",
-        "Cat Groomer"
-  };
+        "Groomer Assistant"
+    };
 
     /// <summary>
     /// Validate Malaysian IC format: xxxxxx-xx-xxxx
@@ -142,7 +142,7 @@ return true; // Optional field
     return experienceYear.Value >= 0 && experienceYear.Value <= 50;
     }
 
-  /// <summary>
+    /// <summary>
     /// Validate position against allowed positions
     /// </summary>
     public bool ValidatePosition(string position)
@@ -150,7 +150,7 @@ return true; // Optional field
         if (string.IsNullOrWhiteSpace(position))
             return false;
 
-   return ValidPositions.Contains(position);
+        return ValidPositions.Contains(position);
     }
 
     /// <summary>
@@ -159,5 +159,63 @@ return true; // Optional field
     public string[] GetValidPositions()
     {
         return ValidPositions;
+    }
+
+    /// <summary>
+    /// Validate that experience years are realistic for the person's age derived from IC.
+    /// The experience cannot be more than (Age - 18).
+    /// </summary>
+    public ValidationResult ValidateExperienceAgainstAge(int experience, string ic)
+    {
+        if (string.IsNullOrWhiteSpace(ic) || !ICFormatRegex.IsMatch(ic))
+ {
+ // Don't validate if IC is invalid, as another validator will catch that.
+ return new ValidationResult { IsValid = true };
+ }
+
+        try
+        {
+            string datePart = ic.Substring(0, 6);
+            if (!int.TryParse(datePart.Substring(0, 2), out int year)) return new ValidationResult { IsValid = true };
+            if (!int.TryParse(datePart.Substring(2, 2), out int month)) return new ValidationResult { IsValid = true };
+            if (!int.TryParse(datePart.Substring(4, 2), out int day)) return new ValidationResult { IsValid = true };
+
+            int fullYear = year >= 50 ? 1900 + year : 2000 + year;
+
+            DateTime birthDate = new DateTime(fullYear, month, day);
+            DateTime today = DateTime.Now;
+            int age = today.Year - birthDate.Year;
+
+            if (today.Month < birthDate.Month || (today.Month == birthDate.Month && today.Day < birthDate.Day))
+            {
+                age--;
+            }
+
+            // Experience cannot be greater than the number of years they could have been working (age - 18)
+            if (experience > (age - 18))
+            {
+                return new ValidationResult
+                {
+                    IsValid = false, // Assuming ValidationResult has an IsValid property
+                    ErrorMessage = $"Experience of {experience} years is unrealistic for someone aged {age}."
+                };
+            }
+
+ return new ValidationResult { IsValid = true };
+        }
+        catch
+        {
+ return new ValidationResult { IsValid = true }; // Fail silently if IC parsing has an issue
+        }
+    }
+
+    /// <summary>
+    /// Validates a customer field for uniqueness and format.
+    /// This method is intended to be implemented by a service that has access to the database,
+    /// as ValidationService itself does not have DB context.
+    /// </summary>
+    public Task<ValidationResult> ValidateCustomerFieldAsync(string customerId, string fieldName, string fieldValue)
+    {
+        throw new NotImplementedException("ValidateCustomerFieldAsync is not implemented in ValidationService. It should be handled by a service with database access.");
     }
 }

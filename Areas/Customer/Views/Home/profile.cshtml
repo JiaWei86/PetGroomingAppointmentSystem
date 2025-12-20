@@ -461,7 +461,11 @@
                                     <i class="fa fa-key" style="font-size: 32px; color: white;"></i>
                                 </div>
                                 <h6 class="mt-3">Change Your Password</h6>
-                                <p class="text-muted small">Enter your current password and choose a new one</p>
+                            </div>
+
+                            @* --- ✅ Welcome message for pending_password status --- *@
+                            <div id="firstLoginNotice" class="alert alert-info" style="display: none; margin-bottom: 20px; text-align: center; padding: 10px 15px;">
+                                <p style="margin: 0; font-size: 14px;">Welcome! To activate your account, please set a new password.</p>
                             </div>
 
                             <div class="mb-3">
@@ -619,621 +623,679 @@
 
 <canvas id="webcamCanvas" style="display:none;"></canvas>
 
+<!-- Toast container for success messages -->
+<div id="globalToastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top:20px; left:50%; transform: translateX(-50%); z-index:20000; display: none;">
+ <div id="globalToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" style="min-width:260px;">
+ <div class="toast-header" style="background:#28a745;color:#fff;border-radius:6px6px00;padding:8px10px;">
+ <strong class="mr-auto" style="font-size:14px">Success</strong>
+ <button type="button" class="ml-2 mb-1 close" onclick="hideGlobalToast()" style="color:#fff;background:none;border:0;font-size:16px;">&times;</button>
+ </div>
+ <div class="toast-body" id="globalToastMessage" style="padding:10px; background:#fff; color:#333; border-radius:006px6px;"></div>
+ </div>
+</div>
+
 @section Scripts {
 <script>
-    // ========== STATUS CONTROL VARIABLES ==========
-    const customerStatus = '@customerStatus';
-    const isBlocked = @(isBlocked.ToString().ToLower());
-    const isInactive = @(isInactive.ToString().ToLower());
-    const isActive = @(isActive.ToString().ToLower());
+ // ========== STATUS CONTROL VARIABLES ==========
+ const customerStatus = '@customerStatus';
+ const isBlocked = @(isBlocked.ToString().ToLower());
+ const isInactive = @(isInactive.ToString().ToLower());
+ const isActive = @(isActive.ToString().ToLower());
 
-    // ========== PHOTO DATA STORAGE ==========
-    let uploadedPhotos = [];
-    
-    // Initialize with existing photos
-    @if (hasMultiplePhotos)
-    {
-        <text>
-        uploadedPhotos = [
-            @for (int i = 0; i < photoList.Count; i++)
-            {
-                if (photoList[i] != "/Customer/img/default-avatar.png")
-                {
-                    @:{ id: '@i', src: '@photoList[i]', isExisting: true },
-                }
-            }
-        ];
-        </text>
-    }
+ // Flag from server to indicate pending password state
+ const showPendingPassword = @((ViewBag.ShowPendingPassword ?? false).ToString().ToLower());
 
-    // ========== STATUS CHECK HELPER ==========
-    function checkStatusBeforeAction(actionName) {
-        if (isBlocked) {
-            showBlockedToast('Action Blocked', 'Your account is blocked. You cannot ' + actionName + '.');
-            return false;
-        }
-        return true;
-    }
+ // ========== PHOTO DATA STORAGE ==========
+ let uploadedPhotos = [];
+ 
+ // Initialize with existing photos
+ @if (hasMultiplePhotos)
+ {
+ <text>
+ uploadedPhotos = [
+ @for (int i =0; i < photoList.Count; i++)
+ {
+ if (photoList[i] != "/Customer/img/default-avatar.png")
+ {
+ @:{ id: '@i', src: '@photoList[i]', isExisting: true },
+ }
+ }
+ ];
+ </text>
+ }
 
-    function showBlockedToast(title, message) {
-        // Remove existing toast if any
-        const existingToast = document.querySelector('.action-blocked-toast');
-        if (existingToast) existingToast.remove();
+ // ========== STATUS CHECK HELPER ==========
+ function checkStatusBeforeAction(actionName) {
+ if (isBlocked) {
+ showBlockedToast('Action Blocked', 'Your account is blocked. You cannot ' + actionName + '.');
+ return false;
+ }
+ return true;
+ }
 
-        const toast = document.createElement('div');
-        toast.className = 'action-blocked-toast';
-        toast.innerHTML = `
-            <i class="fa fa-ban"></i>
-            <div class="toast-content">
-                <div class="toast-title">${title}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-        `;
-        document.body.appendChild(toast);
+ function showBlockedToast(title, message) {
+ // Remove existing toast if any
+ const existingToast = document.querySelector('.action-blocked-toast');
+ if (existingToast) existingToast.remove();
 
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toast.classList.add('fade-out');
-                setTimeout(() => toast.remove(), 300);
-            }
-        }, 5000);
-    }
+ const toast = document.createElement('div');
+ toast.className = 'action-blocked-toast';
+ toast.innerHTML = `
+ <i class="fa fa-ban"></i>
+ <div class="toast-content">
+ <div class="toast-title">${title}</div>
+ <div class="toast-message">${message}</div>
+ </div>
+ <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+ `;
+ document.body.appendChild(toast);
 
-    // ========== AVATAR ANIMATION ==========
-    let currentPhotoIndex = 0;
-    let avatarAnimationInterval = null;
-    let isAnimationPaused = false;
-    const ANIMATION_DELAY = 3000;
+ // Auto remove after5 seconds
+ setTimeout(() => {
+ if (toast.parentElement) {
+ toast.classList.add('fade-out');
+ setTimeout(() => toast.remove(),300);
+ }
+ },5000);
+ }
 
-    function initAvatarAnimation() {
-        const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
-        if (photos.length <= 1) return;
-        
-        avatarAnimationInterval = setInterval(() => {
-            if (isAnimationPaused) return;
-            
-            photos[currentPhotoIndex].classList.remove('active');
-            const indicators = document.querySelectorAll('.avatar-indicator');
-            if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
-            
-            currentPhotoIndex = (currentPhotoIndex + 1) % photos.length;
-            
-            photos[currentPhotoIndex].classList.add('active');
-            if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
-        }, ANIMATION_DELAY);
-    }
+ // ========== AVATAR ANIMATION ==========
+ let currentPhotoIndex =0;
+ let avatarAnimationInterval = null;
+ let isAnimationPaused = false;
+ const ANIMATION_DELAY =3000;
 
-    function goToPhoto(index) {
-        const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
-        const indicators = document.querySelectorAll('.avatar-indicator');
-        
-        if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.remove('active');
-        if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
-        
-        currentPhotoIndex = index;
-        
-        if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.add('active');
-        if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
-    }
+ function initAvatarAnimation() {
+ const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
+ if (photos.length <=1) return;
+ 
+ avatarAnimationInterval = setInterval(() => {
+ if (isAnimationPaused) return;
+ 
+ photos[currentPhotoIndex].classList.remove('active');
+ const indicators = document.querySelectorAll('.avatar-indicator');
+ if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
+ 
+ currentPhotoIndex = (currentPhotoIndex +1) % photos.length;
+ 
+ photos[currentPhotoIndex].classList.add('active');
+ if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
+ }, ANIMATION_DELAY);
+ }
 
-    // ========== MULTI-FILE UPLOAD ==========
-    function handleMultiFileSelect(event) {
-        if (!checkStatusBeforeAction('upload photos')) return;
-        
-        const files = event.target.files;
-        if (!files.length) return;
-        
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (!file.type.startsWith('image/')) continue;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                addPhotoToGrid(e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        event.target.value = '';
-    }
+ function goToPhoto(index) {
+ const photos = document.querySelectorAll('.animated-avatar-container .avatar-photo');
+ const indicators = document.querySelectorAll('.avatar-indicator');
+ 
+ if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.remove('active');
+ if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.remove('active');
+ 
+ currentPhotoIndex = index;
+ 
+ if (photos[currentPhotoIndex]) photos[currentPhotoIndex].classList.add('active');
+ if (indicators[currentPhotoIndex]) indicators[currentPhotoIndex].classList.add('active');
+ }
 
-    function addPhotoToGrid(imageSrc) {
-        const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        uploadedPhotos.push({ id: photoId, src: imageSrc, isExisting: false });
-        renderPhotoGrid();
-        updatePhotosInput();
-    }
+ // ========== MULTI-FILE UPLOAD ==========
+ function handleMultiFileSelect(event) {
+ if (!checkStatusBeforeAction('upload photos')) return;
+ 
+ const files = event.target.files;
+ if (!files.length) return;
+ 
+ for (let i =0; i < files.length; i++) {
+ const file = files[i];
+ if (!file.type.startsWith('image/')) continue;
+ 
+ const reader = new FileReader();
+ reader.onload = function(e) {
+ addPhotoToGrid(e.target.result);
+ };
+ reader.readAsDataURL(file);
+ }
+ 
+ event.target.value = '';
+ }
 
-    function removePhoto(photoId) {
-        uploadedPhotos = uploadedPhotos.filter(p => p.id !== photoId);
-        renderPhotoGrid();
-        updatePhotosInput();
-    }
+ function addPhotoToGrid(imageSrc) {
+ const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
+ uploadedPhotos.push({ id: photoId, src: imageSrc, isExisting: false });
+ renderPhotoGrid();
+ updatePhotosInput();
+ }
 
-    function clearAllPhotos() {
-        if (!confirm('Remove all photos?')) return;
-        uploadedPhotos = [];
-        renderPhotoGrid();
-        updatePhotosInput();
-    }
+ function removePhoto(photoId) {
+ uploadedPhotos = uploadedPhotos.filter(p => p.id !== photoId);
+ renderPhotoGrid();
+ updatePhotosInput();
+ }
 
-    function renderPhotoGrid() {
-        const grid = document.getElementById('photoThumbnailsGrid');
-        const emptyMsg = document.getElementById('emptyPhotosMessage');
-        const clearBtn = document.getElementById('clearPhotosBtn');
-        
-        grid.querySelectorAll('.photo-thumbnail').forEach(el => el.remove());
-        
-        if (uploadedPhotos.length === 0) {
-            emptyMsg.style.display = 'flex';
-            clearBtn.style.display = 'none';
-            grid.classList.remove('has-photos');
-        } else {
-            emptyMsg.style.display = 'none';
-            clearBtn.style.display = 'inline-flex';
-            grid.classList.add('has-photos');
-            
-            uploadedPhotos.forEach((photo, index) => {
-                const thumb = document.createElement('div');
-                thumb.className = 'photo-thumbnail';
-                thumb.innerHTML = `
-                    <img src="${photo.src}" alt="Photo ${index + 1}" />
-                    <span class="photo-number">${index + 1}</span>
-                    <button type="button" class="remove-btn" onclick="removePhoto('${photo.id}')">
-                        <i class="fa fa-times"></i>
-                    </button>
-                `;
-                grid.appendChild(thumb);
-            });
-        }
-    }
+ function clearAllPhotos() {
+ if (!confirm('Remove all photos?')) return;
+ uploadedPhotos = [];
+ renderPhotoGrid();
+ updatePhotosInput();
+ }
 
-    function updatePhotosInput() {
-        const photosData = uploadedPhotos.map(p => p.src);
-        document.getElementById('allPhotosData').value = JSON.stringify(photosData);
-    }
+ function renderPhotoGrid() {
+ const grid = document.getElementById('photoThumbnailsGrid');
+ const emptyMsg = document.getElementById('emptyPhotosMessage');
+ const clearBtn = document.getElementById('clearPhotosBtn');
+ 
+ grid.querySelectorAll('.photo-thumbnail').forEach(el => el.remove());
+ 
+ if (uploadedPhotos.length ===0) {
+ emptyMsg.style.display = 'flex';
+ clearBtn.style.display = 'none';
+ grid.classList.remove('has-photos');
+ } else {
+ emptyMsg.style.display = 'none';
+ clearBtn.style.display = 'inline-flex';
+ grid.classList.add('has-photos');
+ 
+ uploadedPhotos.forEach((photo, index) => {
+ const thumb = document.createElement('div');
+ thumb.className = 'photo-thumbnail';
+ thumb.innerHTML = `
+ <img src="${photo.src}" alt="Photo ${index +1}" />
+ <span class="photo-number">${index +1}</span>
+ <button type="button" class="remove-btn" onclick="removePhoto('${photo.id}')">
+ <i class="fa fa-times"></i>
+ </button>
+ `;
+ grid.appendChild(thumb);
+ });
+ }
+ }
 
-    // ========== DRAG & DROP ==========
-    const dropZone = document.getElementById('dropZone');
-    
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone?.addEventListener(eventName, preventDefaults, false);
-    });
+ function updatePhotosInput() {
+ const photosData = uploadedPhotos.map(p => p.src);
+ document.getElementById('allPhotosData').value = JSON.stringify(photosData);
+ }
 
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+ // ========== DRAG & DROP ==========
+ const dropZone = document.getElementById('dropZone');
+ 
+ ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+ dropZone?.addEventListener(eventName, preventDefaults, false);
+ });
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone?.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
-    });
+ function preventDefaults(e) {
+ e.preventDefault();
+ e.stopPropagation();
+ }
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone?.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
-    });
+ ['dragenter', 'dragover'].forEach(eventName => {
+ dropZone?.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+ });
 
-    dropZone?.addEventListener('drop', function(e) {
-        if (!checkStatusBeforeAction('upload photos')) return;
-        
-        const files = e.dataTransfer.files;
-        for (let i = 0; i < files.length; i++) {
-            if (!files[i].type.startsWith('image/')) continue;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                addPhotoToGrid(ev.target.result);
-            };
-            reader.readAsDataURL(files[i]);
-        }
-    }, false);
+ ['dragleave', 'drop'].forEach(eventName => {
+ dropZone?.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+ });
 
-    // ========== WEBCAM ==========
-    let webcamData = { stream: null, capturedImage: null };
+ dropZone?.addEventListener('drop', function(e) {
+ if (!checkStatusBeforeAction('upload photos')) return;
+ 
+ const files = e.dataTransfer.files;
+ for (let i =0; i < files.length; i++) {
+ if (!files[i].type.startsWith('image/')) continue;
+ const reader = new FileReader();
+ reader.onload = function(ev) {
+ addPhotoToGrid(ev.target.result);
+ };
+ reader.readAsDataURL(files[i]);
+ }
+ }, false);
 
-    async function openWebcamModal() {
-        if (!checkStatusBeforeAction('use webcam')) return;
-        
-        document.getElementById('webcamOverlay').classList.add('show');
-        document.getElementById('webcamContainer').style.display = 'block';
-        document.getElementById('capturedPreviewContainer').style.display = 'none';
-        document.getElementById('webcamControls').style.display = 'flex';
-        document.getElementById('afterCaptureControls').style.display = 'none';
-        document.getElementById('webcamError').style.display = 'none';
+ // ========== WEBCAM ==========
+ let webcamData = { stream: null, capturedImage: null };
 
-        try {
-            const video = document.getElementById('webcamVideo');
-            webcamData.stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
-            });
-            video.srcObject = webcamData.stream;
-            await video.play();
-        } catch (error) {
-            document.getElementById('webcamErrorText').textContent = 'Unable to access webcam.';
-            document.getElementById('webcamError').style.display = 'block';
-            document.getElementById('webcamControls').style.display = 'none';
-        }
-    }
+ async function openWebcamModal() {
+ if (!checkStatusBeforeAction('use webcam')) return;
+ 
+ document.getElementById('webcamOverlay').classList.add('show');
+ document.getElementById('webcamContainer').style.display = 'block';
+ document.getElementById('capturedPreviewContainer').style.display = 'none';
+ document.getElementById('webcamControls').style.display = 'flex';
+ document.getElementById('afterCaptureControls').style.display = 'none';
+ document.getElementById('webcamError').style.display = 'none';
 
-    function closeWebcamModal() {
-        document.getElementById('webcamOverlay').classList.remove('show');
-        if (webcamData.stream) {
-            webcamData.stream.getTracks().forEach(track => track.stop());
-            webcamData.stream = null;
-        }
-        document.getElementById('webcamVideo').srcObject = null;
-    }
+ try {
+ const video = document.getElementById('webcamVideo');
+ webcamData.stream = await navigator.mediaDevices.getUserMedia({
+ video: { width: { ideal:640 }, height: { ideal:480 }, facingMode: 'user' }
+ });
+ video.srcObject = webcamData.stream;
+ await video.play();
+ } catch (error) {
+ document.getElementById('webcamErrorText').textContent = 'Unable to access webcam.';
+ document.getElementById('webcamError').style.display = 'block';
+ document.getElementById('webcamControls').style.display = 'none';
+ }
+ }
 
-    function capturePhoto() {
-        const video = document.getElementById('webcamVideo');
-        const canvas = document.getElementById('webcamCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        
-        webcamData.capturedImage = canvas.toDataURL('image/jpeg', 0.9);
-        
-        document.getElementById('capturedPreview').src = webcamData.capturedImage;
-        document.getElementById('webcamContainer').style.display = 'none';
-        document.getElementById('capturedPreviewContainer').style.display = 'block';
-        document.getElementById('webcamControls').style.display = 'none';
-        document.getElementById('afterCaptureControls').style.display = 'flex';
-        video.pause();
-    }
+ function closeWebcamModal() {
+ document.getElementById('webcamOverlay').classList.remove('show');
+ if (webcamData.stream) {
+ webcamData.stream.getTracks().forEach(track => track.stop());
+ webcamData.stream = null;
+ }
+ document.getElementById('webcamVideo').srcObject = null;
+ }
 
-    function retakePhoto() {
-        document.getElementById('webcamContainer').style.display = 'block';
-        document.getElementById('capturedPreviewContainer').style.display = 'none';
-        document.getElementById('webcamControls').style.display = 'flex';
-        document.getElementById('afterCaptureControls').style.display = 'none';
-        document.getElementById('webcamVideo').play();
-    }
+ function capturePhoto() {
+ const video = document.getElementById('webcamVideo');
+ const canvas = document.getElementById('webcamCanvas');
+ const ctx = canvas.getContext('2d');
+ 
+ canvas.width = video.videoWidth;
+ canvas.height = video.videoHeight;
+ ctx.drawImage(video,0,0);
+ 
+ webcamData.capturedImage = canvas.toDataURL('image/jpeg',0.9);
+ 
+ document.getElementById('capturedPreview').src = webcamData.capturedImage;
+ document.getElementById('webcamContainer').style.display = 'none';
+ document.getElementById('capturedPreviewContainer').style.display = 'block';
+ document.getElementById('webcamControls').style.display = 'none';
+ document.getElementById('afterCaptureControls').style.display = 'flex';
+ video.pause();
+ }
 
-    function useWebcamPhoto() {
-        if (!webcamData.capturedImage) return;
-        addPhotoToGrid(webcamData.capturedImage);
-        closeWebcamModal();
-    }
+ function retakePhoto() {
+ document.getElementById('webcamContainer').style.display = 'block';
+ document.getElementById('capturedPreviewContainer').style.display = 'none';
+ document.getElementById('webcamControls').style.display = 'flex';
+ document.getElementById('afterCaptureControls').style.display = 'none';
+ document.getElementById('webcamVideo').play();
+ }
 
-    // ========== MODALS ==========
-    function openEditModal() {
-        if (!checkStatusBeforeAction('edit profile')) return;
-        
-        document.getElementById('editProfileOverlay').classList.add('show');
-        document.body.style.overflow = 'hidden';
-        renderPhotoGrid();
-        updatePhotosInput();
-        $('#editProfileTabs a[href="#profileInfoTab"]').tab('show');
-        document.getElementById('changePasswordForm').reset();
-        hidePasswordMessages();
-    }
+ function useWebcamPhoto() {
+ if (!webcamData.capturedImage) return;
+ addPhotoToGrid(webcamData.capturedImage);
+ closeWebcamModal();
+ }
 
-    function closeEditModal() {
-        document.getElementById('editProfileOverlay').classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
+ // ========== MODALS ==========
+ function openEditModal() {
+ if (!checkStatusBeforeAction('edit profile')) return;
+ 
+ document.getElementById('editProfileOverlay').classList.add('show');
+ document.body.style.overflow = 'hidden';
+ renderPhotoGrid();
+ updatePhotosInput();
+ $('#editProfileTabs a[href="#profileInfoTab"]').tab('show');
+ document.getElementById('changePasswordForm').reset();
+ hidePasswordMessages();
+ }
 
-    // ========== FORM SUBMISSION ==========
-    function submitEditProfile(event) {
-        event.preventDefault();
-        
-        if (!checkStatusBeforeAction('update profile')) return;
-        
-        const formData = new FormData(document.getElementById('editProfileForm'));
-        
-        fetch('/Customer/Home/UpdateProfileMultiPhoto', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('successMessage').textContent = 'Profile updated!';
-                document.getElementById('successMessage').style.display = 'block';
-                setTimeout(() => { closeEditModal(); location.reload(); }, 1500);
-            } else {
-                document.getElementById('errorMessage').textContent = data.message;
-                document.getElementById('errorMessage').style.display = 'block';
-            }
-        })
-        .catch(error => {
-            document.getElementById('errorMessage').textContent = 'Error updating profile';
-            document.getElementById('errorMessage').style.display = 'block';
-        });
-    }
+ function closeEditModal() {
+ document.getElementById('editProfileOverlay').classList.remove('show');
+ document.body.style.overflow = 'auto';
+ }
 
-    // ========== CHANGE PASSWORD FUNCTIONS ==========
-    function togglePasswordVisibility(inputId, button) {
-        const input = document.getElementById(inputId);
-        const icon = button.querySelector('i');
-        
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
+ // ========== FORM SUBMISSION ==========
+ function submitEditProfile(event) {
+ event.preventDefault();
+ 
+ if (!checkStatusBeforeAction('update profile')) return;
+ 
+ const formData = new FormData(document.getElementById('editProfileForm'));
+ 
+ fetch('/Customer/Home/UpdateProfileMultiPhoto', {
+ method: 'POST',
+ body: formData
+ })
+ .then(response => response.json())
+ .then(data => {
+ if (data.success) {
+ document.getElementById('successMessage').textContent = 'Profile updated!';
+ document.getElementById('successMessage').style.display = 'block';
+ setTimeout(() => { closeEditModal(); location.reload(); },1500);
+ } else {
+ document.getElementById('errorMessage').textContent = data.message;
+ document.getElementById('errorMessage').style.display = 'block';
+ }
+ })
+ .catch(error => {
+ document.getElementById('errorMessage').textContent = 'Error updating profile';
+ document.getElementById('errorMessage').style.display = 'block';
+ });
+ }
 
-    function checkPasswordStrength() {
-        const password = document.getElementById('newPassword').value;
-        const container = document.getElementById('passwordStrengthContainer');
-        const bar = document.getElementById('passwordStrengthBar');
-        const text = document.getElementById('passwordStrengthText');
-        
-        if (password.length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-        
-        container.style.display = 'block';
-        
-        let strength = 0;
-        let feedback = '';
-        
-        if (password.length >= 8) strength += 25;
-        if (password.length >= 12) strength += 10;
-        if (/[A-Z]/.test(password)) strength += 20;
-        if (/[a-z]/.test(password)) strength += 15;
-        if (/[0-9]/.test(password)) strength += 15;
-        if (/[^A-Za-z0-9]/.test(password)) strength += 15;
-        
-        bar.style.width = strength + '%';
-        bar.classList.remove('bg-danger', 'bg-warning', 'bg-info', 'bg-success');
-        
-        if (strength < 30) {
-            bar.classList.add('bg-danger');
-            feedback = 'Weak';
-        } else if (strength < 50) {
-            bar.classList.add('bg-warning');
-            feedback = 'Fair';
-        } else if (strength < 75) {
-            bar.classList.add('bg-info');
-            feedback = 'Good';
-        } else {
-            bar.classList.add('bg-success');
-            feedback = 'Strong';
-        }
-        
-        text.textContent = feedback;
-    }
+ // ========== CHANGE PASSWORD FUNCTIONS ==========
+ function togglePasswordVisibility(inputId, button) {
+ const input = document.getElementById(inputId);
+ const icon = button.querySelector('i');
+ 
+ if (input.type === 'password') {
+ input.type = 'text';
+ icon.classList.remove('fa-eye');
+ icon.classList.add('fa-eye-slash');
+ } else {
+ input.type = 'password';
+ icon.classList.remove('fa-eye-slash');
+ icon.classList.add('fa-eye');
+ }
+ }
 
-    function checkPasswordMatch() {
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        const matchText = document.getElementById('passwordMatchText');
-        
-        if (confirmPassword.length === 0) {
-            matchText.textContent = '';
-            matchText.classList.remove('text-success', 'text-danger');
-            return;
-        }
-        
-        if (newPassword === confirmPassword) {
-            matchText.textContent = '✓ Passwords match';
-            matchText.classList.remove('text-danger');
-            matchText.classList.add('text-success');
-        } else {
-            matchText.textContent = '✗ Passwords do not match';
-            matchText.classList.remove('text-success');
-            matchText.classList.add('text-danger');
-        }
-    }
+ function checkPasswordStrength() {
+ const password = document.getElementById('newPassword').value;
+ const container = document.getElementById('passwordStrengthContainer');
+ const bar = document.getElementById('passwordStrengthBar');
+ const text = document.getElementById('passwordStrengthText');
+ 
+ if (password.length ===0) {
+ container.style.display = 'none';
+ return;
+ }
+ 
+ container.style.display = 'block';
+ 
+ let strength =0;
+ let feedback = '';
+ 
+ if (password.length >=8) strength +=25;
+ if (password.length >=12) strength +=10;
+ if (/[A-Z]/.test(password)) strength +=20;
+ if (/[a-z]/.test(password)) strength +=15;
+ if (/[0-9]/.test(password)) strength +=15;
+ if (/[^A-Za-z0-9]/.test(password)) strength +=15;
+ 
+ bar.style.width = strength + '%';
+ bar.classList.remove('bg-danger', 'bg-warning', 'bg-info', 'bg-success');
+ 
+ if (strength <30) {
+ bar.classList.add('bg-danger');
+ feedback = 'Weak';
+ } else if (strength <50) {
+ bar.classList.add('bg-warning');
+ feedback = 'Fair';
+ } else if (strength <75) {
+ bar.classList.add('bg-info');
+ feedback = 'Good';
+ } else {
+ bar.classList.add('bg-success');
+ feedback = 'Strong';
+ }
+ 
+ text.textContent = feedback;
+ }
 
-    function hidePasswordMessages() {
-        document.getElementById('passwordSuccessMessage').style.display = 'none';
-        document.getElementById('passwordErrorMessage').style.display = 'none';
-        document.getElementById('passwordStrengthContainer').style.display = 'none';
-        document.getElementById('passwordMatchText').textContent = '';
-    }
+ function checkPasswordMatch() {
+ const newPassword = document.getElementById('newPassword').value;
+ const confirmPassword = document.getElementById('confirmPassword').value;
+ const matchText = document.getElementById('passwordMatchText');
+ 
+ if (confirmPassword.length ===0) {
+ matchText.textContent = '';
+ matchText.classList.remove('text-success', 'text-danger');
+ return;
+ }
+ 
+ if (newPassword === confirmPassword) {
+ matchText.textContent = '✓ Passwords match';
+ matchText.classList.remove('text-danger');
+ matchText.classList.add('text-success');
+ } else {
+ matchText.textContent = '✗ Passwords do not match';
+ matchText.classList.remove('text-success');
+ matchText.classList.add('text-danger');
+ }
+ }
 
-    function submitChangePassword(event) {
-        event.preventDefault();
-        
-        if (!checkStatusBeforeAction('change password')) return;
-        
-        const currentPassword = document.getElementById('currentPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        
-        hidePasswordMessages();
-        
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            document.getElementById('passwordErrorMessage').textContent = 'All fields are required.';
-            document.getElementById('passwordErrorMessage').style.display = 'block';
-            return;
-        }
-        
-        if (newPassword.length < 8) {
-            document.getElementById('passwordErrorMessage').textContent = 'New password must be at least 8 characters.';
-            document.getElementById('passwordErrorMessage').style.display = 'block';
-            return;
-        }
-        
-        if (newPassword !== confirmPassword) {
-            document.getElementById('passwordErrorMessage').textContent = 'New passwords do not match.';
-            document.getElementById('passwordErrorMessage').style.display = 'block';
-            return;
-        }
-        
-        if (currentPassword === newPassword) {
-            document.getElementById('passwordErrorMessage').textContent = 'New password must be different from current password.';
-            document.getElementById('passwordErrorMessage').style.display = 'block';
-            return;
-        }
-        
-        const btn = document.getElementById('changePasswordBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing...';
-        
-        const formData = new FormData();
-        formData.append('currentPassword', currentPassword);
-        formData.append('newPassword', newPassword);
-        
-        fetch('/Customer/Home/ChangePassword', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
-            
-            if (data.success) {
-                document.getElementById('passwordSuccessMessage').textContent = data.message || 'Password changed successfully!';
-                document.getElementById('passwordSuccessMessage').style.display = 'block';
-                document.getElementById('changePasswordForm').reset();
-                
-                setTimeout(() => { closeEditModal(); }, 2000);
-            } else {
-                document.getElementById('passwordErrorMessage').textContent = data.message || 'Failed to change password.';
-                document.getElementById('passwordErrorMessage').style.display = 'block';
-            }
-        })
-        .catch(error => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
-            document.getElementById('passwordErrorMessage').textContent = 'An error occurred. Please try again.';
-            document.getElementById('passwordErrorMessage').style.display = 'block';
-        });
-    }
+ function hidePasswordMessages() {
+ document.getElementById('passwordSuccessMessage').style.display = 'none';
+ document.getElementById('passwordErrorMessage').style.display = 'none';
+ document.getElementById('passwordStrengthContainer').style.display = 'none';
+ document.getElementById('passwordMatchText').textContent = '';
+ }
 
-    // ========== PET FUNCTIONS ==========
-    function openAddPetModal() {
-        if (!checkStatusBeforeAction('add pet')) return;
-        
-        document.getElementById('petIdInput').value = '';
-        document.getElementById('petModalTitle').textContent = 'Add Pet';
-        document.getElementById('editPetForm').reset();
-        document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
-        document.getElementById('petSuccessMessage').style.display = 'none';
-        document.getElementById('petErrorMessage').style.display = 'none';
-        document.getElementById('addPetOverlay').classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
+ function submitChangePassword(event) {
+ event.preventDefault();
+ 
+ if (!checkStatusBeforeAction('change password')) return;
+ 
+ const currentPassword = document.getElementById('currentPassword').value;
+ const newPassword = document.getElementById('newPassword').value;
+ const confirmPassword = document.getElementById('confirmPassword').value;
+ 
+ hidePasswordMessages();
+ 
+ if (!currentPassword || !newPassword || !confirmPassword) {
+ document.getElementById('passwordErrorMessage').textContent = 'All fields are required.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ return;
+ }
+ 
+ if (newPassword.length <8) {
+ document.getElementById('passwordErrorMessage').textContent = 'New password must be at least8 characters.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ return;
+ }
+ 
+ if (newPassword !== confirmPassword) {
+ document.getElementById('passwordErrorMessage').textContent = 'New passwords do not match.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ return;
+ }
+ 
+ if (currentPassword === newPassword) {
+ document.getElementById('passwordErrorMessage').textContent = 'New password must be different from current password.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ return;
+ }
+ 
+ const btn = document.getElementById('changePasswordBtn');
+ btn.disabled = true;
+ btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing...';
+ 
+ const formData = new FormData();
+ formData.append('currentPassword', currentPassword);
+ formData.append('newPassword', newPassword);
+ 
+ fetch('/Customer/Home/ChangePassword', {
+ method: 'POST',
+ body: formData
+ })
+ .then(response => response.json())
+ .then(data => {
+ btn.disabled = false;
+ btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+ 
+ if (data.success) {
+ document.getElementById('passwordSuccessMessage').textContent = data.message || 'Password changed successfully!';
+ document.getElementById('passwordSuccessMessage').style.display = 'block';
+ document.getElementById('changePasswordForm').reset();
+ 
+ // Show success toast
+ showSuccessToast(data.message || 'Password changed successfully!');
+ 
+ setTimeout(() => { closeEditModal(); location.reload(); },1200);
+ } else {
+ document.getElementById('passwordErrorMessage').textContent = data.message || 'Failed to change password.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ }
+ })
+ .catch(err => {
+ btn.disabled = false;
+ btn.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+ document.getElementById('passwordErrorMessage').textContent = 'An error occurred. Please try again.';
+ document.getElementById('passwordErrorMessage').style.display = 'block';
+ });
+ }
 
-    function openEditPetModal(petId) {
-        if (!checkStatusBeforeAction('edit pet')) return;
-        
-        fetch(`/Customer/Home/GetPetById?petId=${petId}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const pet = data.data;
-                document.getElementById('petIdInput').value = pet.petId;
-                document.getElementById('petName').value = pet.name || '';
-                document.getElementById('petAge').value = pet.age || '';
-                document.getElementById('petType').value = pet.type || '';
-                document.getElementById('petBreed').value = pet.breed || '';
-                document.getElementById('petRemark').value = pet.remark || '';
-                document.getElementById('petPhotoPreview').src = pet.photo || '/Customer/img/default-pet.png';
-                document.getElementById('petModalTitle').textContent = 'Edit Pet';
-                document.getElementById('petSuccessMessage').style.display = 'none';
-                document.getElementById('petErrorMessage').style.display = 'none';
-                document.getElementById('addPetOverlay').classList.add('show');
-                document.body.style.overflow = 'hidden';
-            }
-        });
-    }
+ // ========== PET FUNCTIONS ==========
+ function openAddPetModal() {
+ if (!checkStatusBeforeAction('add pet')) return;
+ 
+ document.getElementById('petIdInput').value = '';
+ document.getElementById('petModalTitle').textContent = 'Add Pet';
+ document.getElementById('editPetForm').reset();
+ document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
+ document.getElementById('petSuccessMessage').style.display = 'none';
+ document.getElementById('petErrorMessage').style.display = 'none';
+ document.getElementById('addPetOverlay').classList.add('show');
+ document.body.style.overflow = 'hidden';
+ }
 
-    function closeAddPetModal() {
-        document.getElementById('addPetOverlay').classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
+ function openEditPetModal(petId) {
+ if (!checkStatusBeforeAction('edit pet')) return;
+ 
+ fetch(`/Customer/Home/GetPetById?petId=${petId}`)
+ .then(r => r.json())
+ .then(data => {
+ if (data.success) {
+ const pet = data.data;
+ document.getElementById('petIdInput').value = pet.petId;
+ document.getElementById('petName').value = pet.name || '';
+ document.getElementById('petAge').value = pet.age || '';
+ document.getElementById('petType').value = pet.type || '';
+ document.getElementById('petBreed').value = pet.breed || '';
+ document.getElementById('petRemark').value = pet.remark || '';
+ document.getElementById('petPhotoPreview').src = pet.photo || '/Customer/img/default-pet.png';
+ document.getElementById('petModalTitle').textContent = 'Edit Pet';
+ document.getElementById('petSuccessMessage').style.display = 'none';
+ document.getElementById('petErrorMessage').style.display = 'none';
+ document.getElementById('addPetOverlay').classList.add('show');
+ document.body.style.overflow = 'hidden';
+ }
+ });
+ }
 
-    function submitPetForm(event) {
-        event.preventDefault();
-        
-        if (!checkStatusBeforeAction('save pet')) return;
-        
-        const petId = document.getElementById('petIdInput').value;
-        const formData = new FormData(document.getElementById('editPetForm'));
-        const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
+ function closeAddPetModal() {
+ document.getElementById('addPetOverlay').classList.remove('show');
+ document.body.style.overflow = 'auto';
+ }
 
-        fetch(url, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('petSuccessMessage').textContent = petId ? 'Pet updated!' : 'Pet added!';
-                document.getElementById('petSuccessMessage').style.display = 'block';
-                setTimeout(() => { closeAddPetModal(); location.reload(); }, 1000);
-            } else {
-                document.getElementById('petErrorMessage').textContent = data.message;
-                document.getElementById('petErrorMessage').style.display = 'block';
-            }
-        })
-        .catch(error => {
-            document.getElementById('petErrorMessage').textContent = 'Error saving pet';
-            document.getElementById('petErrorMessage').style.display = 'block';
-        });
-    }
+ function submitPetForm(event) {
+ event.preventDefault();
+ 
+ if (!checkStatusBeforeAction('save pet')) return;
+ 
+ const petId = document.getElementById('petIdInput').value;
+ const formData = new FormData(document.getElementById('editPetForm'));
+ const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
 
-    function deletePet(petId, petName) {
-        if (!checkStatusBeforeAction('delete pet')) return;
-        if (!confirm(`Delete ${petName}?`)) return;
-        const formData = new FormData();
-        formData.append('petId', petId);
-        formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
-        fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
-        .then(async response => {
-            const text = await response.text();
-            try {
-                const data = JSON.parse(text);
-                if (data.success) {
-                    location.reload();
-                } else {
-                    console.error('DeletePet error response:', data);
-                    alert(data.message || 'Delete failed');
-                }
-            } catch (err) {
-                console.error('Failed to parse DeletePet response as JSON:', text, err);
-                alert('Server error while deleting pet. See console for details.');
-            }
-        })
-        .catch(err => {
-            console.error('DeletePet request failed:', err);
-            alert('Request failed. See console for details.');
-        });
-    }
+ fetch(url, { method: 'POST', body: formData })
+ .then(r => r.json())
+ .then(data => {
+ if (data.success) {
+ document.getElementById('petSuccessMessage').textContent = petId ? 'Pet updated!' : 'Pet added!';
+ document.getElementById('petSuccessMessage').style.display = 'block';
+ setTimeout(() => { closeAddPetModal(); location.reload(); },1000);
+ } else {
+ document.getElementById('petErrorMessage').textContent = data.message;
+ document.getElementById('petErrorMessage').style.display = 'block';
+ }
+ })
+ .catch(error => {
+ document.getElementById('petErrorMessage').textContent = 'Error saving pet';
+ document.getElementById('petErrorMessage').style.display = 'block';
+ });
+ }
 
-    function previewPetPhoto(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = e => document.getElementById('petPhotoPreview').src = e.target.result;
-            reader.readAsDataURL(file);
-        }
-    }
+ function deletePet(petId, petName) {
+ if (!checkStatusBeforeAction('delete pet')) return;
+ if (!confirm(`Delete ${petName}?`)) return;
+ const formData = new FormData();
+ formData.append('petId', petId);
+ formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
+ fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
+ .then(async response => {
+ const text = await response.text();
+ try {
+ const data = JSON.parse(text);
+ if (data.success) {
+ location.reload();
+ } else {
+ console.error('DeletePet error response:', data);
+ alert(data.message || 'Delete failed');
+ }
+ } catch (err) {
+ console.error('Failed to parse DeletePet response as JSON:', text, err);
+ alert('Server error while deleting pet. See console for details.');
+ }
 
-    // ========== INIT ==========
-    document.addEventListener('DOMContentLoaded', function() {
-        initAvatarAnimation();
-        
-        // Close on overlay click
-        document.querySelectorAll('.custom-modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', e => {
-                if (e.target === overlay) {
-                    overlay.classList.remove('show');
-                    document.body.style.overflow = 'auto';
-                    if (overlay.id === 'webcamOverlay') closeWebcamModal();
-                }
-            });
-        });
-        
-        // ESC to close
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') {
-                closeEditModal();
-                closeAddPetModal();
-                closeWebcamModal();
-            }
-        });
-    });
+ })
+ .catch(err => {
+ console.error('DeletePet request failed:', err);
+ alert('Request failed. See console for details.');
+ });
+ }
+
+ function previewPetPhoto(event) {
+ const file = event.target.files[0];
+ if (file) {
+ const reader = new FileReader();
+ reader.onload = e => document.getElementById('petPhotoPreview').src = e.target.result;
+ reader.readAsDataURL(file);
+ }
+ }
+
+ // ========== SUCCESS TOASTS ==========
+ function showSuccessToast(message) {
+ try {
+ var container = document.getElementById('globalToastContainer');
+ var toast = document.getElementById('globalToast');
+ var msg = document.getElementById('globalToastMessage');
+ msg.textContent = message || 'Success';
+ container.style.display = 'block';
+ toast.classList.add('show');
+
+ // Auto hide after5 seconds
+ setTimeout(function() {
+ hideGlobalToast();
+ },5000);
+ } catch (e) { console.error(e); }
+ }
+
+ function hideGlobalToast() {
+ var container = document.getElementById('globalToastContainer');
+ var toast = document.getElementById('globalToast');
+ if (toast) toast.classList.remove('show');
+ if (container) setTimeout(function() { container.style.display = 'none'; },250);
+ }
+
+ // ========== INIT ==========
+ document.addEventListener('DOMContentLoaded', function() {
+ initAvatarAnimation();
+ 
+ // Close on overlay click
+ document.querySelectorAll('.custom-modal-overlay').forEach(overlay => {
+ overlay.addEventListener('click', e => {
+ if (e.target === overlay) {
+ overlay.classList.remove('show');
+ document.body.style.overflow = 'auto';
+ if (overlay.id === 'webcamOverlay') closeWebcamModal();
+ }
+ });
+ });
+ 
+ // ESC to close
+ document.addEventListener('keydown', e => {
+ if (e.key === 'Escape') {
+ closeEditModal();
+ closeAddPetModal();
+ closeWebcamModal();
+ }
+ });
+
+ // If server flagged pending password, open modal and switch to Change Password tab
+ try {
+ if (showPendingPassword === true || showPendingPassword === 'true') {
+ // Show edit modal and go directly to Change Password tab with a visible notice
+ openEditModal();
+ // Show change password tab
+ $('#editProfileTabs a[href="#changePasswordTab"]').tab('show');
+ // Reveal help notice inside change password tab
+ const notice = document.getElementById('firstLoginNotice');
+ if (notice) notice.style.display = 'block';
+ }
+ } catch (e) {
+ console.error('Error handling pending password display:', e);
+ }
+ });
+
 </script>
 }

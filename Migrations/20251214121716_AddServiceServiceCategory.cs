@@ -22,6 +22,7 @@ namespace PetGroomingAppointmentSystem.Migrations
                 name: "CategoryId",
                 table: "Services");
 
+            /*
             migrationBuilder.CreateTable(
                 name: "ServiceServiceCategories",
                 columns: table => new
@@ -55,6 +56,7 @@ namespace PetGroomingAppointmentSystem.Migrations
                 name: "IX_ServiceServiceCategories_ServiceId",
                 table: "ServiceServiceCategories",
                 column: "ServiceId");
+            */
         }
 
         /// <inheritdoc />

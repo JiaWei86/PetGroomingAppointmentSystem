@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using PetGroomingAppointmentSystem.Models;
 
 namespace PetGroomingAppointmentSystem.Models.ViewModels
 {
@@ -10,6 +11,7 @@ namespace PetGroomingAppointmentSystem.Models.ViewModels
         public StatCardModel TotalAppointments { get; set; }
         public StatCardModel ActiveGroomers { get; set; }
         public StatCardModel PendingAppointments { get; set; }
+        public List<RedeemGift> OutOfStockGifts { get; set; }
         public LoyaltyPointsModel LoyaltyPoints { get; set; }
 
         /// <summary>
@@ -28,6 +30,7 @@ namespace PetGroomingAppointmentSystem.Models.ViewModels
             TotalAppointments = new StatCardModel();
             ActiveGroomers = new StatCardModel();
             PendingAppointments = new StatCardModel();
+            OutOfStockGifts = new List<RedeemGift>();
             LoyaltyPoints = new LoyaltyPointsModel();
             ChartData = new ChartDataModel();
             AppointmentsForCalendar = new List<CalendarAppointmentModel>();

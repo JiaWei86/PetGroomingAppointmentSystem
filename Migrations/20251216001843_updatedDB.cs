@@ -10,6 +10,7 @@ namespace PetGroomingAppointmentSystem.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            /*
             migrationBuilder.DropForeignKey(
                 name: "FK_ResetPassword_Customers_CustomerId",
                 table: "ResetPassword");
@@ -78,6 +79,7 @@ namespace PetGroomingAppointmentSystem.Migrations
                 column: "CustomerId",
                 principalTable: "Customers",
                 principalColumn: "UserId");
+            */
         }
 
         /// <inheritdoc />

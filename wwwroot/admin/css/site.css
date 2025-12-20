@@ -35,6 +35,11 @@ body {
     font-size: 16px;
 }
 
+html, body {
+    /* allow horizontal scrolling when necessary (prevents content clipping) */
+    overflow-x: auto;
+}
+
 #app-container {
     display: flex;
     min-height: 100vh;
@@ -125,14 +130,30 @@ body {
 
 /* --- 3. Main Content Wrapper --- */
 #main-content-wrapper {
-    margin-left: var(--sidebar-width);
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--background-color);
-    overflow-x: auto; /* Allow horizontal scrolling for the main content area */
-    max-width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
-    width: calc(100vw - var(--sidebar-width)); /* ADD THIS */
+ margin-left: var(--sidebar-width);
+ flex-grow:1;
+ display: flex;
+ flex-direction: column;
+ background-color: var(--background-color);
+ /* allow internal scrolling and prevent flex item from forcing overflow */
+ overflow-x: auto;
+ width: auto;
+ max-width: none;
+ min-width:0; /* allow flex child to shrink properly */
+}
+
+/* Ensure inner content can shrink and not force overflow on flex container */
+#main-content-wrapper .main-inner,
+main#main-content, /* fallback */
+.main-inner {
+ min-width:0;
+}
+
+/* Prevent panels from exceeding their container and causing horizontal overflow */
+.panel {
+ box-sizing: border-box;
+ max-width:100%;
+ overflow: visible;
 }
 
 /* --- 4. Top Bar --- */

@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering; // Add this using directive
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 using PetGroomingAppointmentSystem.Areas.Admin.Services;
@@ -15,6 +15,13 @@ using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
 using PetGroomingAppointmentSystem.Services; 
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
+using PetGroomingAppointmentSystem.Services;
+using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 
@@ -38,6 +45,7 @@ public class HomeController : Controller
         AdminServices.IValidationService validationService,  // Use alias
         IS3StorageService s3Service,
         IWebHostEnvironment webHostEnvironment) 
+        IS3StorageService s3Service)
     {
         _db = context;
         _emailService = emailService;
@@ -49,14 +57,65 @@ public class HomeController : Controller
     }
     public class FieldValidationRequest
     {
-        public string StaffId { get; set; }
-        public string FieldName { get; set; }
-        public string FieldValue { get; set; }
+        public required string StaffId { get; set; }
+        public required string FieldName { get; set; }
+        public required string IcValue { get; set; } // 新增：用于传递IC号码
+        public required string FieldValue { get; set; }
     }
 
 
     // ========== DASHBOARD
     public async Task<IActionResult> Index()
+    {
+        ViewData["ActivePage"] = "Dashboard";
+
+        var viewModel = new DashboardViewModel();
+        var now = DateTime.Now;
+
+        // --- 1. 填充统计卡片 (Stat Cards) ---
+
+        // 总预约数 (本月 vs 上月)
+        var firstDayOfCurrentMonth = new DateTime(now.Year, now.Month, 1);
+        var firstDayOfLastMonth = firstDayOfCurrentMonth.AddMonths(-1);
+        var lastDayOfLastMonth = firstDayOfCurrentMonth.AddDays(-1);
+
+        int currentMonthAppointments = await _db.Appointments
+        .CountAsync(a => a.AppointmentDateTime >= firstDayOfCurrentMonth && a.AppointmentDateTime < firstDayOfCurrentMonth.AddMonths(1));
+
+        int lastMonthAppointments = await _db.Appointments
+        .CountAsync(a => a.AppointmentDateTime >= firstDayOfLastMonth && a.AppointmentDateTime < firstDayOfCurrentMonth);
+
+        viewModel.TotalAppointments.Count = currentMonthAppointments;
+        if (lastMonthAppointments > 0)
+        {
+            viewModel.TotalAppointments.ChangePercentage = Math.Round(((decimal)(currentMonthAppointments - lastMonthAppointments) / lastMonthAppointments) * 100, 2);
+        }
+        else if (currentMonthAppointments > 0)
+        {
+            viewModel.TotalAppointments.ChangePercentage = 100; // 如果上月为0，本月有，则增长100%
+        }
+
+        // 活跃美容师数量
+        viewModel.ActiveGroomers.Count = await _db.Staffs.CountAsync(s => s.Role == "staff");
+
+        // 总顾客数量 (替换了原来的"待处理预约")
+        viewModel.PendingAppointments.Count = await _db.Customers.CountAsync();
+
+
+        // --- 2. 塡充忠诚度积分 (Loyalty Points) ---
+        // 注意: 以下是基于现有模型的模拟。您需要根据您的业务逻辑调整。
+        var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
+        var endOfWeek = startOfWeek.AddDays(7);
+
+        // 假设每次完成的预约都奖励10个积分
+        viewModel.LoyaltyPoints.AwardedThisWeek = await _db.Appointments
+        .CountAsync(a => a.Status == "Completed" && a.AppointmentDateTime >= startOfWeek && a.AppointmentDateTime < endOfWeek) * 10;
+
+        // 活跃会员数 (假设为总顾客数)
+        viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers.CountAsync();
+
+        // 假设每次使用礼品兑换都消耗500积分
+        viewModel.LoyaltyPoints.RedeemedThisWeek = 0; // 您需要一个礼品兑换记录表来计算这个值
  {
  ViewData["ActivePage"] = "Dashboard";
 
@@ -114,6 +173,78 @@ public class HomeController : Controller
 
         // 周视图 (过去7天)
         var last7Days = Enumerable.Range(0, 7).Select(i => now.AddDays(-i).Date).Reverse().ToList();
+        var weeklyData = await _db.Appointments
+        .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
+        .GroupBy(a => a.AppointmentDateTime!.Value.Date)
+        .Select(g => new { Date = g.Key, Count = g.Count() })
+        .ToListAsync();
+
+        var weeklyDict = weeklyData.ToDictionary(x => x.Date, x => x.Count);
+        viewModel.ChartData.Week = new ChartSeriesModel
+        {
+            Labels = last7Days.Select(d => d.ToString("ddd")).ToList(),
+            Data = last7Days.Select(d => weeklyDict.ContainsKey(d) ? weeklyDict[d] : 0).ToList()
+        };
+
+        // 月视图 (本月按周)
+        var weeksInMonth = Enumerable.Range(0, 4)
+        .Select(i => $"Week {i + 1}")
+        .ToList();
+        var monthData = new List<int>();
+        for (int i = 0; i < 4; i++)
+        {
+            var weekStart = firstDayOfCurrentMonth.AddDays(i * 7);
+            var weekEnd = weekStart.AddDays(7);
+            int weekCount = await _db.Appointments
+            .CountAsync(a => a.AppointmentDateTime >= weekStart && a.AppointmentDateTime < weekEnd);
+            monthData.Add(weekCount);
+        }
+        viewModel.ChartData.Month = new ChartSeriesModel { Labels = weeksInMonth, Data = monthData };
+
+        // 日视图 (今天按小时)
+        var todayStart = now.Date.AddHours(9); // 9 AM
+        var todayEnd = now.Date.AddHours(17); // 5 PM
+        var hourlyData = await _db.Appointments
+        .Where(a => a.AppointmentDateTime >= todayStart && a.AppointmentDateTime < todayEnd)
+        .GroupBy(a => a.AppointmentDateTime.Value.Hour)
+        .Select(g => new { Hour = g.Key, Count = g.Count() })
+        .ToListAsync();
+
+        var hourlyDict = hourlyData.ToDictionary(x => x.Hour, x => x.Count);
+        var dayLabels = new List<string>();
+        var dayData = new List<int>();
+        for (int hour = 9; hour <= 16; hour++)
+        {
+            dayLabels.Add(new DateTime(1, 1, 1, hour, 0, 0).ToString("h tt"));
+            dayData.Add(hourlyDict.ContainsKey(hour) ? hourlyDict[hour] : 0);
+        }
+        viewModel.ChartData.Day = new ChartSeriesModel { Labels = dayLabels, Data = dayData };
+
+
+        // --- 4. 塡充日历预约 (Calendar Appointments) ---
+        var calendarStartDate = firstDayOfCurrentMonth.AddMonths(-1);
+        var calendarEndDate = firstDayOfCurrentMonth.AddMonths(2);
+
+        viewModel.AppointmentsForCalendar = await _db.Appointments
+        .Where(a => a.AppointmentDateTime >= calendarStartDate && a.AppointmentDateTime < calendarEndDate)
+        .Include(a => a.Pet)
+        .Include(a => a.Staff)
+        .Include(a => a.Service)
+        .Select(a => new CalendarAppointmentModel
+        {
+            Id = a.AppointmentId,
+            Date = a.AppointmentDateTime.Value.ToString("yyyy-MM-dd"),
+            Time = a.AppointmentDateTime.Value.ToString("HH:mm"),
+            PetName = a.Pet.Name,
+            GroomerName = a.Staff.Name,
+            ServiceType = a.Service.Name,
+            Status = a.Status.ToLower()
+        })
+        .ToListAsync();
+
+
+        return View(viewModel);
+    }
  var weeklyData = await _db.Appointments
  .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
  .GroupBy(a => a.AppointmentDateTime.Value.Date)
@@ -205,7 +336,8 @@ public class HomeController : Controller
             string errorMessage = "";
             var valueToCheck = request.FieldValue.Trim();
 
-            switch (request.FieldName.ToLower())
+            var fieldNameNormalized = request.FieldName?.Trim().ToLowerInvariant() ?? string.Empty;
+            switch (fieldNameNormalized)
             {
                 case "name":
                     if (!_validationService.ValidateName(valueToCheck))
@@ -260,6 +392,34 @@ public class HomeController : Controller
                     if (isDuplicate)
                     {
                         errorMessage = "This phone number is already registered.";
+                    }
+                    break;
+
+                case "experienceyear":
+                case "experience":
+                    if (!int.TryParse(valueToCheck, out int expVal))
+                    {
+                        return Json(new { isValid = false, errorMessage = "Experience must be a number." });
+                    }
+                    if (!_validationService.ValidateExperienceYear(expVal))
+                    {
+                        return Json(new { isValid = false, errorMessage = "Experience must be between0-50 years." });
+                    }
+
+                    if (!string.IsNullOrEmpty(request.IcValue))
+                    {
+                        var validationResult = _validationService.ValidateExperienceAgainstAge(expVal, request.IcValue);
+                        if (!validationResult.IsValid)
+                            return Json(new { isValid = false, errorMessage = validationResult.ErrorMessage });
+                    }
+                    break;
+
+                case "description":
+                case "desc":
+                    // optional, but enforce reasonable max length
+                    if (!string.IsNullOrEmpty(valueToCheck) && valueToCheck.Length > 500)
+                    {
+                        return Json(new { isValid = false, errorMessage = "Description must be500 characters or fewer." });
                     }
                     break;
 
@@ -361,8 +521,8 @@ public class HomeController : Controller
 
             if (string.IsNullOrEmpty(currentAdminId))
             {
-                TempData["ErrorMessage"] = "? Admin not logged in. Please login again.";
-                return RedirectToAction(nameof(Groomer));
+                TempData["ErrorMessage"] = "Admin not logged in. Please login again.";
+                return RedirectToAction("Login", "Auth");
             }
 
             // ========== GENERATE RANDOM PASSWORD USING PASSWORD SERVICE ==========
@@ -417,13 +577,13 @@ public class HomeController : Controller
                 }
 
                 await _emailService.SendStaffCredentialsEmailAsync(
-                    toEmail: staff.Email,
-                    staffName: staff.Name,
-                    staffId: newStaffId,
-                    temporaryPassword: temporaryPassword,
-                    email: staff.Email,
-                    phone: staff.Phone,
-                    loginUrl: loginUrl
+                    staff.Email,
+                    staff.Name,
+                    newStaffId,
+                    temporaryPassword,
+                    staff.Email,
+                    staff.Phone,
+                    loginUrl
                 );
             }
             catch (Exception ex)
@@ -526,7 +686,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(deleteStaffId)) return NotFound();
 
             var dbStaff = await _db.Staffs.FindAsync(deleteStaffId);
-            if (dbStaff == null) return NotFound();     
+            if (dbStaff == null) return NotFound();
 
             _db.Staffs.Remove(dbStaff);
             await _db.SaveChangesAsync();
@@ -833,11 +993,11 @@ public class HomeController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddPetToCustomer(
-        string customerId, 
-        string petName, 
-        string petType, 
-        string petBreed, 
-        int? petAge, 
+        string customerId,
+        string petName,
+        string petType,
+        string petBreed,
+        int? petAge,
         string petRemark,
         IFormFile petPhotoUpload) // ✅ Add photo parameter
     {
@@ -860,6 +1020,7 @@ public class HomeController : Controller
             {
                 // Extract numeric part and find the maximum
                 nextNumber = existingPetIds
+                    .Select(id => int.TryParse(id.Substring(1), out var n) ? n : 0)
                     .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
                     .Where(n => n > 0)
                     .OrderBy(n => n)
@@ -978,11 +1139,11 @@ public class HomeController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdatePet(
-        string petId, 
-        string petName, 
-        string petType, 
-        string petBreed, 
-        int? petAge, 
+        string petId,
+        string petName,
+        string petType,
+        string petBreed,
+        int? petAge,
         string petRemark,
         IFormFile petPhotoUpload) // ✅ Add photo parameter
     {
@@ -1043,50 +1204,50 @@ public class HomeController : Controller
 
     // ========== APPOINTMENT ==========
     public async Task<IActionResult> Appointment(string status, string groomerid, string date, string editId, string filterAppointmentId, string filterCustomerName)
- {
- ViewData["ActivePage"] = "Appointment";
- // Base query
- var query = _db.Appointments
- .Include(a => a.Customer)
- .Include(a => a.Pet)
- .Include(a => a.Staff)
- .Include(a => a.Service)
- .AsQueryable();
+    {
+        ViewData["ActivePage"] = "Appointment";
+        // Base query
+        var query = _db.Appointments
+        .Include(a => a.Customer)
+        .Include(a => a.Pet)
+        .Include(a => a.Staff)
+        .Include(a => a.Service)
+        .AsQueryable();
 
- // Apply Appointment ID filter
- if (!string.IsNullOrEmpty(filterAppointmentId))
- {
- query = query.Where(a => a.AppointmentId.Contains(filterAppointmentId));
- }
+        // Apply Appointment ID filter
+        if (!string.IsNullOrEmpty(filterAppointmentId))
+        {
+            query = query.Where(a => a.AppointmentId.Contains(filterAppointmentId));
+        }
 
- // Apply Customer Name filter
- if (!string.IsNullOrEmpty(filterCustomerName))
- {
- query = query.Where(a => a.Customer.Name.Contains(filterCustomerName));
- }
+        // Apply Customer Name filter
+        if (!string.IsNullOrEmpty(filterCustomerName))
+        {
+            query = query.Where(a => a.Customer.Name.Contains(filterCustomerName));
+        }
 
- // Apply status filter if it's not "All"
- if (!string.IsNullOrEmpty(status))
- {
- query = query.Where(a => a.Status == status);
- }
+        // Apply status filter if it's not "All"
+        if (!string.IsNullOrEmpty(status))
+        {
+            query = query.Where(a => a.Status == status);
+        }
 
- if (!string.IsNullOrEmpty(groomerid))
- {
- query = query.Where(a => a.StaffId == groomerid);
- }
+        if (!string.IsNullOrEmpty(groomerid))
+        {
+            query = query.Where(a => a.StaffId == groomerid);
+        }
 
- if (!string.IsNullOrEmpty(date))
- {
- if (DateTime.TryParse(date, out var parsedDate))
- {
- var start = parsedDate.Date;
- var end = start.AddDays(1);
- query = query.Where(a => a.AppointmentDateTime >= start && a.AppointmentDateTime < end);
- }
- }
+        if (!string.IsNullOrEmpty(date))
+        {
+            if (DateTime.TryParse(date, out var parsedDate))
+            {
+                var start = parsedDate.Date;
+                var end = start.AddDays(1);
+                query = query.Where(a => a.AppointmentDateTime >= start && a.AppointmentDateTime < end);
+            }
+        }
 
- var appointments = await query.OrderByDescending(a => a.AppointmentDateTime).ToListAsync();
+        var appointments = await query.OrderByDescending(a => a.AppointmentDateTime).ToListAsync();
 
         // Create and populate the ViewModel
         var viewModel = new AppointmentViewModel
@@ -1121,7 +1282,7 @@ public class HomeController : Controller
         ViewBag.EditingId = editId;
 
         return View(viewModel);
- }
+    }
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Appointment(AppointmentViewModel model, string actionType)
@@ -1131,16 +1292,15 @@ public class HomeController : Controller
             // 1. 检查模型状态是否有效
             if (!ModelState.IsValid)
             {
-                // 将所有模型验证错误合并成一条消息
                 var errors = ModelState.Values
                                     .SelectMany(v => v.Errors)
                                     .Select(e => e.ErrorMessage)
                                     .ToList();
-                 TempData["ErrorMessage"] = "Data is invalid. Please check your inputs. Details: " + string.Join("; ", errors);
+                TempData["ErrorMessage"] = "Data is invalid. Please check your inputs. Details: " + string.Join("; ", errors);
                 return RedirectToAction(nameof(Appointment));
             }
-    
-            // 2. 检查宠物和服务的数量是否匹配 (使用 PetServiceMap)
+
+            // 2. 检查宠物和服务的数量是否匹配
             if (model.PetId == null || model.PetServiceMap == null || model.PetId.Count == 0 || model.PetId.Count != model.PetServiceMap.Count)
             {
                 TempData["ErrorMessage"] = "An error occurred. The number of selected pets must match the number of selected services. Please try again.";
@@ -1149,55 +1309,37 @@ public class HomeController : Controller
 
             try
             {
-                var newAppointments = new List<Appointment>();
-                var appointmentStartTime = model.AppointmentDateTime;
+                // ========== 1. INITIAL VALIDATION ==========
 
-                // 检查预约时间是否在当前时间之前
-                if (appointmentStartTime < DateTime.Now)
+                // Validate Admin Session
+                string? currentAdminId = HttpContext.Session.GetString("AdminId");
+                if (string.IsNullOrEmpty(currentAdminId))
+                {
+                    TempData["ErrorMessage"] = "Your session has expired. Please log in again.";
+                    return RedirectToAction("Login", "Auth", new { area = "Admin" });
+                }
+
+                // Validate Customer Status
+                var customer = await _db.Customers.FindAsync(model.CustomerId);
+                if (customer == null || string.IsNullOrWhiteSpace(customer.Status) || customer.Status.Trim().ToUpperInvariant() != "ACTIVE")
+                {
+                    TempData["ErrorMessage"] = "Appointments can only be created for 'Active' customers.";
+                    return RedirectToAction(nameof(Appointment));
+                }
+
+                // Validate Appointment Time
+                if (model.AppointmentDateTime < DateTime.Now)
                 {
                     TempData["ErrorMessage"] = "You cannot create an appointment for a time that has already passed.";
                     return RedirectToAction(nameof(Appointment));
                 }
 
+                // ========== 2. SETUP FOR APPOINTMENT CREATION ==========
 
+                var newAppointments = new List<Appointment>();
+                var appointmentProcessingTime = model.AppointmentDateTime;
 
-                // 如果是为每只宠物单独分配美容师
-                if (model.GroomerMode == "individual" && model.PetGroomerMap != null)
-                {
-                    // 检查是否有任何一只宠物没有分配美容师
-                    if (model.PetId.Any(petId => !model.PetGroomerMap.ContainsKey(petId) || string.IsNullOrEmpty(model.PetGroomerMap[petId])))
-                    {
-                        TempData["ErrorMessage"] = "When assigning individually, every pet must be assigned a groomer.";
-                        return RedirectToAction(nameof(Appointment));
-                    }
-
-                    // 按美容师分组，检查每个美容师的时间安排
-                    var groomerTasks = model.PetGroomerMap.GroupBy(kv => kv.Value);
-                    foreach (var group in groomerTasks)
-                    {
-                        var groomerId = group.Key;
-                        double totalDurationForGroomer = 0;
-                        foreach (var petGroomerPair in group)
-                        {
-                            if (model.PetServiceMap.TryGetValue(petGroomerPair.Key, out var serviceId))
-                            {
-                                var service = await _db.Services.FindAsync(serviceId);
-                                if (service?.DurationTime.HasValue ?? false)
-                                {
-                                    totalDurationForGroomer += service.DurationTime.Value;
-                                }
-                            }
-                        }
-                        var finalEndTime = appointmentStartTime.AddMinutes(totalDurationForGroomer);
-                        if (finalEndTime.TimeOfDay > new TimeSpan(16, 30, 0))
-                        {
-                            var groomer = await _db.Staffs.FindAsync(groomerId);
-                            TempData["ErrorMessage"] = $"The total duration for services assigned to {groomer?.Name} exceeds the closing time of 4:30 PM.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-                    }
-                }
-                // 优化ID生成：一次性获取所有ID
+                // Prepare for Smart ID Generation
                 var allAppointmentIds = await _db.Appointments.Select(a => a.AppointmentId).ToListAsync();
                 var usedNumbers = allAppointmentIds
                     .Where(id => !string.IsNullOrEmpty(id) && id.StartsWith("AP"))
@@ -1206,247 +1348,175 @@ public class HomeController : Controller
                     .ToHashSet();
                 int nextIdNum = 1;
 
-                // 如果用户指定了美容师
-                // 如果是为每只宠物单独分配美容师
-                if (model.GroomerMode == "individual")
+                TempData["DebugMessage"] = "";
+
+                // Create a dictionary to hold pet-specific data
+                var petTasks = new Dictionary<string, (Service service, string groomerId)>();
+
+                // ========== 3. PRE-PROCESSING & VALIDATION FOR ALL PETS ==========
+
+                if (model.GroomerMode == "one_sequential")
                 {
+                    if (string.IsNullOrEmpty(model.StaffId) || model.StaffId == "any")
+                    {
+                        TempData["ErrorMessage"] = "You must select a specific groomer for the 'One Groomer (Sequential)' mode.";
+                        return RedirectToAction(nameof(Appointment));
+                    }
+
                     foreach (var petId in model.PetId)
                     {
-                        if (!model.PetServiceMap.TryGetValue(petId, out var serviceId) || !model.PetGroomerMap.TryGetValue(petId, out var groomerId)) continue;
+                        if (model.PetServiceMap.TryGetValue(petId, out var serviceId))
+                        {
+                            var service = await _db.Services.FindAsync(serviceId);
+                            if (service != null && service.DurationTime.HasValue)
+                            {
+                                petTasks[petId] = (service, model.StaffId);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    List<Models.Staff> availableGroomersForAutoAssign = null;
 
+                    foreach (var petId in model.PetId)
+                    {
+                        if (!model.PetServiceMap.TryGetValue(petId, out var serviceId)) continue;
                         var service = await _db.Services.FindAsync(serviceId);
                         if (service == null || !service.DurationTime.HasValue) continue;
 
-                        var appointmentEndTime = appointmentStartTime.AddMinutes(service.DurationTime.Value);
+                        string assignedGroomerId = null;
 
-                        bool isBusy = await _db.Appointments.AnyAsync(a =>
-                            a.StaffId == groomerId &&
-                            a.AppointmentDateTime < appointmentEndTime &&
-                            a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-
-                        if (isBusy)
+                        if (model.PetGroomerMap?.ContainsKey(petId) == true && !string.IsNullOrEmpty(model.PetGroomerMap[petId]) && model.PetGroomerMap[petId] != "any")
                         {
-                            var groomer = await _db.Staffs.FindAsync(groomerId);
-                            TempData["ErrorMessage"] = $"Groomer '{groomer?.Name}' is not available at the selected time for one of the pets. Please check availability.";
-                            return RedirectToAction(nameof(Appointment));
+                            assignedGroomerId = model.PetGroomerMap[petId];
                         }
-
-                        while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
-                        var newAppointmentId = "AP" + nextIdNum.ToString("D3");
-                        usedNumbers.Add(nextIdNum);
-
-                        string currentAdminId = HttpContext.Session.GetString("AdminId");
-                        if (string.IsNullOrEmpty(currentAdminId))
+                        else if (model.PetId.Count == 1 && !string.IsNullOrEmpty(model.StaffId) && model.StaffId != "any")
                         {
-                            TempData["ErrorMessage"] = "Your session has expired. Please log in again.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-
-                        newAppointments.Add(new Appointment
-                        {
-                            AppointmentId = newAppointmentId,
-                            CustomerId = model.CustomerId,
-                            PetId = petId,
-                            ServiceId = serviceId,
-                            StaffId = groomerId,
-                            AppointmentDateTime = appointmentStartTime,
-                            SpecialRequest = model.SpecialRequest,
-                            Status = "Confirmed",
-                            AdminId = currentAdminId,
-                            DurationTime = service.DurationTime.Value,
-                            CreatedAt = DateTime.Now
-                        });
-                    }
-                }
-                else // 默认行为：如果只有一只宠物，则使用StaffId；如果是多只宠物，则为 "Any" 模式
-                {
-                    // 单只宠物，指定了美容师
-                    if (model.PetId.Count == 1 && (string.IsNullOrEmpty(model.GroomerMode) || model.GroomerMode == "one"))
-                    {
-                        var petId = model.PetId.First();
-                        if (model.PetServiceMap.TryGetValue(petId, out var serviceId) && !string.IsNullOrEmpty(serviceId))
-                        {
-                            var service = await _db.Services.FindAsync(serviceId);
-                            if (service == null || !service.DurationTime.HasValue)
-                            {
-                                TempData["ErrorMessage"] = "The selected service is invalid or has no duration.";
-                                return RedirectToAction(nameof(Appointment));
-                            }
-
-                            var appointmentEndTime = appointmentStartTime.AddMinutes(service.DurationTime.Value);
-                            string assignedGroomerId = null;
-
-                            // Case 1: A specific groomer is selected
-                            if (!string.IsNullOrEmpty(model.StaffId) && model.StaffId != "any")
-                            {
-                                bool isBusy = await _db.Appointments.AnyAsync(a =>
-                                    a.StaffId == model.StaffId &&
-                                    a.AppointmentDateTime < appointmentEndTime &&
-                                    a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-
-                                if (isBusy)
-                                {
-                                    var groomer = await _db.Staffs.FindAsync(model.StaffId);
-                                    TempData["ErrorMessage"] = $"Groomer '{groomer?.Name}' is unavailable at the selected time.";
-                                    return RedirectToAction(nameof(Appointment));
-                                }
-                                assignedGroomerId = model.StaffId;
-                            }
-                            else // Case 2: "Any Available Groomer" is selected
-                            {
-                                var availableGroomers = await _db.Staffs
-                                    .Where(s => s.Position.Contains("Groomer"))
-                                    .ToListAsync();
-
-                                foreach (var groomer in availableGroomers)
-                                {
-                                    bool isBusy = await _db.Appointments.AnyAsync(a =>
-                                        a.StaffId == groomer.UserId &&
-                                        a.AppointmentDateTime < appointmentEndTime &&
-                                        a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-
-                                    if (!isBusy)
-                                    {
-                                        assignedGroomerId = groomer.UserId;
-                                        break; // Found an available groomer
-                                    }
-                                }
-
-                                if (assignedGroomerId == null)
-                                {
-                                    TempData["ErrorMessage"] = $"No groomers are available for the appointment at {appointmentStartTime:MMM dd, hh:mm tt}. Please choose another time.";
-                                    return RedirectToAction(nameof(Appointment));
-                                }
-                            }
-
-                            // Create the single appointment
-                            while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
-                            var newAppointmentId = "AP" + nextIdNum.ToString("D3");
-
-                            string currentAdminId = HttpContext.Session.GetString("AdminId");
-                            if (string.IsNullOrEmpty(currentAdminId))
-                            {
-                                TempData["ErrorMessage"] = "Your session has expired. Please log in again.";
-                                return RedirectToAction(nameof(Appointment));
-                            }
-
-                            newAppointments.Add(new Appointment
-                            {
-                                AppointmentId = newAppointmentId,
-                                CustomerId = model.CustomerId,
-                                PetId = petId,
-                                ServiceId = serviceId,
-                                StaffId = assignedGroomerId,
-                                AppointmentDateTime = appointmentStartTime,
-                                SpecialRequest = model.SpecialRequest,
-                                Status = "Confirmed",
-                                AdminId = currentAdminId,
-                                DurationTime = service.DurationTime.Value,
-                                CreatedAt = DateTime.Now
-                            });
-
-                            // Since we've handled the single pet case completely, we can skip the rest of the logic.
-                            // The final save logic is outside this 'else' block.
+                            assignedGroomerId = model.StaffId;
                         }
                         else
                         {
-                            TempData["ErrorMessage"] = "A service must be selected for the pet.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-                    }
-                    // This 'else' now correctly handles only the "Any" mode for multiple pets
-                    else
-                    {
-                        var sequentialStartTimeForAny = appointmentStartTime;
-
-                        // 1. 获取所有美容师及其当天的预约
-                        var groomers = await _db.Staffs
-                            .Where(s => s.Position.Contains("Groomer"))
-                            .Include(s => s.Appointments.Where(a => a.AppointmentDateTime.Value.Date == appointmentStartTime.Date))
-                            .ThenInclude(a => a.Service)
-                            .ToListAsync();
-
-                        if (!groomers.Any())
-                        {
-                            TempData["ErrorMessage"] = "No groomers are configured in the system.";
-                            return RedirectToAction(nameof(Appointment));
-                        }
-
-                        // 2. 模拟分配过程
-                        foreach (var petId in model.PetId)
-                        {
-                            if (!model.PetServiceMap.TryGetValue(petId, out var serviceId)) continue;
-
-                            var service = await _db.Services.FindAsync(serviceId);
-                            if (service == null || !service.DurationTime.HasValue) continue;
-
-                            var appointmentEndTime = sequentialStartTimeForAny.AddMinutes(service.DurationTime.Value);
-                            string assignedGroomerId = null;
-
-                            // 寻找一个能接这个单的美容师
-                            foreach (var groomer in groomers.OrderBy(g => g.Appointments.Count)) // 优先分配给预约较少的美容师
+                            if (availableGroomersForAutoAssign == null)
                             {
-                                // 检查该美容师的现有预约 + 已临时分配的预约
-                                var existingBookings = groomer.Appointments.Select(a => (
-                                    Start: a.AppointmentDateTime.Value,
-                                    End: a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) // Use DurationTime from Appointment
-                                ))
-                                    .ToList();
+                                availableGroomersForAutoAssign = await _db.Staffs
+                                    .Where(s => s.Position.Contains("Groomer"))
+                                    .Include(s => s.Appointments.Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date == model.AppointmentDateTime.Date && a.Status != "Cancelled"))
+                                    .ToListAsync();
+                            }
 
-                                bool isAvailable = !existingBookings.Any(b =>
-                                    sequentialStartTimeForAny < b.End && appointmentEndTime > b.Start
-                                );
+                            foreach (var groomer in availableGroomersForAutoAssign)
+                            {
+                                var appointmentEndTime = model.AppointmentDateTime.AddMinutes(service.DurationTime.Value);
+                                bool isBusy = groomer.Appointments.Any(a => model.AppointmentDateTime < a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) && appointmentEndTime > a.AppointmentDateTime);
 
-                                if (isAvailable)
+                                if (!isBusy)
                                 {
                                     assignedGroomerId = groomer.UserId;
-                                    break; // 找到美容师，跳出循环
+                                    groomer.Appointments.Add(new Appointment { AppointmentDateTime = model.AppointmentDateTime, DurationTime = service.DurationTime.Value });
+                                    break;
                                 }
                             }
-
-                            if (assignedGroomerId == null)
-                            {
-                                TempData["ErrorMessage"] = $"No groomers are available for one of the services starting at {sequentialStartTimeForAny:MMM dd, hh:mm tt}. Please choose another time or assign manually.";
-                                return RedirectToAction(nameof(Appointment));
-                            }
-
-                            // 为这个宠物创建预约
-                            while (usedNumbers.Contains(nextIdNum)) nextIdNum++;
-                            var newAppointmentId = "AP" + nextIdNum.ToString("D3");
-                            usedNumbers.Add(nextIdNum);
-
-                            // Get Admin ID from session
-                            string currentAdminId = HttpContext.Session.GetString("AdminId");
-                            if (string.IsNullOrEmpty(currentAdminId))
-                            {
-                                TempData["ErrorMessage"] = "Your session has expired. Please log in again to create appointments.";
-                                return RedirectToAction(nameof(Appointment));
-                            }
-
-                            var newAppt = new Appointment
-                            {
-                                AppointmentId = newAppointmentId,
-                                CustomerId = model.CustomerId,
-                                PetId = petId,
-                                ServiceId = serviceId,
-                                StaffId = assignedGroomerId,
-                                AppointmentDateTime = sequentialStartTimeForAny,
-                                SpecialRequest = model.SpecialRequest,
-                                Status = "Confirmed",
-                                AdminId = currentAdminId,
-                                CreatedAt = DateTime.Now,
-                                DurationTime = service.DurationTime.Value
-                            };
-                            newAppointments.Add(newAppt);
-                            // 手动将新预约添加到美容师的预约列表中，以便下一次循环检查
-                            // This is safe because we are adding the DurationTime to newAppt
-                            groomers.First(g => g.UserId == assignedGroomerId).Appointments.Add(newAppt);
-
                         }
 
+                        if (string.IsNullOrEmpty(assignedGroomerId))
+                        {
+                            TempData["ErrorMessage"] = $"Could not find an available groomer for all services at the selected time. Please try another time or assign groomers manually.";
+                            return RedirectToAction(nameof(Appointment));
+                        }
+                        petTasks[petId] = (service, assignedGroomerId);
                     }
-                    if (newAppointments.Any())
+                }
+
+                // ========== 4. CREATE APPOINTMENTS ==========
+
+                foreach (var petId in model.PetId)
+                {
+                    TempData["DebugMessage"] += $"Processing petId={petId}\n";
+
+                    if (!petTasks.TryGetValue(petId, out var task))
                     {
+                        TempData["DebugMessage"] += $"Skipping petId={petId}, not in petTasks\n";
+                        continue;
+                    }
+
+                    var service = task.service;
+                    var assignedGroomerId = task.groomerId; // Rename for clarity consistent with pre-processing
+                    var duration = service.DurationTime.Value;
+                    var appointmentStartTime = appointmentProcessingTime; // Rename for clarity consistent with pre-processing
+                    var appointmentEndTime = appointmentStartTime.AddMinutes(duration);
+
+                    // Re-check for conflicts with the *final* assigned groomer and time
+                    // (This check should ideally be part of pre-processing for all appointments for better efficiency)
+                    bool isBusy = await _db.Appointments.AnyAsync(a =>
+                        a.StaffId == assignedGroomerId && a.Status != "Cancelled" &&
+                        a.AppointmentDateTime.HasValue &&
+                        appointmentStartTime < a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) &&
+                        appointmentEndTime > a.AppointmentDateTime.Value);
+
+                    if (isBusy)
+                    {
+                        var groomer = await _db.Staffs.FindAsync(assignedGroomerId);
+                        TempData["ErrorMessage"] = $"Groomer '{groomer?.Name}' has a conflict for the timeslot {appointmentStartTime:t} - {appointmentEndTime:t}. The schedule may have changed. Please try again.";
+                        return RedirectToAction(nameof(Appointment));
+                    }
+
+                    // Generate a unique AppointmentId
+                    while (usedNumbers.Contains(nextIdNum))
+                    {
+                        nextIdNum++;
+                    }
+                    var newAppointmentId = "AP" + nextIdNum.ToString("D3");
+                    usedNumbers.Add(nextIdNum);
+                    nextIdNum++;
+
+                    TempData["DebugMessage"] += $"Generated AppointmentId={newAppointmentId} for petId={petId}\n";
+
+                    // Create the new Appointment object
+                    var newAppointment = new Appointment
+                    {
+                        AppointmentId = newAppointmentId,
+                        CustomerId = model.CustomerId,
+                        PetId = petId,
+                        ServiceId = service.ServiceId,
+                        StaffId = assignedGroomerId,
+                        AppointmentDateTime = appointmentStartTime,
+                        DurationTime = duration,
+                        SpecialRequest = model.SpecialRequest ?? "",
+                        Status = "Confirmed",
+                        AdminId = currentAdminId,
+                        CreatedAt = DateTime.Now
+                    };
+
+                    newAppointments.Add(newAppointment);
+                    TempData["DebugMessage"] += $"Added appointment for petId={petId}, AppointmentId={newAppointment.AppointmentId}\n";
+
+                    // For sequential mode, update the start time for the next appointment
+                    if (model.GroomerMode == "one_sequential")
+                    {
+                        appointmentProcessingTime = appointmentEndTime;
+                    }
+
+                    TempData["DebugMessage"] += $"Creating appointment for petId={petId}, AppointmentId={newAppointmentId}\n";
+                } // End of outer foreach (var petId in model.PetId)
+
+                // ========== 5. SAVE TO DATABASE ==========
+
+                if (newAppointments.Count == model.PetId.Count)
+                {
+                    foreach (var appt in newAppointments)
+                    {
+                        if (string.IsNullOrEmpty(appt.AppointmentId))
+                        {
+                            TempData["ErrorMessage"] = "Error: Internal error - appointment ID is missing.";
+                            return RedirectToAction(nameof(Appointment));
+                        }
+                    }
+
+                    TempData["DebugMessage"] += $"newAppointments count: {newAppointments.Count}\n";
+                    foreach (var appt in newAppointments)
+                    {
+                        TempData["DebugMessage"] += $"AppointmentId: '{appt.AppointmentId}', CustomerId: '{appt.CustomerId}', PetId: '{appt.PetId}', ServiceId: '{appt.ServiceId}', StaffId: '{appt.StaffId}', AdminId: '{appt.AdminId}'\n";
                         _db.Appointments.AddRange(newAppointments);
                         await _db.SaveChangesAsync();
 
@@ -1464,31 +1534,39 @@ public class HomeController : Controller
 
                         TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created! Customer earned {newAppointments.Count * 10} loyalty points.";
                     }
-                    else
+                    _db.Appointments.AddRange(newAppointments);
+                    await _db.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
+                }
+                else // This 'else' belongs to the 'if (newAppointments.Count == model.PetId.Count)'
                     {
-                        TempData["WarningMessage"] = "No appointments were created. Please check the service details.";
+                        if (!TempData.ContainsKey("ErrorMessage"))
+                        {
+                            TempData["ErrorMessage"] = "Could not create all requested appointments. Please check the details and try again.";
+                        }
                     }
                 }
-            }
             catch (Exception ex)
             {
-                // 捕获任何意外的数据库错误或其他异常
-                // 建议在这里记录错误日志 (log ex)
-                TempData["ErrorMessage"] = "An unexpected error occurred while saving the appointments. Please contact support. Error: " + ex.Message;
+                Debug.WriteLine($"[ERROR] Appointment Creation Failed: {ex.ToString()}");
+                Debug.WriteLine($"[ERROR] Exception Message: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Debug.WriteLine($"[ERROR] Inner Exception: {ex.InnerException.Message}");
+                }
+                TempData["ErrorMessage"] = "An unexpected error occurred while saving the appointments. Please contact support. Details: " + ex.Message;
             }
-    
+
             return RedirectToAction(nameof(Appointment));
         }
         else if (actionType == "edit")
         {
-            // 1. 验证传入的 AppointmentId 和 Status 是否有效
             if (string.IsNullOrEmpty(model.EditAppointmentId))
             {
                 TempData["ErrorMessage"] = "Appointment ID was missing. Cannot update.";
                 return RedirectToAction(nameof(Appointment));
             }
 
-            // 2. 查找预约并验证状态转换规则
             var appointmentToUpdate = await _db.Appointments.FindAsync(model.EditAppointmentId);
 
             if (appointmentToUpdate == null)
@@ -1496,7 +1574,7 @@ public class HomeController : Controller
                 TempData["ErrorMessage"] = "Appointment not found. It may have been deleted.";
                 return RedirectToAction(nameof(Appointment));
             }
-            // 强制规则：只允许从 "Confirmed" 变为 "Completed"
+
             if (appointmentToUpdate.Status != "Confirmed" || model.Status != "Completed")
             {
                 TempData["ErrorMessage"] = "Invalid status change. Only 'Confirmed' appointments can be changed to 'Completed'.";
@@ -1505,97 +1583,87 @@ public class HomeController : Controller
                 return RedirectToAction(nameof(Appointment), new { status = model.FilterStatus, groomerid = model.FilterGroomerId, date = model.FilterDate?.ToString("yyyy-MM-dd"), editId = model.EditAppointmentId });
             }
 
-            // 4. 更新预约信息
-            appointmentToUpdate.Status = model.Status; // 允许更新状态
+            if (appointmentToUpdate.AppointmentDateTime.HasValue && appointmentToUpdate.DurationTime.HasValue && appointmentToUpdate.DurationTime.Value > 0)
+            {
+                var appointmentEnd = appointmentToUpdate.AppointmentDateTime.Value.AddMinutes(appointmentToUpdate.DurationTime.Value);
+                if (DateTime.Now < appointmentEnd)
+                {
+                    TempData["ErrorMessage"] = $"Cannot complete appointment yet. The service finishes at {appointmentEnd:MMM dd, hh:mm tt}.";
+                    return RedirectToAction(nameof(Appointment), new { status = model.FilterStatus, groomerid = model.FilterGroomerId, date = model.FilterDate?.ToString("yyyy-MM-dd"), editId = model.EditAppointmentId });
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Cannot complete appointment because appointment time or duration is missing.";
+                return RedirectToAction(nameof(Appointment), new { status = model.FilterStatus, groomerid = model.FilterGroomerId, date = model.FilterDate?.ToString("yyyy-MM-dd"), editId = model.EditAppointmentId });
+            }
 
+            appointmentToUpdate.Status = model.Status;
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = $"Appointment {appointmentToUpdate.AppointmentId} has been successfully updated!";
+
+            return RedirectToAction(nameof(Appointment));
         }
-    
+
+        // 默认返回 - 所有代码路径现在都有返回值
         return RedirectToAction(nameof(Appointment));
     }
 
-    // 将此方法设为私有，因为它只应在控制器内部被调用
+
+    /// <summary>
+    /// AJAX endpoint for creating groomer with validation
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ValidateAppointmentTime([FromBody] AppointmentViewModel model)
+    public async Task<IActionResult> CreateGroomerAjax(
+     [FromForm] Models.Staff staff,
+        [FromForm] IFormFile PhotoUpload)
     {
-        if (model.AppointmentDateTime == default || model.PetServiceMap == null || !model.PetServiceMap.Any())
+        try
         {
-            return Json(new { isValid = true }); // Not enough info to validate, so don't block the user
-        }
+            // ========== VALIDATE INPUTS USING VALIDATION SERVICE =========
+            var validationErrors = await ValidateStaffAsync(staff);
 
-        var appointmentStartTime = model.AppointmentDateTime;
-
-        // 检查预约时间是否在当前时间之前
-        if (appointmentStartTime < DateTime.Now)
-        {
-            return Json(new { isValid = false, field = "AppointmentDateTime", message = "不能为已经过去的时间创建预约。" });
-        }
-
-        // --- Single Groomer Validation ---
-        // This now handles both "one" mode for multiple pets and the default mode for a single pet
-        if ((model.GroomerMode == "one" || string.IsNullOrEmpty(model.GroomerMode)) && !string.IsNullOrEmpty(model.StaffId) && model.StaffId != "any")
-        {
-            double totalDuration = 0;
-            foreach (var petServicePair in model.PetServiceMap)
+            if (validationErrors.Any())
             {
-                var service = await _db.Services.FindAsync(petServicePair.Value);
-                if (service?.DurationTime.HasValue ?? false)
+                return Json(new { success = false, errors = validationErrors });
+            }
+
+            // ========== SMART ID GENERATION ==========
+            var allStaffIds = await _db.Staffs
+  .Select(s => s.UserId)
+     .OrderBy(id => id)
+          .ToListAsync();
+
+            string newStaffId;
+
+            if (!allStaffIds.Any())
+            {
+                newStaffId = "S001";
+            }
+            else
+            {
+                var usedNumbers = allStaffIds
+                .Select(id => int.Parse(id.Substring(1)))
+                .OrderBy(n => n)
+           .ToList();
+
+                int nextNumber = 1;
+                bool foundGap = false;
+
+                foreach (var num in usedNumbers)
                 {
-                    totalDuration += service.DurationTime.Value;
-                }
-            }
-
-            var finalEndTime = appointmentStartTime.AddMinutes(totalDuration);
-
-            // Check if it exceeds closing time
-            if (finalEndTime.TimeOfDay > new TimeSpan(16, 30, 0))
-            {
-                return Json(new { isValid = false, field = "AppointmentDateTime", message = $"Total duration exceeds closing time. Finishes at {finalEndTime:hh:mm tt}." });
-            }
-
-            // Check for conflicts with existing appointments
-            bool isBusy = await _db.Appointments.AnyAsync(a =>
-                a.StaffId == model.StaffId &&
-                a.AppointmentDateTime < finalEndTime &&
-                a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
-
-            if (isBusy)
-            {
-                return Json(new { isValid = false, field = "StaffId", message = "This groomer is unavailable at the selected time." });
-            }
-        }
-        // --- Individual Groomer Validation ---
-        else if (model.GroomerMode == "individual" && model.PetGroomerMap != null)
-        {
-            var groomerChecks = new Dictionary<string, List<double>>();
-
-            foreach (var petServicePair in model.PetServiceMap)
-            {
-                if (model.PetGroomerMap.TryGetValue(petServicePair.Key, out var groomerId) && !string.IsNullOrEmpty(groomerId))
-                {
-                    var service = await _db.Services.FindAsync(petServicePair.Value);
-                    if (service?.DurationTime.HasValue ?? false)
+                    if (num != nextNumber)
                     {
-                        if (!groomerChecks.ContainsKey(groomerId))
-                        {
-                            groomerChecks[groomerId] = new List<double>();
-                        }
-                        groomerChecks[groomerId].Add(service.DurationTime.Value);
+                        foundGap = true;
+                        break;
                     }
+                    nextNumber++;
                 }
-            }
 
-            foreach (var groomerCheck in groomerChecks)
-            {
-                var groomerId = groomerCheck.Key;
-                var totalDurationForGroomer = groomerCheck.Value.Sum();
-                var finalEndTime = appointmentStartTime.AddMinutes(totalDurationForGroomer);
-
-                if (finalEndTime.TimeOfDay > new TimeSpan(16, 30, 0))
+                if (!foundGap)
                 {
-                    return Json(new { isValid = false, field = "StaffId", message = $"Services for one groomer exceed closing time." });
+                    nextNumber = usedNumbers.Max() + 1;
                 }
 
                 bool isBusy = await _db.Appointments.AnyAsync(a =>
@@ -2387,7 +2455,8 @@ public class HomeController : Controller
 
             if (string.IsNullOrEmpty(currentAdminId))
             {
-                return Json(new { success = false, errors = new { General = "Admin not logged in. Please login again." } });
+                TempData["ErrorMessage"] = "Admin not logged in. Please login again.";
+                return RedirectToAction("Login", "Auth");
             }
 
             // ========== GENERATE RANDOM PASSWORD USING PASSWORD SERVICE ==========
@@ -2442,13 +2511,13 @@ public class HomeController : Controller
                 }
 
                 await _emailService.SendStaffCredentialsEmailAsync(
-                    toEmail: staff.Email,
-                    staffName: staff.Name,
-                    staffId: newStaffId,
-                    temporaryPassword: temporaryPassword,
-                    email: staff.Email,
-                    phone: staff.Phone,
-                    loginUrl: loginUrl
+                    staff.Email,
+                    staff.Name,
+                    newStaffId,
+                    temporaryPassword,
+                    staff.Email,
+                    staff.Phone,
+                    loginUrl
                 );
             }
             catch (Exception ex)
@@ -2497,12 +2566,12 @@ public class HomeController : Controller
             }
 
             // ========== VALIDATE INPUTS USING SERVICES =========
-            var errors = await ValidateStaffAsync(staff, editStaffId);
+            var validationErrors = await ValidateStaffAsync(staff, editStaffId);
 
             // If there are validation errors, return them
-            if (errors.Any())
+            if (validationErrors.Any())
             {
-                return Json(new { success = false, errors = errors });
+                return Json(new { success = false, errors = validationErrors });
             }
 
             // Update fields
@@ -2714,7 +2783,7 @@ public class HomeController : Controller
     // AJAX: Delete a single Service and its ServiceServiceCategories
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteServiceAjax([FromForm] string serviceId)
+    public async Task<JsonResult> DeleteServiceAjax([FromForm] string serviceId)
     {
         try
         {
@@ -2722,8 +2791,8 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Invalid service id." });
 
             var dbService = await _db.Services
-            .Include(s => s.ServiceServiceCategories)
-            .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+                .Include(s => s.ServiceServiceCategories)
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
             if (dbService == null)
                 return Json(new { success = false, message = "Service not found." });
@@ -2747,148 +2816,209 @@ public class HomeController : Controller
         }
     }
 
-    private async Task<Dictionary<string, string>> ValidateStaffAsync(Models.Staff staff, string staffIdToExclude = null)
-    {
-        var errors = new Dictionary<string, string>();
+    private async Task<int> GetNextAvailableNumericId(string prefix, HashSet<string> assignedIdsInCurrentBatch)
 
-        // Validate Name using ValidationService
-        if (!_validationService.ValidateName(staff.Name))
+    {
+
+        var allExistingIds = await _db.ServiceServiceCategories
+
+            .Where(x => x.SscId != null && x.SscId.StartsWith(prefix))
+
+            .Select(x => x.SscId)
+
+            .ToListAsync();
+
+
+
+        // Combine existing database IDs with IDs assigned in the current batch
+
+        var allUsedIds = allExistingIds.Concat(assignedIdsInCurrentBatch)
+
+                                       .Where(id => id.StartsWith(prefix))
+
+                                       .ToList();
+
+
+
+        var usedNumbers = allUsedIds
+
+            .Select(id =>
+
+            {
+
+                if (id.Length <= prefix.Length) return -1;
+
+                return int.TryParse(id.Substring(prefix.Length), out var n) ? n : -1;
+
+            })
+
+            .Where(n => n > 0)
+
+            .OrderBy(n => n)
+
+            .ToList();
+
+
+
+        int nextNumber = 1;
+
+        foreach (var num in usedNumbers)
+
         {
-            if (string.IsNullOrWhiteSpace(staff.Name))
-                errors["Name"] = "Full name cannot be empty.";
-            else if (staff.Name.Length < 3 || staff.Name.Length > 200)
-                errors["Name"] = "Name must be between 3-200 characters.";
-            else
-                errors["Name"] = "Name must contain only letters and spaces.";
+
+            if (num != nextNumber)
+
+            {
+
+                break; // Found a gap
+
+            }
+
+            nextNumber++;
+
         }
 
-        // Validate IC using ValidationService
-        if (string.IsNullOrWhiteSpace(staff.IC))
-            errors["IC"] = "IC number cannot be empty.";
-        else if (!_validationService.ValidateICFormat(staff.IC))
-            errors["IC"] = "IC number must be in format xxxxxx-xx-xxxx (e.g., 123456-78-9012).";
-        else if (await _db.Staffs.AnyAsync(s => s.IC == staff.IC && s.UserId != staffIdToExclude))
-            errors["IC"] = "This IC number is already registered.";
+        return nextNumber;
 
-        // Validate Email using ValidationService
-        if (string.IsNullOrWhiteSpace(staff.Email))
-            errors["Email"] = "Email cannot be empty.";
-        else if (!_validationService.ValidateEmail(staff.Email))
-            errors["Email"] = "Please enter a valid email address.";
-        else if (await _db.Staffs.AnyAsync(s => s.Email == staff.Email && s.UserId != staffIdToExclude))
-            errors["Email"] = "This email address is already registered.";
-
-        // Format and validate Phone using PhoneService
-        string formattedPhoneNumber = _phoneService.FormatPhoneNumber(staff.Phone);
-
-        if (string.IsNullOrWhiteSpace(staff.Phone))
-            errors["Phone"] = "Phone number cannot be empty.";
-        else if (!_phoneService.ValidatePhoneFormat(formattedPhoneNumber))
-            errors["Phone"] = "Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX (e.g., 012-1234567).";
-        else if (await _db.Staffs.AnyAsync(s => s.Phone == formattedPhoneNumber && s.UserId != staffIdToExclude))
-            errors["Phone"] = "This phone number is already registered.";
-        else
-            staff.Phone = formattedPhoneNumber; // Update staff object with formatted phone if valid
-
-        // Validate Experience Year using ValidationService
-        if (staff.ExperienceYear.HasValue && !_validationService.ValidateExperienceYear(staff.ExperienceYear))
-            errors["ExperienceYear"] = "Experience must be between 0-50 years.";
-
-        // Validate Position using ValidationService
-        if (string.IsNullOrWhiteSpace(staff.Position))
-            errors["Position"] = "Please select a position.";
-        else if (!_validationService.ValidatePosition(staff.Position))
-            errors["Position"] = "Please select a valid position.";
-
-        return errors;
     }
 
-        private async Task<int> GetNextAvailableNumericId(string prefix, HashSet<string> assignedIdsInCurrentBatch)
+    // ========== APPOINTMENT AJAX ENDPOINTS ==========
 
+    // GET: Search customers for Select2 AJAX
+    [HttpGet]
+    public async Task<JsonResult> SearchCustomers(string term = "")
+    {
+        try
         {
+            var query = _db.Customers.AsQueryable();
 
-            var allExistingIds = await _db.ServiceServiceCategories
-
-                .Where(x => x.SscId != null && x.SscId.StartsWith(prefix))
-
-                .Select(x => x.SscId)
-
-                .ToListAsync();
-
-    
-
-            // Combine existing database IDs with IDs assigned in the current batch
-
-            var allUsedIds = allExistingIds.Concat(assignedIdsInCurrentBatch)
-
-                                           .Where(id => id.StartsWith(prefix))
-
-                                           .ToList();
-
-    
-
-            var usedNumbers = allUsedIds
-
-                .Select(id =>
-
-                {
-
-                    if (id.Length <= prefix.Length) return -1;
-
-                    return int.TryParse(id.Substring(prefix.Length), out var n) ? n : -1;
-
-                })
-
-                .Where(n => n > 0)
-
-                .OrderBy(n => n)
-
-                .ToList();
-
-    
-
-            int nextNumber = 1;
-
-            foreach (var num in usedNumbers)
-
+            if (!string.IsNullOrEmpty(term))
             {
-
-                if (num != nextNumber)
-
-                {
-
-                    break; // Found a gap
-
-                }
-
-                nextNumber++;
-
+                term = term.ToLower();
+                query = query.Where(c =>
+                    c.Name.ToLower().Contains(term) ||
+                    c.Email.ToLower().Contains(term) ||
+                    c.Phone.Contains(term));
             }
 
-            return nextNumber;
+            var results = await query
+                .Take(20) // Limit to 20 results
+                .Select(c => new
+                {
+                    id = c.UserId,
+                    text = c.Name + " (" + c.Phone + ")"
+                })
+                .ToListAsync();
 
+            return Json(new { results = results });
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in SearchCustomers: {ex.Message}");
+            return Json(new { results = new List<object>() });
+        }
+    }
 
-        [HttpGet]
-        [Route("Admin/Home/GetPetsByCustomerId")]
-        public async Task<IActionResult> GetPetsByCustomerId(string customerId)
+    // GET: Get pets by customer ID
+    [HttpGet]
+    public async Task<JsonResult> GetPetsByCustomerId(string customerId)
+    {
+        try
         {
             if (string.IsNullOrEmpty(customerId))
-            {
-                return Json(new List<object>());
-            }
+                return Json(new { results = new List<object>() });
 
-            // Order in the database by Name and Type, then project on client to avoid EF translation of string.Format
-            var petsFromDb = await _db.Pets
+            var pets = await _db.Pets
                 .Where(p => p.CustomerId == customerId)
-                .OrderBy(p => p.Name)
-                .ThenBy(p => p.Type)
-                .Select(p => new { p.PetId, p.Name, p.Type })
+                .Select(p => new
+                {
+                    id = p.PetId,
+                    text = p.Name,
+                    type = p.Type
+                })
                 .ToListAsync();
 
-            var pets = petsFromDb.Select(p => new { id = p.PetId, text = p.Name, type = p.Type }).ToList();
+            return Json(new { results = pets });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetPetsByCustomerId: {ex.Message}");
+            return Json(new { results = new List<object>() });
+        }
+    }
 
-            return Json(pets);
+    // GET: Get services by pet type
+    [HttpGet]
+    public async Task<JsonResult> GetServicesByPetType(string petType)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(petType))
+                return Json(new List<object>());
+
+            var services = await _db.Services
+    .Include(s => s.ServiceServiceCategories)
+    .ThenInclude(ssc => ssc.Category)
+    .Where(s => s.Status == "Active" && s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == petType))
+    .Select(s => new
+    {
+        id = s.ServiceId,
+        text = s.Name,
+        duration = s.DurationTime
+    })
+    .ToListAsync();
+
+            return Json(services);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetServicesByPetType: {ex.Message}");
+            return Json(new List<object>());
+        }
+    }
+
+    // GET: Get booking density for calendar visualization
+    [HttpGet]
+    public async Task<JsonResult> GetBookingDensity(int year, int month)
+    {
+        try
+        {
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            // Get total available minutes per day (assuming 8 hours = 480 minutes per day)
+            int totalMinutesPerDay = 480;
+
+            // Get appointments and their durations
+            var appointmentsByDay = await _db.Appointments
+                .Where(a => a.AppointmentDateTime >= startDate &&
+                            a.AppointmentDateTime <= endDate &&
+                            a.Status != "Cancelled")
+                .GroupBy(a => a.AppointmentDateTime.Value.Date)
+                .Select(g => new
+                {
+                    date = g.Key,
+                    bookedMinutes = g.Sum(a => a.DurationTime ?? 0)
+                })
+                .ToListAsync();
+
+            // Convert to dictionary format
+            var counts = appointmentsByDay.ToDictionary(
+                x => x.date.ToString("yyyy-MM-dd"),
+                x => new { bookedMinutes = x.bookedMinutes }
+            );
+
+            return Json(new
+            {
+                success = true,
+                totalMinutesPerDay = totalMinutesPerDay,
+                counts = counts
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetBookingDensity: {ex.Message}");
+            return Json(new { success = false, message = "Could not retrieve booking density." });
         }
 
 
@@ -3033,4 +3163,133 @@ public class HomeController : Controller
         return RedirectToAction("Profile");
     }
 
+    }
+
+    // POST: Delete appointment (AJAX)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<JsonResult> DeleteAppointmentAjax(string appointmentId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(appointmentId))
+                return Json(new { success = false, message = "Invalid appointment ID." });
+
+            var appointment = await _db.Appointments.FindAsync(appointmentId);
+            if (appointment == null)
+                return Json(new { success = false, message = "Appointment not found." });
+
+            _db.Appointments.Remove(appointment);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Appointment deleted successfully." });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in DeleteAppointmentAjax: {ex.Message}");
+            return Json(new { success = false, message = "Failed to delete appointment." });
+        }
+    }
+
+    // POST: Validate appointment time
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<JsonResult> ValidateAppointmentTime([FromBody] AppointmentValidationRequest request)
+    {
+        try
+        {
+            if (request == null || string.IsNullOrEmpty(request.AppointmentDateTime) ||
+                string.IsNullOrEmpty(request.StaffId))
+            {
+                return Json(new { isValid = false, field = "StaffId", message = "Missing required fields." });
+            }
+
+            // Parse the appointment date/time
+            if (!DateTime.TryParse(request.AppointmentDateTime, out DateTime appointmentTime))
+            {
+                return Json(new { isValid = false, field = "AppointmentDateTime", message = "Invalid date/time format." });
+            }
+
+            // Validate groomer availability
+            if (request.StaffId != "any")
+            {
+                var existingAppointments = await _db.Appointments
+                    .Where(a => a.StaffId == request.StaffId &&
+                                a.AppointmentDateTime.Value.Date == appointmentTime.Date &&
+                                a.Status != "Cancelled")
+                    .ToListAsync();
+
+                // Check if any existing appointment conflicts with the requested time
+                // (This is a simple check - you may need more sophisticated logic)
+                if (existingAppointments.Any())
+                {
+                    return Json(new { isValid = false, field = "StaffId", message = "This groomer is not available at this time." });
+                }
+            }
+
+            return Json(new { isValid = true });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in ValidateAppointmentTime: {ex.Message}");
+            return Json(new { isValid = false, field = "StaffId", message = "Validation error occurred." });
+        }
+    }
+
+    // Request class for AJAX validation
+    public class AppointmentValidationRequest
+    {
+        public string? AppointmentDateTime { get; set; }
+        public string? StaffId { get; set; }
+        public string? GroomerMode { get; set; }
+        public Dictionary<string, string>? PetServiceMap { get; set; }
+        public Dictionary<string, string>? PetGroomerMap { get; set; }
+    }
+
+    // Helper: Validate staff object on server-side for create/edit flows
+    private async Task<Dictionary<string, string>> ValidateStaffAsync(Models.Staff staff, string? existingStaffId = null)
+    {
+        var errors = new Dictionary<string, string>();
+        if (staff == null)
+        {
+            errors["General"] = "Staff data is required.";
+            return errors;
+        }
+
+        var name = staff.Name ?? string.Empty;
+        var ic = staff.IC ?? string.Empty;
+        var email = staff.Email ?? string.Empty;
+        var phone = staff.Phone ?? string.Empty;
+        var desc = staff.Description ?? string.Empty;
+
+        if (!_validationService.ValidateName(name))
+            errors["Name"] = "Name must be 3-200 characters and contain only letters/spaces.";
+
+        if (!_validationService.ValidateICFormat(ic))
+            errors["IC"] = "IC format must be xxxxxx-xx-xxxx and age 18-60.";
+
+        if (!_validationService.ValidateEmail(email))
+            errors["Email"] = "Please enter a valid email address.";
+
+        var formattedPhone = _phoneService.FormatPhoneNumber(phone);
+        if (!_phoneService.ValidatePhoneFormat(formattedPhone))
+            errors["Phone"] = "Phone format must be 01X-XXXXXXX or 01X-XXXXXXXX.";
+
+        if (staff.ExperienceYear.HasValue && !_validationService.ValidateExperienceYear(staff.ExperienceYear.Value))
+        {
+            errors["ExperienceYear"] = "Experience must be between 0 and 50 years.";
+        }
+
+        // Cross-validate experience vs IC if both present
+        if (!string.IsNullOrEmpty(ic) && staff.ExperienceYear.HasValue)
+        {
+            var vr = _validationService.ValidateExperienceAgainstAge(staff.ExperienceYear.Value, ic);
+            if (!vr.IsValid) errors["ExperienceYear"] = vr.ErrorMessage;
+        }
+
+        if (!string.IsNullOrEmpty(desc) && desc.Length > 500)
+            errors["Description"] = "Description must be 500 characters or fewer.";
+
+        return errors;
+    }
 }

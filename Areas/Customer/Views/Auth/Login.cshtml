@@ -323,6 +323,19 @@
                     <div class="error-message" id="passwordError"></div>
                 </div>
 
+                @{
+                    bool requireRecaptcha = ViewData["RequireRecaptcha"] != null && (bool)ViewData["RequireRecaptcha"];
+                    string recaptchaSiteKey = ViewData["RecaptchaSiteKey"]?.ToString() ?? "";
+                }
+
+                <!-- reCAPTCHA v2 Checkbox -->
+                @if (requireRecaptcha)
+                {
+                    <div class="form-group" style="margin-top: 20px; border: 2px solid #ff8800; padding: 15px; border-radius: 8px; background-color: #fff9f0;">
+                        <div class="g-recaptcha" data-sitekey="@recaptchaSiteKey"></div>
+                    </div>
+                }
+
                 <div class="checkbox-group">
                     <input type="checkbox" 
                            id="rememberMe" 
@@ -343,14 +356,21 @@
         </div>
     </div>
 
+    <!-- reCAPTCHA v2 脚本 -->
+    <script src="https://www.google.com/recaptcha/api.js"></script>
     <script>
+        @{
+            bool requireRecaptcha = ViewData["RequireRecaptcha"] != null && (bool)ViewData["RequireRecaptcha"];
+        }
+        
         const isLocked = @(isLocked ? "true" : "false");
+        const requireRecaptcha = @(requireRecaptcha ? "true" : "false");  // ✅ 添加这行
         let phoneValidationTimeout;
         let isPhoneRegistered = false;
         let isPasswordFilled = false;
 
         // Disable all form inputs when locked
-        if (isLocked) {
+        if (isLocked === "true") {
             document.getElementById('phoneNumber').disabled = true;
             document.getElementById('password').disabled = true;
             document.getElementById('passwordToggle').disabled = true;
@@ -358,11 +378,10 @@
             document.getElementById('submitBtn').disabled = true;
         }
 
-        // ✅ 新增：页面加载时验证预填充的电话号码
+        // ✅ 页面加载时验证预填充的电话号码
         window.addEventListener('load', function () {
             const phoneInput = document.getElementById('phoneNumber');
             if (phoneInput.value.length > 0) {
-                // 如果电话号码已预填充，立即验证
                 validatePhoneForLogin(phoneInput.value);
             }
         });
@@ -387,7 +406,7 @@
             clearTimeout(phoneValidationTimeout);
             phoneValidationTimeout = setTimeout(() => {
                 validatePhoneForLogin(this.value);
-            }, 100);
+            }, 50);
         });
 
         // ✅ Real-time validation for phone number on login
@@ -549,6 +568,15 @@
             if (passwordInput.value.length === 0) {
                 showError('password', 'Password is required');
                 isValid = false;
+            }
+
+            // ✅ 修复：检查 reCAPTCHA 是否被勾选（仅当需要 reCAPTCHA 时）
+            if (requireRecaptcha === "true") {
+                const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+                if (!recaptchaResponse || recaptchaResponse.value.length === 0) {
+                    alert('Please complete the reCAPTCHA verification');
+                    isValid = false;
+                }
             }
 
             // Prevent submit if validation fails

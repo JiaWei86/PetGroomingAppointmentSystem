@@ -190,16 +190,25 @@
                         <div class="service_content text-center">
                             <h3>@gift.Name</h3>
                             <p>Loyalty Point Cost: @gift.LoyaltyPointCost pts</p>
-
-                            <button class="boxed-btn4 redeem-btn"
-                                    data-gift-id="@gift.GiftId"
-                                    data-gift-name="@gift.Name"
-                                    data-cost="@gift.LoyaltyPointCost"
-                                    data-maxqty="@gift.Quantity"
-                                    data-userpoints="@Model.CustomerLoyaltyPoints"
-                                    data-photo="@gift.Photo">
-                                Redeem Gift
-                            </button>
+                            
+                            @if (gift.Quantity > 0)
+                            {
+                                <button class="boxed-btn4 redeem-btn"
+                                        data-gift-id="@gift.GiftId"
+                                        data-gift-name="@gift.Name"
+                                        data-cost="@gift.LoyaltyPointCost"
+                                        data-maxqty="@gift.Quantity"
+                                        data-userpoints="@Model.CustomerLoyaltyPoints"
+                                        data-photo="@gift.Photo">
+                                    Redeem Gift
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="boxed-btn4" disabled style="background-color: #ccc; cursor: not-allowed;">
+                                    Out Of Stock
+                                </button>
+                            }
                         </div>
                     </div>
                 }
@@ -263,7 +272,8 @@
 <!-- contact_anipat_end -->
 @section Scripts {
     <script>
-        $(document).ready(function () {
+        // Consolidate DOMContentLoaded listener
+        document.addEventListener('DOMContentLoaded', function () {
             new WOW().init();
 
             // ? read counts from model (rendered as numbers)
@@ -272,8 +282,9 @@
             var giftCount = @Model.RedeemGifts.Count;
 
             // Generic function for initializing any carousel
-            function initCarousel(selector, count) {
-                $(selector).owlCarousel({
+            function initCarousel(selector, count) { // Ensure jQuery is loaded for Owl Carousel
+                if (typeof jQuery !== 'undefined' && $.fn.owlCarousel) {
+                    $(selector).owlCarousel({
                     items: 3,
                     loop: count > 3,        // loop only when more than 3
                     autoplay: count > 3,    // autoplay only when more than 3
@@ -286,6 +297,7 @@
                         1200: { items: 3 }
                     }
                 });
+                }
             }
 
             // Initialize carousels with model count
@@ -296,18 +308,26 @@
 
             // Equal height adjustment
             function setCarouselHeights() {
+                // Use jQuery since Owl Carousel is a jQuery plugin
                 $(".service-carousel").each(function () {
                     var maxHeight = 0;
-                    $(this).find(".single_service").each(function () {
+                    var $items = $(this).find(".single_service");
+
+                    // First, reset heights to auto to get the natural height
+                    $items.css('height', 'auto');
+
+                    // Then, find the max height
+                    $items.each(function () {
                         var height = $(this).height();
                         if (height > maxHeight) maxHeight = height;
                     });
-                    $(this).find(".single_service").height(maxHeight);
+                    // Finally, set all items to the max height
+                    $items.height(maxHeight);
                 });
             }
 
             setCarouselHeights();
-            $(window).on('resize', setCarouselHeights);
+            window.addEventListener('resize', setCarouselHeights);
         });
 
         // ============ BOOK NOW LOGIN CHECK ============
@@ -315,17 +335,15 @@
             event.preventDefault();
             event.stopPropagation();
             
-            // Show loading state
-            $(element).prop('disabled', true);
-            const originalText = $(element).text();
-            $(element).text('Checking...');
-            
-            // Fetch user login status from server
+            // Show loading state (using native JS)
+            element.disabled = true;
+            const originalText = element.textContent;
+            element.textContent = 'Checking...';
             fetch('/Customer/Home/CheckUserStatus')
                 .then(response => response.json())
                 .then(data => {
-                    $(element).prop('disabled', false);
-                    $(element).text(originalText);
+                    element.disabled = false;
+                    element.textContent = originalText;
                     
                     if (!data.isLoggedIn) {
                         // User is NOT logged in - show modal
@@ -338,8 +356,8 @@
                 })
                 .catch(error => {
                     console.error('Error checking login status:', error);
-                    $(element).prop('disabled', false);
-                    $(element).text(originalText);
+                    element.disabled = false;
+                    element.textContent = originalText;
                     // On error, show login modal to be safe
                     const modal = new bootstrap.Modal(document.getElementById('loginRequiredModal'));
                     modal.show();
