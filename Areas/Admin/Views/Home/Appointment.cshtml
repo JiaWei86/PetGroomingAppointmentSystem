@@ -267,13 +267,7 @@
     <h1 class="page-title">Appointment Management</h1>
 </div>
 
-@if (TempData["DebugMessage"] != null)
-{
-    <div style="background: yellow; padding: 10px; border: 1px solid black; margin-bottom: 20px;">
-        <strong>Debug Logs:</strong><br>
-        @Html.Raw(TempData["DebugMessage"].ToString().Replace("\n", "<br>"))
-    </div>
-}
+@* Debug logs removed *@
 @if (TempData["ErrorMessage"] != null)
 {
     <div class="alert alert-danger" id="alertMessage">

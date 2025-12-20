@@ -207,7 +207,6 @@ public class HomeController : Controller
             using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true))
             {
                 _rawBody = await reader.ReadToEndAsync();
-                Console.WriteLine($"[ValidateGroomerField] RawBody: {_rawBody}");
                 HttpContext.Request.Body.Position = 0;
             }
 
@@ -217,22 +216,15 @@ public class HomeController : Controller
                 {
                     request = System.Text.Json.JsonSerializer.Deserialize<FieldValidationRequest>(_rawBody, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[ValidateGroomerField] JSON deserialize error: {ex.Message}");
+                    // swallow deserialization errors silently in production
                 }
             }
 
-            // Log incoming request info to help debug AJAX validation issues
-            try
-            {
-                Console.WriteLine($"[ValidateGroomerField] ContentType={HttpContext.Request.ContentType}, ContentLength={HttpContext.Request.ContentLength}");
-                Console.WriteLine($"[ValidateGroomerField] Payload => StaffId='{request?.StaffId}', FieldName='{request?.FieldName}', FieldValue='{request?.FieldValue}', IcValue='{request?.IcValue}'");
-            }
-            catch { }
             if (request == null || string.IsNullOrWhiteSpace(request.FieldName) || string.IsNullOrWhiteSpace(request.FieldValue))
             {
-                return Json(new { isValid = false, errorMessage = "Invalid validation request.", rawBody = _rawBody });
+                return Json(new { isValid = false, errorMessage = "Invalid validation request." });
             }
 
             bool isDuplicate = false;
@@ -1250,7 +1242,7 @@ public class HomeController : Controller
                     .ToHashSet();
                 int nextIdNum = 1;
 
-                TempData["DebugMessage"] = "";
+                // Debug logs removed
 
                 // Create a dictionary to hold pet-specific data
                 var petTasks = new Dictionary<string, (Service service, string groomerId)>();
@@ -1280,6 +1272,8 @@ public class HomeController : Controller
                 else
                 {
                     List<Models.Staff> availableGroomersForAutoAssign = null;
+                    // Keep track of in-request reserved time slots per groomer to avoid adding transient Appointment
+                    var reservedSlots = new Dictionary<string, List<(DateTime Start, DateTime End)>>();
 
                     foreach (var petId in model.PetId)
                     {
@@ -1310,12 +1304,18 @@ public class HomeController : Controller
                             foreach (var groomer in availableGroomersForAutoAssign)
                             {
                                 var appointmentEndTime = model.AppointmentDateTime.AddMinutes(service.DurationTime.Value);
-                                bool isBusy = groomer.Appointments.Any(a => model.AppointmentDateTime < a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) && appointmentEndTime > a.AppointmentDateTime);
+                                bool isBusyDb = groomer.Appointments.Any(a => model.AppointmentDateTime < a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) && appointmentEndTime > a.AppointmentDateTime);
 
-                                if (!isBusy)
+                                // Check reserved slots we tracked in this request
+                                reservedSlots.TryGetValue(groomer.UserId, out var slots);
+                                bool isBusyReserved = slots != null && slots.Any(s => model.AppointmentDateTime < s.End && appointmentEndTime > s.Start);
+
+                                if (!isBusyDb && !isBusyReserved)
                                 {
                                     assignedGroomerId = groomer.UserId;
-                                    groomer.Appointments.Add(new Appointment { AppointmentDateTime = model.AppointmentDateTime, DurationTime = service.DurationTime.Value });
+                                    // Reserve this timeslot for this groomer locally (do NOT add a new Appointment entity to groomer.Appointments)
+                                    if (!reservedSlots.ContainsKey(groomer.UserId)) reservedSlots[groomer.UserId] = new List<(DateTime, DateTime)>();
+                                    reservedSlots[groomer.UserId].Add((model.AppointmentDateTime, appointmentEndTime));
                                     break;
                                 }
                             }
@@ -1334,11 +1334,11 @@ public class HomeController : Controller
 
                 foreach (var petId in model.PetId)
                 {
-                    TempData["DebugMessage"] += $"Processing petId={petId}\n";
+                    // Processing petId logging removed
 
                     if (!petTasks.TryGetValue(petId, out var task))
                     {
-                        TempData["DebugMessage"] += $"Skipping petId={petId}, not in petTasks\n";
+                        // Skipped petId logging removed
                         continue;
                     }
 
@@ -1372,7 +1372,7 @@ public class HomeController : Controller
                     usedNumbers.Add(nextIdNum);
                     nextIdNum++;
 
-                    TempData["DebugMessage"] += $"Generated AppointmentId={newAppointmentId} for petId={petId}\n";
+                    // Generated appointment id logging removed
 
                     // Create the new Appointment object
                     var newAppointment = new Appointment
@@ -1391,7 +1391,7 @@ public class HomeController : Controller
                     };
 
                     newAppointments.Add(newAppointment);
-                    TempData["DebugMessage"] += $"Added appointment for petId={petId}, AppointmentId={newAppointment.AppointmentId}\n";
+                    // Added appointment logging removed
 
                     // For sequential mode, update the start time for the next appointment
                     if (model.GroomerMode == "one_sequential")
@@ -1399,7 +1399,7 @@ public class HomeController : Controller
                         appointmentProcessingTime = appointmentEndTime;
                     }
 
-                    TempData["DebugMessage"] += $"Creating appointment for petId={petId}, AppointmentId={newAppointmentId}\n";
+                    // Creating appointment logging removed
                 } // End of outer foreach (var petId in model.PetId)
 
                 // ========== 5. SAVE TO DATABASE ==========
@@ -1415,30 +1415,23 @@ public class HomeController : Controller
                         }
                     }
 
-                    TempData["DebugMessage"] += $"newAppointments count: {newAppointments.Count}\n";
-                    foreach (var appt in newAppointments)
-                    {
-                        TempData["DebugMessage"] += $"AppointmentId: '{appt.AppointmentId}', CustomerId: '{appt.CustomerId}', PetId: '{appt.PetId}', ServiceId: '{appt.ServiceId}', StaffId: '{appt.StaffId}', AdminId: '{appt.AdminId}'\n";
-                        _db.Appointments.AddRange(newAppointments);
-                        await _db.SaveChangesAsync();
+                    // Appointment list logging removed
 
-                        // ========== ADD LOYALTY POINTS FOR EACH APPOINTMENT ==========
-                        // Award 10 loyalty points per service to the customer
-                        var cust = await _db.Customers.FindAsync(model.CustomerId);
-                        if (cust != null)
-                        {
-                            // 10 points for each appointment created
-                            int totalPointsToAdd = newAppointments.Count * 10;
-                            cust.LoyaltyPoint += totalPointsToAdd;
-                            _db.Customers.Update(cust);
-                            await _db.SaveChangesAsync();
-                        }
-
-                        TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created! Customer earned {newAppointments.Count * 10} loyalty points.";
-                    }
+                    // Persist all new appointments once
                     _db.Appointments.AddRange(newAppointments);
                     await _db.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created!";
+
+                    // ========== ADD LOYALTY POINTS FOR EACH APPOINTMENT ==========
+                    var cust = await _db.Customers.FindAsync(model.CustomerId);
+                    if (cust != null)
+                    {
+                        int totalPointsToAdd = newAppointments.Count * 10;
+                        cust.LoyaltyPoint += totalPointsToAdd;
+                        _db.Customers.Update(cust);
+                        await _db.SaveChangesAsync();
+                    }
+
+                    TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created! Customer earned {newAppointments.Count * 10} loyalty points.";
                 }
                 else // This 'else' belongs to the 'if (newAppointments.Count == model.PetId.Count)'
                     {
