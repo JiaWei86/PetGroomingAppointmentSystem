@@ -291,7 +291,8 @@ async function validateName(value) {
     try {
         const resp = await fetch('/Admin/Home/ValidateGroomerField', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
                 FieldName: 'Name',
                 FieldValue: value,
@@ -414,7 +415,8 @@ async function validateIC(value) {
  try {
  const resp = await fetch('/Admin/Home/ValidateGroomerField', {
  method: 'POST',
- headers: { 'Content-Type': 'application/json' },
+ credentials: 'same-origin',
+ headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
  body: JSON.stringify({
  FieldName: 'IC',
  FieldValue: value,
@@ -457,7 +459,8 @@ async function validateEmail(value) {
  try {
       const resp = await fetch('/Admin/Home/ValidateGroomerField', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
               FieldName: 'Email',
               FieldValue: value,
@@ -494,7 +497,8 @@ async function validatePhone(value) {
  try {
       const resp = await fetch('/Admin/Home/ValidateGroomerField', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
               FieldName: 'Phone',
               FieldValue: value,
