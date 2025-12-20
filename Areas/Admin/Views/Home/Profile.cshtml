@@ -1,12 +1,13 @@
-﻿@model PetGroomingAppointmentSystem.Models.Staff
+﻿@model PetGroomingAppointmentSystem.Models.Admin
 
 @{
-    ViewData["Title"] = "Staff Profile";
+    ViewData["Title"] = "Admin Profile";
     ViewData["ActivePage"] = "Profile";
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/admin/css/responsive.css" />
+    <link rel="stylesheet" href="~/admin/css/dashboard.css" />
     <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-********" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
@@ -45,16 +46,16 @@
             justify-content: center;
         }
 
-        .profile-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            border-radius: 50%;
-        }
+            .profile-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 300px;
+                height: 300px;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                border-radius: 50%;
+            }
 
         .profile-header-content {
             position: relative;
@@ -80,15 +81,15 @@
             object-fit: cover;
         }
 
-        .profile-avatar:hover {
-            transform: scale(1.05);
-        }
+            .profile-avatar:hover {
+                transform: scale(1.05);
+            }
 
-        .profile-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+            .profile-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
 
         .profile-name {
             font-size: 28px;
@@ -108,26 +109,6 @@
             border-radius: 20px;
             display: inline-block;
             margin-top: 8px;
-        }
-
-        .profile-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            color: inherit;
-            cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 6px;
-            transition: background-color 0.3s ease;
-        }
-
-        .profile-link:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-
-        .profile-link i {
-            font-size: 28px;
         }
 
         .profile-body {
@@ -153,14 +134,14 @@
             gap: 8px;
         }
 
-        .section-title::before {
-            content: '';
-            display: inline-block;
-            width: 4px;
-            height: 4px;
-            background: #d97706;
-            border-radius: 50%;
-        }
+            .section-title::before {
+                content: '';
+                display: inline-block;
+                width: 4px;
+                height: 4px;
+                background: #d97706;
+                border-radius: 50%;
+            }
 
         .profile-info {
             display: flex;
@@ -169,9 +150,9 @@
             border-bottom: 1px solid #f3f4f6;
         }
 
-        .profile-info:last-child {
-            border-bottom: none;
-        }
+            .profile-info:last-child {
+                border-bottom: none;
+            }
 
         .info-label {
             font-weight: 600;
@@ -188,15 +169,15 @@
             font-weight: 500;
         }
 
-        .info-value a {
-            color: #d97706;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
+            .info-value a {
+                color: #d97706;
+                text-decoration: none;
+                transition: color 0.3s ease;
+            }
 
-        .info-value a:hover {
-            color: #b45309;
-        }
+                .info-value a:hover {
+                    color: #b45309;
+                }
 
         .description-box {
             background: linear-gradient(135deg, #fffbf0 0%, #f9fafb 100%);
@@ -231,11 +212,11 @@
             transition: all 0.3s ease;
         }
 
-        .profile-stat:hover {
-            border-color: #d97706;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
-            transform: translateY(-2px);
-        }
+            .profile-stat:hover {
+                border-color: #d97706;
+                box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+                transform: translateY(-2px);
+            }
 
         .stat-number {
             font-size: 28px;
@@ -276,14 +257,14 @@
             gap: 8px;
         }
 
-        .btn-edit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
-        }
+            .btn-edit:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+            }
 
-        .btn-edit:active {
-            transform: translateY(0);
-        }
+            .btn-edit:active {
+                transform: translateY(0);
+            }
 
         .error-message {
             color: #dc2626;
@@ -329,34 +310,34 @@
             margin: auto;
         }
 
-        .modal-box h2 {
-            margin-bottom: 20px;
-            color: #b45309;
-        }
+            .modal-box h2 {
+                margin-bottom: 20px;
+                color: #b45309;
+            }
 
         .form-group {
             margin-bottom: 16px;
         }
 
-        .form-group label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 6px;
-            color: #374151;
-        }
+            .form-group label {
+                font-weight: 600;
+                display: block;
+                margin-bottom: 6px;
+                color: #374151;
+            }
 
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            box-sizing: border-box;
-        }
+            .form-group input {
+                width: 100%;
+                padding: 10px;
+                border-radius: 6px;
+                border: 1px solid #d1d5db;
+                box-sizing: border-box;
+            }
 
-        .form-group input:disabled {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
+                .form-group input:disabled {
+                    background: #f3f4f6;
+                    color: #6b7280;
+                }
 
         /* Photo Upload Styles */
         .photo-upload-section {
@@ -378,16 +359,16 @@
             transition: all 0.3s ease;
         }
 
-        .photo-preview-container:hover {
-            border-color: #d97706;
-            background: #fffbf0;
-        }
+            .photo-preview-container:hover {
+                border-color: #d97706;
+                background: #fffbf0;
+            }
 
-        .photo-preview-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+            .photo-preview-container img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
 
         .photo-placeholder {
             font-size: 48px;
@@ -417,10 +398,10 @@
             width: 100%;
         }
 
-        .file-input-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
-        }
+            .file-input-label:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+            }
 
         #photoInput {
             position: absolute;
@@ -439,9 +420,9 @@
             display: none;
         }
 
-        .photo-error.show {
-            display: block;
-        }
+            .photo-error.show {
+                display: block;
+            }
 
         .hint {
             font-size: 12px;
@@ -471,9 +452,9 @@
             transition: all 0.3s ease;
         }
 
-        .btn-save:hover {
-            background: #b45309;
-        }
+            .btn-save:hover {
+                background: #b45309;
+            }
 
         .btn-cancel {
             padding: 10px 18px;
@@ -484,9 +465,9 @@
             flex: 1;
         }
 
-        .btn-cancel:hover {
-            background: #d1d5db;
-        }
+            .btn-cancel:hover {
+                background: #d1d5db;
+            }
     </style>
 }
 
@@ -521,7 +502,6 @@
                         }
                     </div>
                     <div class="profile-name">@Model.Name</div>
-                    <div class="profile-position">@(Model.Position ?? "Groomer")</div>
                 </div>
             </div>
 
@@ -553,46 +533,6 @@
                     }
                 </div>
 
-                <!-- Professional Information Section -->
-                <div class="profile-section">
-                    <div class="section-title">Professional Info</div>
-                    <div class="profile-info">
-                        <span class="info-label">Position</span>
-                        <span class="info-value">@(Model.Position ?? "Not Specified")</span>
-                    </div>
-                    <div class="profile-info">
-                        <span class="info-label">Experience Level</span>
-                        <span class="info-value">
-                            @if (Model.ExperienceYear.HasValue)
-                            {
-                                @($"{Model.ExperienceYear} year{(Model.ExperienceYear > 1 ? "s" : "")}")
-                            }
-                            else
-                            {
-                                <text>Not Specified</text>
-                            }
-                        </span>
-                    </div>
-                    @if (Model.CreatedAt.HasValue)
-                    {
-                        <div class="profile-info">
-                            <span class="info-label">Joined Date</span>
-                            <span class="info-value">@Model.CreatedAt?.ToString("dd/MM/yyyy")</span>
-                        </div>
-                    }
-                </div>
-
-                <!-- Description Section -->
-                @if (!string.IsNullOrEmpty(Model.Description))
-                {
-                    <div class="profile-section profile-full-width">
-                        <div class="section-title">About</div>
-                        <div class="description-box">
-                            @Model.Description
-                        </div>
-                    </div>
-                }
-
             </div>
 
             <div class="profile-footer">
@@ -605,7 +545,7 @@
     else
     {
         <div class="error-message">
-            ⚠️ Staff member profile not found. Please contact the administrator.
+            ⚠️ Admin member profile not found. 
         </div>
     }
 </div>
@@ -615,7 +555,7 @@
     <div class="modal-box">
         <h2>Edit Profile</h2>
 
-        <form asp-action="EditProfile" asp-controller="Home" asp-area="Staff" method="post" enctype="multipart/form-data" onsubmit="return validatePassword()">
+        <form asp-action="EditProfile" asp-controller="Home" asp-area="Admin" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
 
             <input type="hidden" name="UserId" value="@Model.UserId" />
 
@@ -663,6 +603,19 @@
                 <input type="text" name="Name" value="@Model.Name" required />
             </div>
 
+            <div class="form-group">
+                <label>Email</label>
+                <input type="text" id="emailInput" name="Email" value="@Model.Email" />
+                <span id="emailError" class="error-text"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" id="phoneInput" name="Phone" value="@Model.Phone" />
+                <span id="phoneError" class="error-text"></span>
+            </div>
+
+
             <!-- New Password -->
             <div class="form-group">
                 <label>New Password</label>
@@ -687,18 +640,26 @@
         </form>
     </div>
 </div>
-
 <!-- Cropper.js JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" integrity="sha512-********" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 
 <script>
-    let cropper;
+ let cropper;
+
     const photoInput = document.getElementById("photoInput");
     const photoPreview = document.getElementById("photoPreview");
     const photoError = document.getElementById("photoError");
     const cropperControls = document.getElementById("cropperControls");
-    const photoUploadSection = document.getElementById("photoUploadSection");
+
+    const emailInput = document.getElementById("emailInput");
+    const phoneInput = document.getElementById("phoneInput");
+    const passwordInput = document.getElementById("password");
+    const confirmPasswordInput = document.getElementById("confirmPassword");
+
+    const emailError = document.getElementById("emailError");
+    const phoneError = document.getElementById("phoneError");
+    const passwordError = document.getElementById("passwordError");
 
     function openEditModal() {
         document.getElementById("editProfileModal").style.display = "flex";
@@ -707,98 +668,112 @@
     function closeEditModal() {
         document.getElementById("editProfileModal").style.display = "none";
         resetPhotoInput();
+        clearAllErrors();
+    }
+
+    function validateForm() {
+        clearAllErrors();
+        let isValid = true;
+
+        if (!validateEmail()) isValid = false;
+        if (!validatePhone()) isValid = false;
+        if (!validatePassword()) isValid = false;
+
+        return isValid;
+    }
+
+    function validateEmail() {
+        const email = emailInput.value.trim();
+        if (email === "") {
+            emailError.innerText = "Email cannot be empty.";
+            return false;
+        }
+
+        const regex = new RegExp("^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*\\.[a-zA-Z]{2,}$");
+        if (!regex.test(email)) {
+            emailError.innerText = "Invalid email format.";
+            return false;
+        }
+        return true;
+    }
+
+    function validatePhone() {
+        const phone = phoneInput.value.trim();
+        if (phone === "") return true;
+        const normalized = phone.replace(/\s+/g, "");
+        const regex = /^01\d-?\d{7,8}$/;
+        if (!regex.test(normalized)) {
+            phoneError.innerText = "Phone must be in format 01X-XXXXXXX or 01X-XXXXXXXX.";
+            return false;
+        }
+        phoneInput.value = normalized;
+        return true;
     }
 
     function validatePassword() {
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirmPassword").value;
-        const error = document.getElementById("passwordError");
-
-        if (password.length === 0) return true; // Allow name-only update
-
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        if (password.length === 0) return true;
         const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
         if (!regex.test(password)) {
-            error.innerText = "Password does not meet requirements.";
+            passwordError.innerText = "Password must include uppercase, lowercase, number, symbol and be at least 8 characters.";
             return false;
         }
-
         if (password !== confirmPassword) {
-            error.innerText = "Passwords do not match.";
+            passwordError.innerText = "Passwords do not match.";
             return false;
         }
-
-        error.innerText = "";
         return true;
+    }
+
+    function clearAllErrors() {
+        emailError.innerText = "";
+        phoneError.innerText = "";
+        passwordError.innerText = "";
+        photoError.innerText = "";
+        photoError.classList.remove("show");
     }
 
     function resetPhotoInput() {
         photoInput.value = "";
         photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
-        photoError.classList.remove("show");
-        photoError.innerText = "";
         if (cropper) {
             cropper.destroy();
             cropper = null;
-            cropperControls.style.display = "none";
         }
-        showPhotoInputWrapper(true);
+        cropperControls.style.display = "none";
     }
 
-    // Helper to show/hide file input + error + hint
-    function showPhotoInputWrapper(show) {
-        const fileWrapper = photoUploadSection.querySelector(".file-input-wrapper");
-        const hint = photoUploadSection.querySelector("small.hint");
-        const errorDiv = photoUploadSection.querySelector(".photo-error");
-
-        if (show) {
-            fileWrapper.style.display = "block";
-            hint.style.display = "block";
-            errorDiv.style.display = photoError.classList.contains("show") ? "block" : "none";
-        } 
-    }
-
-    // File input change (handles validation and Cropper initialization)
-    photoInput.addEventListener("change", function(e) {
+    photoInput.addEventListener("change", function (e) {
         const file = e.target.files[0];
-
-        photoError.classList.remove("show");
-        photoError.innerText = "";
-
+        clearAllErrors();
         if (!file) {
             resetPhotoInput();
             return;
         }
 
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        const maxSize = 5 * 1024 * 1024;
         const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-        if (file.size > maxSize || !allowedTypes.includes(file.type)) {
-            let errorMsg = "";
-            if (file.size > maxSize) {
-                errorMsg = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 5MB.`;
-            } else {
-                errorMsg = "Invalid file type. Only JPG, PNG, GIF, WebP allowed.";
-            }
-
-            photoError.innerText = errorMsg;
+        if (file.size > maxSize) {
+            photoError.innerText = "Photo must not exceed 5MB.";
             photoError.classList.add("show");
-
-            // Reset preview and hide the file input section
-            photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
-            showPhotoInputWrapper(false);
-            photoInput.value = "";
+            resetPhotoInput();
             return;
         }
 
-        showPhotoInputWrapper(true);
+        if (!allowedTypes.includes(file.type)) {
+            photoError.innerText = "Invalid file type. JPG, PNG, GIF, WebP only.";
+            photoError.classList.add("show");
+            resetPhotoInput();
+            return;
+        }
 
         const reader = new FileReader();
-        reader.onload = function(event) {
-            photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" style="max-width:100%;" />`;
-
+        reader.onload = function (event) {
+            photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" />`;
             if (cropper) cropper.destroy();
-            const image = document.getElementById("cropperImage");
-            cropper = new Cropper(image, {
+            cropper = new Cropper(document.getElementById("cropperImage"), {
                 aspectRatio: 1,
                 viewMode: 1,
                 autoCropArea: 1
@@ -808,80 +783,156 @@
         reader.readAsDataURL(file);
     });
 
-       // Drag & Drop
-    photoUploadSection.addEventListener("dragover", function(e) {
-        e.preventDefault();
-        photoPreview.style.borderColor = "#d97706";
-        photoPreview.style.background = "#fffbf0";
-    });
+          function resetPhotoInput() {
+           photoInput.value = "";
+           photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+           photoError.classList.remove("show");
+           photoError.innerText = "";
+           if (cropper) {
+               cropper.destroy();
+               cropper = null;
+               cropperControls.style.display = "none";
+           }
+           showPhotoInputWrapper(true);
+       }
 
-    photoUploadSection.addEventListener("dragleave", function(e) {
-        e.preventDefault();
-        photoPreview.style.borderColor = "#d1d5db";
-        photoPreview.style.background = "#f9fafb";
-    });
+       // Helper to show/hide file input + error + hint
+       function showPhotoInputWrapper(show) {
+           const fileWrapper = photoUploadSection.querySelector(".file-input-wrapper");
+           const hint = photoUploadSection.querySelector("small.hint");
+           const errorDiv = photoUploadSection.querySelector(".photo-error");
 
-    photoUploadSection.addEventListener("drop", function(e) {
-        e.preventDefault();
-        photoPreview.style.borderColor = "#d1d5db";
-        photoPreview.style.background = "#f9fafb";
+           if (show) {
+               fileWrapper.style.display = "block";
+               hint.style.display = "block";
+               errorDiv.style.display = photoError.classList.contains("show") ? "block" : "none";
+           }
+       }
 
-        const file = e.dataTransfer.files[0];
-        if (!file) return;
+       // File input change (handles validation and Cropper initialization)
+       photoInput.addEventListener("change", function(e) {
+           const file = e.target.files[0];
 
-        // Assign the dropped file to the input
-        photoInput.files = e.dataTransfer.files;
+           photoError.classList.remove("show");
+           photoError.innerText = "";
 
-        // Always show the input and hint for valid files
-        showPhotoInputWrapper(true);
+           if (!file) {
+               resetPhotoInput();
+               return;
+           }
 
-        // Trigger the existing change event for validation & preview
-        photoInput.dispatchEvent(new Event("change"));
-    });
+           const maxSize = 5 * 1024 * 1024; // 5MB
+           const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-    // Cropper controls
-    document.getElementById("rotateLeft").onclick = () => cropper.rotate(-90);
-    document.getElementById("rotateRight").onclick = () => cropper.rotate(90);
+           if (file.size > maxSize || !allowedTypes.includes(file.type)) {
+               let errorMsg = "";
+               if (file.size > maxSize) {
+                   errorMsg = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 5MB.`;
+               } else {
+                   errorMsg = "Invalid file type. Only JPG, PNG, GIF, WebP allowed.";
+               }
 
-    document.getElementById("flipHorizontal").onclick = () => {
-        cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1);
-    };
+               photoError.innerText = errorMsg;
+               photoError.classList.add("show");
 
-    document.getElementById("flipVertical").onclick = () => {
-        cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1);
-    };
+               // Reset preview and hide the file input section
+               photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+               showPhotoInputWrapper(false);
+               photoInput.value = "";
+               return;
+           }
 
-    document.getElementById("resetCrop").onclick = () => {
-        cropper.reset();
-    };
+           showPhotoInputWrapper(true);
 
-    document.getElementById("cropImage").onclick = () => {
-        const canvas = cropper.getCroppedCanvas({
-            width: 600,
-            height: 600,
-            fillColor: "#fff"
-        });
+           const reader = new FileReader();
+           reader.onload = function(event) {
+               photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" style="max-width:100%;" />`;
 
-        canvas.toBlob(blob => {
-            const newFile = new File([blob], "cropped.png", { type: "image/png" });
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(newFile);
-            photoInput.files = dataTransfer.files;
+               if (cropper) cropper.destroy();
+               const image = document.getElementById("cropperImage");
+               cropper = new Cropper(image, {
+                   aspectRatio: 1,
+                   viewMode: 1,
+                   autoCropArea: 1
+               });
+               cropperControls.style.display = "flex";
+           };
+           reader.readAsDataURL(file);
+       });
 
-            const url = URL.createObjectURL(blob);
-            photoPreview.innerHTML = `<img src="${url}" style="max-width:100%;" />`;
-        });
+          // Drag & Drop
+       photoUploadSection.addEventListener("dragover", function(e) {
+           e.preventDefault();
+           photoPreview.style.borderColor = "#d97706";
+           photoPreview.style.background = "#fffbf0";
+       });
 
-        cropper.destroy();
-        cropperControls.style.display = "none";
-    };
+       photoUploadSection.addEventListener("dragleave", function(e) {
+           e.preventDefault();
+           photoPreview.style.borderColor = "#d1d5db";
+           photoPreview.style.background = "#f9fafb";
+       });
 
-    // Close modal by clicking outside
-    document.getElementById("editProfileModal").addEventListener("click", function(e) {
-        if (e.target === this) closeEditModal();
-    });
+       photoUploadSection.addEventListener("drop", function(e) {
+           e.preventDefault();
+           photoPreview.style.borderColor = "#d1d5db";
+           photoPreview.style.background = "#f9fafb";
+
+           const file = e.dataTransfer.files[0];
+           if (!file) return;
+
+           // Assign the dropped file to the input
+           photoInput.files = e.dataTransfer.files;
+
+           // Always show the input and hint for valid files
+           showPhotoInputWrapper(true);
+
+           // Trigger the existing change event for validation & preview
+           photoInput.dispatchEvent(new Event("change"));
+       });
+
+       // Cropper controls
+       document.getElementById("rotateLeft").onclick = () => cropper.rotate(-90);
+       document.getElementById("rotateRight").onclick = () => cropper.rotate(90);
+
+       document.getElementById("flipHorizontal").onclick = () => {
+           cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1);
+       };
+
+       document.getElementById("flipVertical").onclick = () => {
+           cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1);
+       };
+
+       document.getElementById("resetCrop").onclick = () => {
+           cropper.reset();
+       };
+
+       document.getElementById("cropImage").onclick = () => {
+           const canvas = cropper.getCroppedCanvas({
+               width: 600,
+               height: 600,
+               fillColor: "#fff"
+           });
+
+           canvas.toBlob(blob => {
+               const newFile = new File([blob], "cropped.png", { type: "image/png" });
+               const dataTransfer = new DataTransfer();
+               dataTransfer.items.add(newFile);
+               photoInput.files = dataTransfer.files;
+
+               const url = URL.createObjectURL(blob);
+               photoPreview.innerHTML = `<img src="${url}" style="max-width:100%;" />`;
+           });
+
+           cropper.destroy();
+           cropperControls.style.display = "none";
+       };
+
+       // Close modal by clicking outside
+       document.getElementById("editProfileModal").addEventListener("click", function(e) {
+           if (e.target === this) closeEditModal();
+       });
 </script>
-
 
 
 

@@ -1,3 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +13,8 @@ using PetGroomingAppointmentSystem.Areas.Admin.Services;
 using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
 using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
+using PetGroomingAppointmentSystem.Services; 
+using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
 using PetGroomingAppointmentSystem.Services;
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;
 using System;
@@ -26,6 +35,7 @@ public class HomeController : Controller
     private readonly AdminServices.IPhoneService _phoneService;  // Use alias
     private readonly AdminServices.IValidationService _validationService;  // Use alias
     private readonly IS3StorageService _s3Service;
+    private readonly IWebHostEnvironment _webHostEnvironment;
 
     public HomeController(
         DB context,
@@ -33,6 +43,8 @@ public class HomeController : Controller
         AdminServices.IPasswordService passwordService,  // Use alias
         AdminServices.IPhoneService phoneService,  // Use alias
         AdminServices.IValidationService validationService,  // Use alias
+        IS3StorageService s3Service,
+        IWebHostEnvironment webHostEnvironment) 
         IS3StorageService s3Service)
     {
         _db = context;
@@ -41,6 +53,7 @@ public class HomeController : Controller
         _phoneService = phoneService;
         _validationService = validationService;
         _s3Service = s3Service;
+        _webHostEnvironment = webHostEnvironment;
     }
     public class FieldValidationRequest
     {
@@ -3007,6 +3020,149 @@ public class HomeController : Controller
             Console.WriteLine($"Error in GetBookingDensity: {ex.Message}");
             return Json(new { success = false, message = "Could not retrieve booking density." });
         }
+
+
+    public async Task<IActionResult> Profile()
+    {
+        var adminId = HttpContext.Session.GetString("AdminId");
+
+        if (string.IsNullOrEmpty(adminId))
+        {
+            return RedirectToAction("Login", "Auth", new { area = "Admin" });
+        }
+
+        var adminMember = await _db.Admins
+            .FirstOrDefaultAsync(s => s.UserId == adminId);
+
+        if (adminMember == null)
+        {
+            TempData["ErrorMessage"] = "Admin member not found.";
+            return NotFound();
+        }
+
+        return View(adminMember);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> EditProfile(PetGroomingAppointmentSystem.Models.Admin model)
+    {
+        var admin = await _db.Admins.FirstOrDefaultAsync(a => a.UserId == model.UserId);
+        if (admin == null)
+        {
+            TempData["ErrorMessage"] = "Admin not found.";
+            return RedirectToAction("Profile");
+        }
+
+        /* =========================
+         * EMAIL VALIDATION
+         * ========================= */
+        if (string.IsNullOrWhiteSpace(model.Email))
+        {
+            TempData["ErrorMessage"] = "Email cannot be empty.";
+            return RedirectToAction("Profile");
+        }
+
+        model.Email = model.Email.Trim();
+
+        if (model.Email.Length > 150 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(model.Email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$"))
+        {
+            TempData["ErrorMessage"] = "Invalid email format.";
+            return RedirectToAction("Profile");
+        }
+
+        bool emailExists = await _db.Users.AnyAsync(u =>
+            u.Email == model.Email && u.UserId != model.UserId);
+
+        if (emailExists)
+        {
+            TempData["ErrorMessage"] = "This email is already registered.";
+            return RedirectToAction("Profile");
+        }
+
+        /* =========================
+         * PHONE VALIDATION
+         * ========================= */
+        if (!string.IsNullOrWhiteSpace(model.Phone))
+        {
+            string formattedPhone = _phoneService.FormatPhoneNumber(model.Phone);
+
+            if (!_phoneService.ValidatePhoneFormat(formattedPhone))
+            {
+                TempData["ErrorMessage"] = "Phone must be in format 01X-XXXXXXX or 01X-XXXXXXXX.";
+                return RedirectToAction("Profile");
+            }
+
+            bool phoneExists = _db.Users.Any(u =>
+                u.Phone == formattedPhone && u.UserId != model.UserId);
+
+            if (phoneExists)
+            {
+                TempData["ErrorMessage"] = "This phone number is already registered.";
+                return RedirectToAction("Profile");
+            }
+
+            admin.Phone = formattedPhone;
+        }
+
+        /* =========================
+         * UPDATE BASIC INFO
+         * ========================= */
+        admin.Name = model.Name;
+        admin.Email = model.Email;
+
+        /* =========================
+         * PHOTO UPLOAD (unchanged)
+         * ========================= */
+        if (Request.Form.Files.Count > 0)
+        {
+            var photoFile = Request.Form.Files[0];
+            if (photoFile.Length > 0)
+            {
+                const long maxFileSize = 5 * 1024 * 1024;
+
+                if (photoFile.Length > maxFileSize)
+                {
+                    TempData["ErrorMessage"] = "Photo file must be less than 5MB.";
+                    return RedirectToAction("Profile");
+                }
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(photoFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    TempData["ErrorMessage"] = "Invalid image file type.";
+                    return RedirectToAction("Profile");
+                }
+
+                var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "admin");
+                Directory.CreateDirectory(uploadPath);
+
+                var fileName = Guid.NewGuid() + extension;
+                var fullPath = Path.Combine(uploadPath, fileName);
+
+                using var stream = new FileStream(fullPath, FileMode.Create);
+                await photoFile.CopyToAsync(stream);
+
+                admin.Photo = "/uploads/admin/" + fileName;
+            }
+        }
+
+        /* =========================
+         * PASSWORD (optional)
+         * ========================= */
+        if (!string.IsNullOrWhiteSpace(model.Password))
+        {
+            admin.Password = model.Password; // hash if applicable
+        }
+
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Profile updated successfully.";
+        return RedirectToAction("Profile");
+    }
+
     }
 
     // POST: Delete appointment (AJAX)
