@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-
+using System.Collections.Generic;
 namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
 {
     public class RegisterViewModel

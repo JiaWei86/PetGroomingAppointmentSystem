@@ -1,4 +1,4 @@
-﻿@model PetGroomingAppointmentSystem.Models.ViewModels.AppointmentViewModel
+@model PetGroomingAppointmentSystem.Models.ViewModels.AppointmentViewModel
 @using PetGroomingAppointmentSystem.Models
 @{
     ViewData["Title"] = "Appointment Management";
@@ -267,11 +267,11 @@
     <h1 class="page-title">Appointment Management</h1>
 </div>
 
-@* ========== Alerts ========== *@
-@if (ViewData["Error"] != null)
+@if (TempData["DebugMessage"] != null)
 {
-    <div class="alert alert-danger" id="alertMessage">
-        <strong>❌ Error:</strong> @ViewData["Error"]
+    <div style="background: yellow; padding: 10px; border: 1px solid black; margin-bottom: 20px;">
+        <strong>Debug Logs:</strong><br>
+        @Html.Raw(TempData["DebugMessage"].ToString().Replace("\n", "<br>"))
     </div>
 }
 @if (TempData["ErrorMessage"] != null)
@@ -491,7 +491,7 @@
             <label for="customerSearch">Customer Name</label>
             <select id="customerSearch" name="CustomerId" class="form-control" style="width:100%;" required>
                 <option value=""> Search by name or phone number</option>
-                @if (Model.CustomerList != null) @* Can be replaced with Model.CustomerList if not using AJAX for initial load *@
+                @if (Model.CustomerList != null)
                 {
                     foreach (var customer in Model.CustomerList)
                     {
@@ -676,10 +676,14 @@
             const form = $(button).closest('form')[0];
             if (!form) return;
 
+            const row = $(button).closest('tr');
+            const petName = row.find('td:nth-child(4)').text().trim(); // 从表格行获取宠物名称
+            const customerName = row.find('td:nth-child(3)').text().trim(); // 从表格行获取顾客名称
+
             const statusSelect = form.querySelector('select[name="Status"]');
             const newStatus = statusSelect ? statusSelect.value : 'Completed';
 
-            const message = `Are you sure you want to update appointment of ${petName} to "${newStatus}"?`;
+            const message = `Are you sure you want to update the appointment for ${customerName}'s pet (${petName}) to "${newStatus}"?`;
 
             // Use the global confirmation modal
             window.showConfirmModal('Confirm Update', message, 'save', '#10b981', function () {
@@ -744,6 +748,9 @@
         }
 
         $(document).ready(function () {
+            // Declare flatpickrInstance and flatpickrInitialized in outer scope so they're accessible everywhere
+            var flatpickrInstance = null;
+            var flatpickrInitialized = false;
             // Show the appointment creation form panel
             function showAppointmentForm() {
                 const createForm = document.getElementById('createAppointmentForm');
@@ -759,6 +766,7 @@
                     formTitle.textContent = 'Create New Appointment';
                     actionType.value = 'create';
                     editIdInput.value = '';
+                    $(editIdInput).removeAttr('name'); // Prevent sending AppointmentId for new creations
 
                     customerSearch.prop('disabled', false);
                     petContainer.css('pointer-events', 'auto').css('opacity', '1');
@@ -766,15 +774,174 @@
 
                     $('#createAppointmentForm form')[0].reset();
                     customerSearch.val(null).trigger('change');
-                    $('html, body').animate({ scrollTop: $(createForm).offset().top - 80 }, 500);
-                }
-            };
+                    
+                    // Initialize flatpickr only once when the form is shown for the first time
+                    if (!flatpickrInitialized && typeof flatpickr !== 'undefined') {
+                        (function () {
+                            var appointmentData = {}; // Stores day-level availability { success, counts, totalMinutesPerDay }
+
+                            // Fetches day-level dot data
+                            function fetchCounts(year, month, callback) {
+                                console.log('fetchCounts: Fetching booking density for year:', year, 'month:', month);
+                                $.ajax({
+                                    url: '@Url.Action("GetBookingDensity", "Home", new { area = "Admin" })',
+                                    data: { year: year, month: month },
+                                    dataType: 'json',
+                                    success: function (resp) {
+                                        appointmentData = resp || {};
+                                        console.log('fetchCounts: Booking density response:', appointmentData);
+                                        if (typeof callback === 'function') callback();
+                                    },
+                                    error: function (xhr, status, error) {
+                                        appointmentData = {};
+                                        console.error('fetchCounts: Error fetching booking density:', status, error);
+                                        if (typeof callback === 'function') callback();
+                                    }
+                                });
+                            }
+
+                            // Paints the dots on the calendar based on daily availability
+                            function paintDots(fp) {
+                                console.log('paintDots: Starting paintDots function.');
+                                if (!fp || !fp.daysContainer) {
+                                    console.log('paintDots: Flatpickr instance or daysContainer not ready.');
+                                    return;
+                                }
+                                var totalMinutesForDay = (appointmentData.success && appointmentData.totalMinutesPerDay > 0) ? appointmentData.totalMinutesPerDay : 0;
+                                var appointmentCounts = (appointmentData.success && appointmentData.counts) ? appointmentData.counts : {};
+                                console.log('paintDots: appointmentData:', appointmentData, 'totalMinutesForDay:', totalMinutesForDay, 'appointmentCounts:', appointmentCounts);
+                                
+                                var days = fp.daysContainer.querySelectorAll('.flatpickr-day');
+                                days.forEach(function (dayElem) {
+                                    var existing = dayElem.querySelector('.calendar-dot');
+                                    if (existing) existing.remove();
+                                    if (dayElem.classList.contains('prevMonth') || dayElem.classList.contains('nextMonth') || dayElem.classList.contains('disabled')) return;
+                                    var dateObj = dayElem.dateObj;
+                                    if (!dateObj) return;
+                                    if (dateObj < new Date().setHours(0,0,0,0) || dateObj.getDay() === 1) return;
+
+                                    var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+                                    var info = appointmentCounts[key] || null;
+                                    var dot = document.createElement('span');
+                                    dot.className = 'calendar-dot';
+
+                                    var bookedMinutes = (info && info.bookedMinutes) ? Number(info.bookedMinutes) : 0;
+
+                                    if (totalMinutesForDay === 0) {
+                                        dot.classList.add('dot-black');
+                                    } else if (bookedMinutes === 0) {
+                                        dot.classList.add('dot-green');
+                                    } else {
+                                        var availableMinutes = totalMinutesForDay - bookedMinutes;
+                                        if (availableMinutes < 0) availableMinutes = 0;
+                                        var freeRatio = availableMinutes / totalMinutesForDay;
+
+                                        if (freeRatio >= 0.67) dot.classList.add('dot-green');
+                                        else if (freeRatio >= 0.34) dot.classList.add('dot-orange');
+                                        else if (freeRatio > 0) dot.classList.add('dot-red');
+                                        else dot.classList.add('dot-black');
+                                    }
+                                    dayElem.appendChild(dot);
+                                });
+                            }
+
+                            // Fetches a specific groomer's schedule and disables those times in flatpickr
+                            window.updateGroomerAvailability = function() {
+                                if (!flatpickrInstance) return;
+
+                                const staffId = $('#staffId').val();
+                                const selectedDates = flatpickrInstance.selectedDates;
+                                const selectedDateStr = selectedDates.length > 0 ? flatpickr.formatDate(selectedDates[0], 'Y-m-d') : null;
+                                
+                                // Base rule: always disable Mondays
+                                let disabledRules = [function(date) { return date.getDay() === 1; }];
+
+                                // If 'any' groomer is selected or no date is picked, just use the base rule
+                                if (!staffId || staffId === 'any' || !selectedDateStr) {
+                                    flatpickrInstance.set('disable', disabledRules);
+                                    // Ensure dots are repainted even if groomer is "any" or no date is selected yet
+                                    fetchCounts(flatpickrInstance.currentYear, flatpickrInstance.currentMonth + 1, () => paintDots(flatpickrInstance));
+                                    return;
+                                }
+
+                                // Fetch the specific schedule for the groomer on the selected date
+                                $.ajax({
+                                    url: '@Url.Action("GetGroomerSchedule", "Home", new { area = "Admin" })',
+                                    data: { staffId: staffId, date: selectedDateStr },
+                                    dataType: 'json',
+                                    success: function(response) {
+                                        if (response.success && Array.isArray(response.schedule)) {
+                                            // Add the busy intervals to the disabled rules
+                                            const busyIntervals = response.schedule.map(item => ({
+                                                from: item.start,
+                                                to: item.end
+                                            }));
+                                            flatpickrInstance.set('disable', disabledRules.concat(busyIntervals));
+                                        } else {
+                                            // On error or empty schedule, just use the base rule
+                                            flatpickrInstance.set('disable', disabledRules);
+                                        }
+                                        // Always refetch counts and repaint dots after updating groomer availability
+                                        fetchCounts(flatpickrInstance.currentYear, flatpickrInstance.currentMonth + 1, () => paintDots(flatpickrInstance));
+                                    },
+                                    error: function() {
+                                        // On AJAX error, revert to only disabling Mondays
+                                        flatpickrInstance.set('disable', disabledRules);
+                                        console.error('Failed to fetch groomer schedule.');
+                                        // Also refetch counts and repaint dots on error
+                                        fetchCounts(flatpickrInstance.currentYear, flatpickrInstance.currentMonth + 1, () => paintDots(flatpickrInstance));
+                                    }
+                                });
+                            };
+
+                            // Initialize the flatpickr instance
+                            flatpickrInstance = flatpickr('#appointmentDateTime', {
+                                enableTime: true,
+                                dateFormat: 'Y-m-d H:i',
+                                altInput: true,
+                                altFormat: 'F j, Y h:i K',
+                                minDate: 'today',
+                                minuteIncrement: 30,
+                                minTime: '09:00',
+                                maxTime: '16:30',
+                                disable: [function (date) { return date.getDay() === 1; }], // Initial rule
+                                onReady: function (selectedDates, dateStr, instance) {
+                                    fetchCounts(instance.currentYear, instance.currentMonth + 1, () => paintDots(instance));
+                                },
+                                onMonthChange: function (selectedDates, dateStr, instance) {
+                                    fetchCounts(instance.currentYear, instance.currentMonth + 1, () => paintDots(instance));
+                                },
+                                onYearChange: function (selectedDates, dateStr, instance) {
+                                    fetchCounts(instance.currentYear, instance.currentMonth + 1, () => paintDots(instance));
+                                },
+                                onChange: function (selectedDates, dateStr, instance) {
+                                    clearAllValidationErrors();
+                                    // When date changes, update the groomer's disabled time slots
+                                    updateGroomerAvailability(); 
+                                    debouncedValidateAppointment();
+                                }
+                            });
+                            flatpickrInitialized = true;
+
+                            // Attach event listener to the groomer dropdown after flatpickr is initialized
+                            $('#staffId').on('change', updateGroomerAvailability);
+
+                                        })(); // Close the IIFE for flatpickr initialization
+                                    }
+                                    // Scroll to the form
+                                    $('html, body').animate({ scrollTop: $(createForm).offset().top - 80 }, 500);                }
+            }
 
             // Hide the appointment creation form panel
             function hideAppointmentForm() {
                 const createForm = document.getElementById('createAppointmentForm');
-                if (createForm) createForm.style.display = 'none';
-            };
+                if (createForm) {
+                    createForm.style.display = 'none';
+                    // Restore the name attribute of editAppointmentId when hiding the form,
+                    // in case it was removed for a "create" operation.
+                    $('#editAppointmentId').attr('name', 'EditAppointmentId');
+                }
+            }
 
             var customerDefaultsLoaded = false;
 
@@ -791,6 +958,21 @@
 
             // Initialize petList placeholder on load
             ensurePetListPlaceholder();
+
+            // ========== EVENT LISTENERS FOR BUTTONS ==========
+            // Bind "Add Appointment" button click
+            $('#btnAddAppointment').on('click', function(e) {
+                e.preventDefault();
+                console.log('Add Appointment button clicked');
+                showAppointmentForm();
+            });
+
+            // Bind "Cancel" button click
+            $('#btnCancelAddAppointment').on('click', function(e) {
+                e.preventDefault();
+                console.log('Cancel button clicked');
+                hideAppointmentForm();
+            });
 
             // Initialize Select2 for AJAX customer search (select2 script loaded in layout)
             if ($.fn.select2) {
@@ -1033,58 +1215,72 @@
 
                 groomerModeSelector.empty().hide();
                 multiGroomerContainer.empty().hide();
-                singleGroomerContainer.show(); // Show by default
+                singleGroomerContainer.show();
 
                 if (checkedPets.length > 1) {
-                    // Show the mode selector for multiple pets
                     groomerModeSelector.html(`
                         <label>Groomer Assignment</label>
                         <div class="radio-group">
-                            <input type="radio" id="groomer_mode_any" name="GroomerMode" value="any" checked>
-                            <label for="groomer_mode_any">Auto-assign (Any)</label>
-                            <input type="radio" id="groomer_mode_individual" name="GroomerMode" value="individual">
-                            <label for="groomer_mode_individual">Assign Individually</label>
+                            <input type="radio" id="groomer_mode_one_sequential" name="GroomerMode" value="one_sequential">
+                            <label for="groomer_mode_one_sequential">One Groomer (Sequential)</label>
+                            
+                            <input type="radio" id="groomer_mode_any_parallel" name="GroomerMode" value="any_parallel" checked>
+                            <label for="groomer_mode_any_parallel">Auto-assign (Parallel)</label>
+                            
+                            <input type="radio" id="groomer_mode_individual_parallel" name="GroomerMode" value="individual_parallel">
+                            <label for="groomer_mode_individual_parallel">Assign Individually (Parallel)</label>
                         </div>
                     `).show();
+                    
+                    // Trigger the handler for the default checked value
+                    handleGroomerModeChange('any_parallel');
 
-                    // Initially, "Any" is selected, so hide the single groomer dropdown
-                    $('#staffId').val('any').trigger('change'); // Set to 'any'
-                    singleGroomerContainer.hide();
-                }
-                else if (checkedPets.length === 1) {
-                    // When only one pet is selected, ensure GroomerMode is set to 'one'
-                    // This is done by creating a hidden input if the radio group is not visible.
-                    if (groomerModeSelector.find('input[name="GroomerMode"]').length === 0) {
-                        groomerModeSelector.html('<input type="hidden" name="GroomerMode" value="one">');
-                    }
-                    singleGroomerContainer.show();
+                } else if (checkedPets.length === 1) {
+                    groomerModeSelector.html('<input type="hidden" name="GroomerMode" value="one_single_pet">');
+                    handleGroomerModeChange('one_single_pet');
+                } else {
+                    // No pets selected
+                    handleGroomerModeChange(null);
                 }
             }
 
-            // Handle groomer assignment mode change
-            $(document).on('change', 'input[name="GroomerMode"]', function() {
-                var mode = $(this).val();
+            function handleGroomerModeChange(mode) {
                 var singleGroomerContainer = $('#single-groomer-select-container');
                 var multiGroomerContainer = $('#multi-groomer-container');
 
                 clearAllValidationErrors();
                 multiGroomerContainer.empty().hide();
+                singleGroomerContainer.hide(); 
 
-                if (mode === 'individual') {
-                    singleGroomerContainer.hide(); // Hide the single dropdown
+                $('#staffId option[value="any"]').show();
+
+                if (mode === 'one_sequential') {
+                    singleGroomerContainer.show();
+                    $('#staffId option[value="any"]').hide();
+                    if ($('#staffId').val() === 'any') {
+                        $('#staffId option:not([value="any"])').first().prop('selected', true);
+                    }
+                } else if (mode === 'individual_parallel') {
                     multiGroomerContainer.show();
-                    // Create a dropdown for each selected pet
                     $('#petList input[type="checkbox"]:checked').each(function() {
                         var petId = $(this).val();
                         var petName = $(this).siblings('label').text();
                         var groomerSelect = generateGroomerSelectForPet(petId, petName);
                         multiGroomerContainer.append(groomerSelect);
                     });
+                } else if (mode === 'one_single_pet') {
+                    singleGroomerContainer.show();
                 }
-                else { // 'any'
-                    singleGroomerContainer.hide(); // Hide the single dropdown
-                    $('#staffId').val('any').trigger('change'); // Reset to 'any'
+                
+                // Only call updateGroomerAvailability if flatpickr is initialized
+                if (typeof flatpickrInstance !== 'undefined' && flatpickrInstance) {
+                    updateGroomerAvailability();
                 }
+            }
+
+            // Handle groomer assignment mode change
+            $(document).on('change', 'input[name="GroomerMode"]', function() {
+                handleGroomerModeChange($(this).val());
             });
 
             function generateGroomerSelectForPet(petId, petName) {
@@ -1131,7 +1327,7 @@
                 });
 
                 // Collect individual groomer assignments if in that mode
-                if (data.GroomerMode === 'individual') {
+                if (data.GroomerMode === 'individual_parallel') {
                     $('[name^="PetGroomerMap"]').each(function() {
                         var petId = this.name.match(/\[(.*?)\]/)[1];
                         var groomerId = $(this).val();
@@ -1143,131 +1339,30 @@
                     return;
                 }
 
-                try {
-                    const response = await fetch('@Url.Action("ValidateAppointmentTime", "Home", new { area = "Admin" })', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                        body: JSON.stringify(data)
-                    });
-                    const result = await response.json();
+                // Read antiforgery token from the form and send as header
+                const token = $('input[name="__RequestVerificationToken"]').first().val();
 
-                    if (!result.isValid) {
-                        showValidationError(result.field || 'StaffId', result.message);
+                // Use jQuery AJAX to POST JSON and include antiforgery token header
+                $.ajax({
+                    url: '@Url.Action("ValidateAppointmentTime", "Home", new { area = "Admin" })',
+                    method: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    headers: { 'RequestVerificationToken': token },
+                    data: JSON.stringify(data),
+                    success: function(result) {
+                        if (!result.isValid) showValidationError(result.field || 'StaffId', result.message);
+                    },
+                    error: function() {
+                        // Silent on error; server will validate on final submit
                     }
-                } catch (error) {
-                    // Don't show a generic error on network failure.
-                    // The validation will run again on the server during submission anyway.
-                }
+                });
             }
+
+            // debounce wrapper must be defined in the outer scope so multiple callers can use it
             const debouncedValidateAppointment = debounce(validateAppointment, 800);
 
-
-            // Initialize flatpickr on appointmentDateTime and disable Mondays (weekday1)
-            if (typeof flatpickr !== 'undefined') {
-                (function () {
-                    var appointmentCounts = {};
-
-                    function fetchCounts(year, month, callback) {
-                        $.ajax({
-                            url: '@Url.Action("GetBookingDensity", "Home", new { area = "Admin" })',
-                            data: { year: year, month: month },
-                            dataType: 'json',
-                            success: function (resp) {
-                                appointmentCounts = (resp && resp.counts) ? resp.counts : (resp || {});
-                                if (typeof callback === 'function') callback(appointmentCounts);
-                            },
-                            error: function () {
-                                appointmentCounts = {};
-                                if (typeof callback === 'function') callback(appointmentCounts);
-                            }
-                        });
-                    }
-
-                    function paintDots(fp) {
-                        if (!fp || !fp.daysContainer) return;
-                        var days = fp.daysContainer.querySelectorAll('.flatpickr-day');
-                        days.forEach(function (dayElem) {
-                            var existing = dayElem.querySelector('.calendar-dot');
-                            if (existing) existing.remove();
-                            if (dayElem.classList.contains('prevMonth') || dayElem.classList.contains('nextMonth') || dayElem.classList.contains('disabled')) return;
-                            var dateObj = dayElem.dateObj;
-                            if (!dateObj) return;
-
-                            if (dateObj < new Date().setHours(0, 0, 0, 0)) return;
-
-                            var key = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-                            var count = appointmentCounts[key] || 0;
-
-                            var dot = document.createElement('span');
-                            dot.className = 'calendar-dot';
-
-                            if (count <= 0) dot.classList.add('dot-green');
-                            else if (count <= 2) dot.classList.add('dot-green');
-                            else if (count <= 5) dot.classList.add('dot-orange');
-                            else if (count <= 8) dot.classList.add('dot-red');
-                            else dot.classList.add('dot-black');
-                            dayElem.appendChild(dot);
-                        });
-                    }
-
-                    var fp = flatpickr('#appointmentDateTime', {
-                        enableTime: true,
-                        dateFormat: 'Y-m-d H:i',
-                        altInput: true,
-                        altFormat: 'F j, Y h:i K',
-                        minDate: 'today',
-                        minuteIncrement: 30,
-                        minTime: '09:00',
-                        maxTime: '16:30',
-                        disable: [function (date) { return date.getDay() === 1; }],
-                        onReady: function (selectedDates, dateStr, instance) {
-                            var year = instance.currentYear;
-                            var month = instance.currentMonth + 1;
-                            fetchCounts(year, month, function () { paintDots(instance); });
-                        },
-                        onMonthChange: function (selectedDates, dateStr, instance) {
-                            var year = instance.currentYear;
-                            var month = instance.currentMonth + 1;
-                            fetchCounts(year, month, function () { paintDots(instance); });
-                        },
-                        onYearChange: function (selectedDates, dateStr, instance) {
-                            var year = instance.currentYear;
-                            var month = instance.currentMonth + 1;
-                            fetchCounts(year, month, function () { paintDots(instance); });
-                        },
-                        onChange: function (selectedDates, dateStr, instance) {
-                            clearAllValidationErrors();
-                            paintDots(instance);
-                            debouncedValidateAppointment(); // Trigger validation on change
-                        }
-                    });
-
-                })();
-            }
-
-            // Button handler
-            $('#btnAddAppointment').on('click', function (e) {
-                e.preventDefault();
-                showAppointmentForm(); // This now also resets the form
-            });
-
-            // Reset button handler for filter form
-            $('#filterForm button[type="reset"]').on('click', function (e) {
-                e.preventDefault();
-                // Redirect to the base URL to clear all filters
-                window.location.href = '@Url.Action("Appointment", "Home")';
-            });
-
-            // Cancel button handler for the create form
-            $('#btnCancelAddAppointment').on('click', function(e) {
-                e.preventDefault();
-                hideAppointmentForm();
-            });
-
-            // Trigger validation when groomer or services change
-            $('#staffId').on('change', debouncedValidateAppointment);
-            $('#serviceSelectContainer').on('change', '.service-select', debouncedValidateAppointment);
-            $('#multi-groomer-container').on('change', 'select', debouncedValidateAppointment);
+            // Declare flatpickrInstance in outer scope so it's accessible everywhere
+            var flatpickrInstance = null;
 
 
         }); // Close $(document).ready

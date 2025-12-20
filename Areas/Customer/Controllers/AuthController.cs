@@ -86,6 +86,18 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             // Successful login - reset failed attempts
             ResetFailedAttempts(formattedPhoneNumber);
 
+            // ✅ Check if customer needs to set a new password
+            if (user.Status == "pending_password")
+            {
+                // For first-time login, set the main session variables
+                HttpContext.Session.SetString("CustomerId", user.UserId);
+                HttpContext.Session.SetString("CustomerName", user.Name);
+                HttpContext.Session.SetString("CustomerPhone", user.Phone);
+                // ✅ Redirect to profile and signal to open change password section
+                TempData["ShowChangePassword"] = true;
+                return RedirectToAction("Profile", "Home");
+            }
+
             // Set session for authenticated user
             HttpContext.Session.SetString("CustomerId", user.UserId);
             HttpContext.Session.SetString("CustomerName", user.Name);
@@ -618,10 +630,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         public IActionResult Logout()
         {
-            // Clear all session data
-            HttpContext.Session.Clear();
-            
-            // Redirect to Login page
+            // Remove only customer-specific session keys to avoid clearing admin/staff sessions
+            HttpContext.Session.Remove("CustomerId");
+            HttpContext.Session.Remove("CustomerName");
+            HttpContext.Session.Remove("CustomerPhone");
+
+            // Also remove any password reset/session keys related to customer flows
+            HttpContext.Session.Remove("ResetCustomerId");
+            HttpContext.Session.Remove("ResetEmail");
+            HttpContext.Session.Remove("ResetPhone");
+
             return RedirectToAction("Index", "Home", new { area = "Customer" });
         }
     }

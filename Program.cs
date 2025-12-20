@@ -1,60 +1,56 @@
-﻿using PetGroomingAppointmentSystem.Services;
-using PetGroomingAppointmentSystem.Areas.Admin.Services;
+﻿using PetGroomingAppointmentSystem.Areas.Admin.Services;
 using PetGroomingAppointmentSystem.Models;
+using PetGroomingAppointmentSystem.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------
-// Register DB (LocalDB .mdf file-based) 
-// -----------------------------
+// Database setup
 builder.Services.AddSqlServer<DB>($@"
     Data Source=(LocalDB)\MSSQLLocalDB;
     AttachDbFilename={builder.Environment.ContentRootPath}\DB.mdf;
-    Database=PetGroomingSystem;
-    Trusted_Connection=True;
-    MultipleActiveResultSets=true;
+
 ");
 
-// -----------------------------
-// Register AWS S3 Storage Service
-// -----------------------------
+// AWS S3 Storage Service
 builder.Services.Configure<AWSSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 
-// Add Admin Email Service (explicit namespace to avoid ambiguity)
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();
+// ========== Admin Area Services ==========
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, 
+                           PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPasswordService, 
+                           PetGroomingAppointmentSystem.Areas.Admin.Services.PasswordService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, 
+                           PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, 
+                           PetGroomingAppointmentSystem.Areas.Admin.Services.ValidationService>();
 
-// Register Admin area support services
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPasswordService, PetGroomingAppointmentSystem.Areas.Admin.Services.PasswordService>();
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, PetGroomingAppointmentSystem.Areas.Admin.Services.ValidationService>();
+// ========== Customer Area Services ==========
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IEmailService, 
+                           PetGroomingAppointmentSystem.Services.EmailService>();
 
-// Add Chatbot Service
+// ========== Shared Services (for both Admin & Customer) ==========
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddHttpClient<ChatbotService>();
 
-// Customer Email Service (if different from Admin)
-// Keep the original IEmailService from Services folder for Customer area
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IEmailService, 
-         PetGroomingAppointmentSystem.Services.EmailService>();
+// Recaptcha Service
+//builder.Services.AddScoped<IRecaptchaService, RecaptchaService>();
 
-// Add session support
+// Session support
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
 });
 
-// Add MVC (controllers + views) and Razor Pages
+// MVC + Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// -----------------------------
-// HTTP pipeline
-// -----------------------------
+// HTTP pipeline configuration
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

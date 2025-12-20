@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PetGroomingAppointmentSystem.Models;
 
@@ -11,9 +12,11 @@ using PetGroomingAppointmentSystem.Models;
 namespace PetGroomingAppointmentSystem.Migrations
 {
     [DbContext(typeof(DB))]
-    partial class DBModelSnapshot : ModelSnapshot
+    [Migration("20251219051715_FixPending")]
+    partial class FixPending
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,7 +28,8 @@ namespace PetGroomingAppointmentSystem.Migrations
             modelBuilder.Entity("PetGroomingAppointmentSystem.Models.Appointment", b =>
                 {
                     b.Property<string>("AppointmentId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("AdminId")
                         .HasMaxLength(10)

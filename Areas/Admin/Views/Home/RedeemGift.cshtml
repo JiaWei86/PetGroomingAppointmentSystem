@@ -50,6 +50,21 @@
             #alertMessage.fade-out {
                 animation: fadeOut 0.5s ease forwards;
             }
+
+        /* ========== ✅ Error Message Styling ========== */
+        .error-message {
+            color: #ef4444 !important; /* Red text */
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            margin-top: 4px !important;
+            display: block !important;
+            min-height: 15px; /* Reserve space */
+        }
+
+        /* Highlight inputs with errors */
+        .form-control.is-invalid {
+            border-color: #ef4444 !important;
+        }
     </style>
 }
 @* ========== 消息显示 ========== *@
@@ -101,22 +116,25 @@
             <div class="form-group">
                 <label for="giftName">Gift Name</label>
                 <input type="text" id="giftName" name="Name" placeholder="e.g., Pet Toy, Food Voucher" required />
+                <small class="error-message" id="error-add-Name"></small>
             </div>
 
             <!-- Quantity -->
             <div class="form-group">
                 <label for="quantity">Quantity</label>
                 <input type="number" id="quantity" name="Quantity" min="0" placeholder="Available stock" required />
+                <small class="error-message" id="error-add-Quantity"></small>
             </div>
 
             <!-- Points Cost -->
             <div class="form-group">
                 <label for="points">Loyalty Points Cost</label>
                 <input type="number" id="points" name="LoyaltyPointCost" min="0" placeholder="Points required" required />
+                <small class="error-message" id="error-add-LoyaltyPointCost"></small>
             </div>
 
             <!-- Photo Upload -->
-            <div class="form-group">
+            <div class="form-group full-width">
                 <label for="photo">Gift Photo</label>
                 <input type="file" 
                        id="photo" 
@@ -127,6 +145,7 @@
                 <span id="uploadStatus_create" 
                       style="display: none; font-size: 12px; margin-top: 5px; display: block; color: #10b981; font-weight: 600;">
                 </span>
+                <small class="error-message" id="error-add-PhotoUpload"></small>
             </div>
 
             <!-- Save Button -->
@@ -168,9 +187,17 @@
                             <input type="hidden" name="actionType" value="edit" />
                             <input type="hidden" name="editGiftId" value="@gift.GiftId" />
                             <td>@gift.GiftId</td>
-                            <td><input type="text" name="Name" value="@gift.Name" required class="form-control" /></td>
-                            <td><input type="number" name="Quantity" value="@gift.Quantity" required class="form-control" /></td>
-                            <td><input type="number" name="LoyaltyPointCost" value="@gift.LoyaltyPointCost" required class="form-control" /></td>
+                            <td>
+                                <input type="text" name="Name" value="@gift.Name" required class="form-control" onblur="validateField(this, '@gift.GiftId')" />
+                                <small class="error-message" id="error-edit-Name-@gift.GiftId"></small>
+                            </td>
+                            <td>
+                                <input type="number" name="Quantity" value="@gift.Quantity" min="0" required class="form-control" onblur="validateField(this, '@gift.GiftId')" />
+                                <small class="error-message" id="error-edit-Quantity-@gift.GiftId"></small>
+                            </td>
+                            <td><input type="number" name="LoyaltyPointCost" value="@gift.LoyaltyPointCost" min="0" required class="form-control" onblur="validateField(this, '@gift.GiftId')" />
+                                <small class="error-message" id="error-edit-LoyaltyPointCost-@gift.GiftId"></small>
+                            </td>
                                 <td>
                                     <input type="file" name="PhotoUpload" accept="image/*" class="form-control"
                                            id="photoInput_@gift.GiftId" onchange="handlePhotoUpload(this, '@gift.GiftId')" />
@@ -266,6 +293,20 @@
         },5000);
     })();
 
+    function showCreateForm() {
+        document.getElementById('createGiftForm').style.display = 'block';
+        // Clear any previous validation messages
+        document.querySelectorAll('#addGiftForm .error-message').forEach(el => el.textContent = '');
+        document.querySelectorAll('#addGiftForm .form-control').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    function hideCreateForm() {
+        document.getElementById('createGiftForm').style.display = 'none';
+        // Optional: reset the form fields when hiding
+        document.getElementById('addGiftForm').reset();
+    }
+
+
     // Page-local fallbacks if admin.js didn't load or expose helpers
     (function() {
      if (typeof window.showConfirmModal === 'function') return; // global available
@@ -336,5 +377,58 @@
      setTimeout(function() { alertDiv.classList.add('fade-out'); setTimeout(function(){ if (alertDiv && alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv); },500); },5000);
      };
     })();
+</script>
+
+<!-- Real-time AJAX validation script -->
+<script>
+    async function validateField(inputElement, giftId) {
+        const fieldName = inputElement.name;
+        const fieldValue = inputElement.value;
+        const formType = giftId ? 'edit' : 'add';
+        const errorElementId = `error-${formType}-${fieldName}` + (giftId ? `-${giftId}` : '');
+        const errorElement = document.getElementById(errorElementId);
+
+        if (!errorElement) {
+            console.warn(`Validation error: Element with ID '${errorElementId}' not found.`);
+            return;
+        }
+
+        // Clear previous error and invalid state
+        errorElement.textContent = '';
+        inputElement.classList.remove('is-invalid');
+
+        // Basic required check (AJAX is for server-side rules like uniqueness)
+        if (inputElement.required && !fieldValue.trim()) {
+            errorElement.textContent = `${fieldName} is required.`;
+            inputElement.classList.add('is-invalid');
+            return;
+        }
+
+        // No need to validate empty non-required fields via AJAX
+        if (!fieldValue.trim()) {
+            return;
+        }
+
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const response = await fetch('@Url.Action("ValidateGiftField", "Home")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ GiftId: giftId, FieldName: fieldName, FieldValue: fieldValue })
+            });
+
+            const result = await response.json();
+            if (!result.isValid) {
+                errorElement.textContent = result.errorMessage;
+                inputElement.classList.add('is-invalid');
+            }
+        } catch (error) {
+            console.error('AJAX validation error:', error);
+        }
+    }
 </script>
 }

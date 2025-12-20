@@ -1,11 +1,26 @@
-﻿@using PetGroomingAppointmentSystem.Models;
+﻿@using PetGroomingAppointmentSystem.Models
 @model Customer
 
 @{
     ViewData["Title"] = $"Customer Profile - {Model?.Name}";
     ViewData["ActivePage"] = "Customer";
-}
 
+    // Choose the first photo when customer.Photo contains multiple comma-separated URLs
+    // Use an existing upload as fallback to avoid404
+    string photoSrc = "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg";
+    var photoList = new string[0];
+    if (!string.IsNullOrEmpty(Model?.Photo))
+    {
+        photoList = Model.Photo.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(p => p.Trim())
+                                 .Where(p => !string.IsNullOrEmpty(p))
+                                 .ToArray();
+        if (photoList.Length >0)
+        {
+            photoSrc = photoList[0];
+        }
+    }
+}
 
 
 <div class="content-header">
@@ -15,19 +30,42 @@
 
 <div class="customer-profile-wrapper">
     <div class="profile-container">
-        
+
         <!-- Left Column: Customer Info Card -->
         <div>
             <div class="profile-card">
-                <!-- Avatar -->
-                <img src="@(Model?.Photo ?? "/uploads/placeholder.png")"
-                     alt="@Model?.Name"
-                     class="profile-avatar" />
+                <!-- Avatar (supports multi-photo carousel) -->
+                <div class="animated-avatar-container admin-animated-avatar" id="adminAnimatedAvatar">
+                    @if (photoList.Length == 0)
+                    {
+                        <img src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="@Model?.Name" class="profile-avatar avatar-photo active" />
+                    }
+                    else
+                    {
+                        for (int i = 0; i < photoList.Length; i++)
+                        {
+                            <img src="@photoList[i]" alt="avatar @(i+1)" class="profile-avatar avatar-photo @(i==0?"active":"")" data-index="@i" />
+                        }
+                    }
+                    @if (photoList.Length > 1)
+                    {
+                        <span class="photo-count-badge">@photoList.Length photos</span>
+                    }
+                </div>
+                @if (photoList.Length > 1)
+                {
+                    <div class="avatar-indicators" id="adminAvatarIndicators">
+                        @for (int i = 0; i < photoList.Length; i++)
+                        {
+                            <button type="button" class="avatar-indicator @(i==0?"active":"")" data-index="@i"></button>
+                        }
+                    </div>
+                }
 
                 <h4>@Model?.Name</h4>
                 <div class="profile-card-email">@Model?.Email</div>
 
-                <button type="button" class="btn btn-primary profile-edit-btn" id="editProfileBtn" onclick="openEditModal()">
+                <button type="button" class="btn btn-primary profile-edit-btn" id="editProfileBtn">
                     ✏️ Edit Profile
                 </button>
 
@@ -62,10 +100,10 @@
             <div class="quick-actions-card">
                 <h6>Quick Actions</h6>
                 <div class="quick-actions-buttons">
-                    <button type="button" class="btn btn-primary quick-actions-btn" onclick="openAddPetModal()">
+                    <button type="button" class="btn btn-primary quick-actions-btn" id="addPetBtn">
                         🐾 Add Pet
                     </button>
-                    <button type="button" class="btn btn-primary quick-actions-btn" onclick="openAdjustLoyaltyModal()">
+                    <button type="button" class="btn btn-primary quick-actions-btn" id="adjustLoyaltyBtn">
                         🎁 Adjust Points
                     </button>
                 </div>
@@ -76,10 +114,10 @@
         <div class="profile-content-card">
             <!-- Tab Navigation -->
             <div class="profile-tabs">
-                <button onclick="switchTab('pets')" class="profile-tab-btn active" id="pets-tab-btn">
+                <button class="profile-tab-btn active" id="pets-tab-btn" data-tab="pets">
                     🐾 Pets (@(Model?.Pets?.Count ?? 0))
                 </button>
-                <button onclick="switchTab('loyalty')" class="profile-tab-btn" id="loyalty-tab-btn">
+                <button class="profile-tab-btn" id="loyalty-tab-btn" data-tab="loyalty">
                     💎 Loyalty Points
                 </button>
             </div>
@@ -92,7 +130,7 @@
                         @foreach (var pet in Model.Pets)
                         {
                             <div class="pet-item">
-                                <img src="@(pet?.Photo ?? "/images/pet-placeholder.png")"
+                                <img src="@(pet?.Photo ?? "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg")"
                                      alt="@pet?.Name"
                                      class="pet-avatar" />
                                 <div class="pet-info">
@@ -100,10 +138,17 @@
                                     <p class="pet-detail">@pet?.Type - @pet?.Breed</p>
                                     <p class="pet-last-detail">Age: @pet?.Age years</p>
                                     <div class="action-buttons">
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="editPet('@pet?.PetId')">
+                                        <button type="button" class="btn btn-primary btn-sm edit-pet-btn"
+ data-pet-id="@pet?.PetId"
+ data-pet-name="@pet?.Name"
+ data-pet-type="@pet?.Type"
+ data-pet-breed="@pet?.Breed"
+ data-pet-age="@pet?.Age"
+ data-pet-remark="@pet?.Remark"
+ data-pet-photo="@pet?.Photo">
                                             ✏️ Edit
                                         </button>
-                                        <button type="button" class="btn btn-sm delete-btn" onclick="deletePet('@pet?.PetId', '@pet?.Name')">
+                                        <button type="button" class="btn btn-sm delete-btn delete-pet-btn" data-pet-id="@pet?.PetId" data-pet-name="@pet?.Name">
                                             🗑️ Delete
                                         </button>
                                     </div>
@@ -112,7 +157,7 @@
                         }
                     </div>
                     <div style="text-align: center; margin-top: 16px;">
-                        <button type="button" class="btn btn-primary" onclick="openAddPetModal()">
+                        <button type="button" class="btn btn-primary add-new-pet-btn">
                             ➕ Add New Pet
                         </button>
                     </div>
@@ -121,7 +166,7 @@
                 {
                     <div class="empty-state-message">
                         <p>No pets assigned yet.</p>
-                        <button type="button" class="btn btn-primary" onclick="openAddPetModal()">
+                        <button type="button" class="btn btn-primary add-new-pet-btn">
                             ➕ Add First Pet
                         </button>
                     </div>
@@ -137,7 +182,7 @@
                             <span id="loyaltyBalanceDisplay">@Model?.LoyaltyPoint</span>
                             <span class="loyalty-balance-unit">pts</span>
                         </div>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openAdjustLoyaltyModal()">
+                        <button type="button" class="btn btn-primary btn-sm adjust-points-btn">
                             💎 Adjust Points
                         </button>
                     </div>
@@ -188,31 +233,36 @@
     <div class="edit-modal-content">
         <div class="edit-modal-header">
             <h5>✏️ Edit Customer Profile</h5>
-            <button type="button" onclick="closeEditModal()" class="edit-modal-close-btn">×</button>
+            <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
         <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
                     <label>Full Name <span class="modal-form-required">*</span></label>
-                    <input type="text" name="Name" value="@Model?.Name" required class="modal-form-input" />
+                    <input id="customerName" type="text" name="Name" value="@Model?.Name" required class="modal-form-input" />
+                    <small class="error-message" id="error-Name"></small>
                 </div>
                 <div class="modal-form-group">
                     <label>Email <span class="modal-form-required">*</span></label>
-                    <input type="email" name="Email" value="@Model?.Email" required class="modal-form-input" />
+                    <input id="customerEmail" type="email" name="Email" value="@Model?.Email" required class="modal-form-input" />
+                    <small class="error-message" id="error-Email"></small>
                 </div>
             </div>
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
                     <label>Phone <span class="modal-form-required">*</span></label>
-                    <input type="tel" name="Phone" value="@Model?.Phone" required class="modal-form-input" />
+                    <input id="customerPhone" type="tel" name="Phone" value="@Model?.Phone" required class="modal-form-input" />
+                    <small class="error-message" id="error-Phone"></small>
                 </div>
                 <div class="modal-form-group">
                     <label>IC Number</label>
-                    <input type="text" name="IC" value="@Model?.IC" class="modal-form-input" />
+                    <input id="customerIC" type="text" name="IC" value="@Model?.IC" class="modal-form-input" />
+                    <small class="error-message" id="error-IC"></small>
                 </div>
             </div>
 
@@ -227,12 +277,30 @@
 
             <div class="modal-form-group">
                 <label>Profile Photo</label>
-                <input type="file" name="PhotoUpload" accept="image/*" class="modal-form-input" />
-                <small class="modal-form-help-text">Leave empty to keep current photo</small>
+                <input type="file" name="Photos" accept="image/*" class="modal-form-input" multiple />
+                <small class="modal-form-help-text">You can select multiple photos. Leave empty to keep current photos.</small>
             </div>
 
+            @* Existing photos gallery with delete buttons *@
+            @if (photoList.Length > 0)
+            {
+                <div class="modal-form-group">
+                    <label>Existing Photos</label>
+                    <div id="existingPhotosContainer" style="display:flex;gap:8px;flex-wrap:wrap;">
+                        @for (int i = 0; i < photoList.Length; i++)
+                        {
+                            var p = photoList[i];
+                            <div class="existing-photo-item" data-photo="@p" style="position:relative;width:72px;height:72px;border-radius:50%;overflow:visible;border:2px solid #ff9500;">
+                                <img src="@p" style="width:100%;height:100%;object-fit:cover;display:block;" alt="photo @(i+1)" />
+                                <button type="button" class="delete-photo-btn" data-photo="@p" title="Delete photo">×</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             <div class="modal-form-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
                 <button type="submit" class="btn btn-primary">💾 Save Changes</button>
             </div>
         </form>
@@ -244,12 +312,17 @@
     <div class="edit-modal-content">
         <div class="edit-modal-header">
             <h5>🐾 Add New Pet</h5>
-            <button type="button" onclick="closeAddPetModal()" class="edit-modal-close-btn">×</button>
+            <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
-        <form id="addPetForm" onsubmit="submitAddPet(event)">
+        <form id="addPetForm" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div style="text-align:center;margin-bottom:12px;">
+              <img id="addPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
+              <input type="file" id="addPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
+            </div>
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
@@ -287,7 +360,7 @@
             <div id="petSuccessMessage" class="alert alert-success" style="display:none;"></div>
 
             <div class="modal-form-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
                 <button type="submit" class="btn btn-primary">💾 Add Pet</button>
             </div>
         </form>
@@ -299,10 +372,11 @@
     <div class="edit-modal-content">
         <div class="edit-modal-header">
             <h5>💎 Adjust Loyalty Points</h5>
-            <button type="button" onclick="closeAdjustLoyaltyModal()" class="edit-modal-close-btn">×</button>
+            <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
-        <form id="adjustLoyaltyForm" onsubmit="submitAdjustLoyalty(event)">
+        <form id="adjustLoyaltyForm">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
             <div class="loyalty-adjustment-info">
@@ -336,7 +410,7 @@
             <div id="loyaltySuccessMessage" class="alert alert-success" style="display:none;"></div>
 
             <div class="modal-form-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeAdjustLoyaltyModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
                 <button type="submit" class="btn btn-primary">💾 Confirm Adjustment</button>
             </div>
         </form>
@@ -348,12 +422,18 @@
     <div class="edit-modal-content">
         <div class="edit-modal-header">
             <h5 id="petModalTitle">🐾 Add New Pet</h5>
-            <button type="button" onclick="closeEditPetModal()" class="edit-modal-close-btn">×</button>
+            <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
-        <form id="editPetForm" onsubmit="submitEditPet(event)">
+        <form id="editPetForm">
+            @Html.AntiForgeryToken()
             <input type="hidden" id="editPetId" name="petId" value="" />
             <input type="hidden" name="customerId" value="@Model?.UserId" />
+
+            <div style="text-align:center;margin-bottom:12px;">
+              <img id="editPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
+              <input type="file" id="editPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
+            </div>
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
@@ -390,450 +470,597 @@
             <div id="editPetSuccessMessage" class="alert alert-success" style="display:none;"></div>
 
             <div class="modal-form-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditPetModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
                 <button type="submit" class="btn btn-primary">💾 Save Pet</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Validation colors -->
+<style>
+    .error-message { color: #dc3545; font-size:12px; min-height:16px; display:block; }
+    .error-message.valid { color: #198754; }
+    .modal-form-input.is-invalid { border-color: #dc3545 !important; }
+    .modal-form-input.is-valid { border-color: #198754 !important; }
+
+    /* ========== ANIMATED AVATAR (match customer) ========== */
+    .admin-animated-avatar {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto; /* center horizontally */
+        transform: translateX(6px); /* nudge slightly right to align under name */
+        margin-bottom: 15px;
+    }
+
+    .admin-animated-avatar .avatar-photo {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #ff9500;
+        opacity: 0;
+        transition: opacity .25s ease-in-out, transform .2s ease;
+        background: #f5f5f5;
+    }
+
+    .admin-animated-avatar .avatar-photo.active {
+        opacity: 1;
+        z-index: 2;
+        transform: scale(1);
+    }
+
+    .admin-animated-avatar .avatar-photo:not(.active) {
+        z-index: 1;
+        transform: scale(0.98);
+    }
+
+    /* ========== PHOTO INDICATORS (DOTS) ========== */
+    .avatar-indicators {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        max-width: 200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .avatar-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ddd;
+        cursor: pointer;
+        transition: all .2s ease;
+        border: none;
+        padding: 0;
+    }
+
+    .avatar-indicator.active {
+        background: #ff9500;
+        transform: scale(1.3);
+    }
+
+    .avatar-indicator:hover {
+        background: #ff6b35;
+    }
+
+    /* ========== PHOTO COUNT BADGE ========== */
+    .photo-count-badge {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        background: #ff9500; /* solid orange for visibility */
+        color: #ffffff;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 14px;
+        font-weight: 600;
+        z-index: 30;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    /* small visual tweaks to match customer page spacing */
+    .profile-card .profile-avatar { width: 100%; height: 100%; border-radius: 50%; }
+
+    /* Existing photos delete button */
+    .existing-photo-item { position: relative; overflow: visible; display: inline-block; }
+    .existing-photo-item .delete-photo-btn {
+        position: absolute;
+        top: 6px; /* inside circle */
+        right: 6px;
+        background: #dc3545;
+        color: #fff;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 9999;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        padding: 0;
+        line-height: 1;
+        pointer-events: auto;
+    }
+    .existing-photo-item .delete-photo-btn:focus { outline: none; box-shadow: 0 4px 8px rgba(255,149,0,0.15); }
+</style>
 
 @section Scripts {
     <script>
-        const customerId = '@Model?.UserId';
-        const currentLoyaltyPoints = @Model?.LoyaltyPoint;
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Constants and State ---
+    const customerId = '@Model?.UserId';
+    let currentLoyaltyPoints = @(Model?.LoyaltyPoint ?? 0); // changed to let so it can be updated
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-        // Create a safe pet DTO array to avoid circular references
-        const petsData = [
-            @foreach (var pet in Model?.Pets ?? new List<Pet>())
-            {
-                    <text>
-                    {
-                        petId: '@pet.PetId',
-                        name: '@(pet.Name?.Replace("'", "\\'") ?? "")',
-                        type: '@(pet.Type ?? "")',
-                        breed: '@(pet.Breed?.Replace("'", "\\'") ?? "")',
-                        age: @(pet.Age ?? 0),
-                        remark: '@(pet.Remark?.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "") ?? "")'
-                    },
-                    </text>
-            }
-        ];
+    const ANIMATION_DELAY = 3200;
+    let avatarInterval = null;
+    let isAvatarPaused = false;
+    let currentPhotoIndex = 0;
 
-        // Get CSRF token from the Add Pet form specifically
-        function getAntiForgeryToken() {
-            // Try to get from the addPetForm first
-            const addPetForm = document.getElementById('addPetForm');
-            if (addPetForm) {
-                const token = addPetForm.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) return token.value;
-            }
-            // Fallback to any token on the page
-            const anyToken = document.querySelector('input[name="__RequestVerificationToken"]');
-            return anyToken ? anyToken.value : '';
+    // --- DOM Element References ---
+    const avatarContainer = document.getElementById('adminAnimatedAvatar');
+    const avatarPhotos = avatarContainer?.querySelectorAll('.avatar-photo');
+    const avatarIndicatorsContainer = document.getElementById('adminAvatarIndicators');
+    const avatarIndicators = avatarIndicatorsContainer?.querySelectorAll('.avatar-indicator');
+
+    const editProfileModal = document.getElementById('editProfileOverlay');
+    const addPetModal = document.getElementById('addPetOverlay');
+    const editPetModal = document.getElementById('editPetOverlay');
+    const adjustLoyaltyModal = document.getElementById('adjustLoyaltyOverlay');
+
+    const loyaltyAmountInput = document.getElementById('loyaltyAmount');
+    const newBalanceDisplay = document.getElementById('newBalance');
+    const currentBalanceDisplay = document.getElementById('currentBalance');
+
+
+    // --- Functions ---
+
+    // Shows a modal overlay.
+    // modal: The modal element to show
+    function openModal(modal) {
+        if (!modal) return;
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Hides a modal overlay.
+    // modal: The modal element to hide.
+    function closeModal(modal) {
+        if (!modal) return;
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Switches between tabs (Pets and Loyalty).
+    // tabName: The name of the tab to switch to ('pets' or 'loyalty').
+    function switchTab(tabName) {
+        document.querySelectorAll('.profile-tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.profile-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(`${tabName}-content`)?.classList.add('active');
+        document.getElementById(`${tabName}-tab-btn`)?.classList.add('active');
+    }
+
+    // --- Avatar Carousel Logic ---
+
+    function updateAvatarUI() {
+        avatarPhotos?.forEach((photo, idx) => {
+            const isActive = idx === currentPhotoIndex;
+            photo.classList.toggle('active', isActive);
+            photo.style.opacity = isActive ? '1' : '0';
+            photo.style.transform = isActive ? 'scale(1)' : 'scale(0.98)';
+        });
+        avatarIndicators?.forEach((indicator, idx) => {
+            indicator.classList.toggle('active', idx === currentPhotoIndex);
+        });
+    }
+
+    function advanceAvatar() {
+        if (!avatarPhotos || avatarPhotos.length <= 1) return;
+        currentPhotoIndex = (currentPhotoIndex + 1) % avatarPhotos.length;
+        updateAvatarUI();
+    }
+
+    function goToPhoto(index) {
+        if (!avatarPhotos || !avatarPhotos[index]) return;
+        currentPhotoIndex = index;
+        updateAvatarUI();
+        // Reset interval so user has time to view the selected photo
+        clearInterval(avatarInterval);
+        if (!isAvatarPaused) {
+            avatarInterval = setInterval(advanceAvatar, ANIMATION_DELAY);
         }
+    }
 
-        // Wait for DOM to be fully loaded
-        document.addEventListener('DOMContentLoaded', function() {
+    function initAvatarAnimation() {
+        if (!avatarContainer || !avatarPhotos || avatarPhotos.length <= 1) return;
 
-            // ========== EVENT LISTENERS INITIALIZATION ==========
-            // Loyalty adjustment type change listeners
-            const adjustmentRadios = document.querySelectorAll('input[name="adjustmentType"]');
-            adjustmentRadios.forEach(radio => {
-                radio.addEventListener('change', updateLoyaltyPreview);
-            });
+        // Set initial state
+        const activePhoto = avatarContainer.querySelector('.avatar-photo.active');
+        currentPhotoIndex = activePhoto ? parseInt(activePhoto.dataset.index || '0', 10) : 0;
+        updateAvatarUI();
 
-            // Loyalty amount input listener
-            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
-            if (loyaltyAmountInput) {
-                loyaltyAmountInput.addEventListener('input', updateLoyaltyPreview);
-            }
-
-            // ========== OVERLAY CLICK HANDLING ==========
-            const editProfileOverlay = document.getElementById('editProfileOverlay');
-            if (editProfileOverlay) {
-                editProfileOverlay.addEventListener('click', function(e) {
-                    if (e.target === this) closeEditModal();
-                });
-            }
-
-            const addPetOverlay = document.getElementById('addPetOverlay');
-            if (addPetOverlay) {
-                addPetOverlay.addEventListener('click', function(e) {
-                    if (e.target === this) closeAddPetModal();
-                });
-            }
-
-            const adjustLoyaltyOverlay = document.getElementById('adjustLoyaltyOverlay');
-            if (adjustLoyaltyOverlay) {
-                adjustLoyaltyOverlay.addEventListener('click', function(e) {
-                    if (e.target === this) closeAdjustLoyaltyModal();
-                });
-            }
-
-            const editPetOverlay = document.getElementById('editPetOverlay');
-            if (editPetOverlay) {
-                editPetOverlay.addEventListener('click', function(e) {
-                    if (e.target === this) closeEditPetModal();
-                });
-            }
-
-            // ========== INITIAL LOYALTY PREVIEW ==========
-            updateLoyaltyPreview();
+        avatarContainer.addEventListener('mouseenter', () => {
+            isAvatarPaused = true;
+            clearInterval(avatarInterval);
         });
 
-        // ========== MODAL MANAGEMENT ==========
-        function openEditModal() {
-            document.getElementById('editProfileOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            var currentStatus = '@Model?.Status';
-            document.getElementById('editStatus').value = currentStatus;
-        }
-
-        function closeEditModal() {
-            document.getElementById('editProfileOverlay').classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }
-
-        function openAddPetModal() {
-            document.getElementById('addPetOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            // Reset individual fields instead of the entire form (to preserve the anti-forgery token)
-            document.getElementById('petName').value = '';
-            document.getElementById('petType').value = '';
-            document.getElementById('petBreed').value = '';
-            document.getElementById('petAge').value = '';
-            document.getElementById('petRemark').value = '';
-            hideMessages('pet');
-        }
-
-        function closeAddPetModal() {
-            document.getElementById('addPetOverlay').classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }
-
-        function openAdjustLoyaltyModal() {
-            document.getElementById('adjustLoyaltyOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            document.getElementById('adjustLoyaltyForm').reset();
-            updateLoyaltyPreview();
-            hideMessages('loyalty');
-        }
-
-        function closeAdjustLoyaltyModal() {
-            document.getElementById('adjustLoyaltyOverlay').classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }
-
-        // ========== TAB MANAGEMENT ==========
-        function switchTab(tab) {
-            document.getElementById('pets-content').classList.remove('active');
-            document.getElementById('loyalty-content').classList.remove('active');
-            document.getElementById('pets-tab-btn').classList.remove('active');
-            document.getElementById('loyalty-tab-btn').classList.remove('active');
-
-            if (tab === 'pets') {
-                document.getElementById('pets-content').classList.add('active');
-                document.getElementById('pets-tab-btn').classList.add('active');
-            } else if (tab === 'loyalty') {
-                document.getElementById('loyalty-content').classList.add('active');
-                document.getElementById('loyalty-tab-btn').classList.add('active');
+        avatarContainer.addEventListener('mouseleave', () => {
+            isAvatarPaused = false;
+            avatarInterval = setInterval(advanceAvatar, ANIMATION_DELAY);
+        });
+        
+        avatarIndicatorsContainer.addEventListener('click', e => {
+            if(e.target.matches('.avatar-indicator')) {
+                 const index = parseInt(e.target.dataset.index, 10);
+                 goToPhoto(index);
             }
+        });
+
+        avatarInterval = setInterval(advanceAvatar, ANIMATION_DELAY);
+    }
+    
+    // --- Loyalty Points Modal ---
+
+    function updateLoyaltyPreview() {
+        const adjustmentType = document.querySelector('input[name="adjustmentType"]:checked')?.value || 'add';
+        const amount = parseInt(loyaltyAmountInput?.value || '0', 10) || 0;
+        let newBalance = (typeof currentLoyaltyPoints === 'number') ? currentLoyaltyPoints : 0;
+
+        if (adjustmentType === 'add') {
+            newBalance += amount;
+        } else {
+            newBalance -= amount;
         }
 
-        // ========== PET MANAGEMENT ==========
-        function submitAddPet(event) {
-            event.preventDefault();
-            console.log('Adding pet...');
+        if (newBalanceDisplay) newBalanceDisplay.textContent = `${newBalance} pts`;
+    }
 
-            const petName = document.getElementById('petName').value.trim();
-            const petType = document.getElementById('petType').value.trim();
-            const petBreed = document.getElementById('petBreed').value.trim();
-            const petAge = document.getElementById('petAge').value ? parseInt(document.getElementById('petAge').value) : null;
-            const petRemark = document.getElementById('petRemark').value.trim();
+    // --- API Calls ---
 
-            // Validation
-            if (!petName || !petType) {
-                showMessage('pet', 'Pet name and type are required', 'error');
-                return;
-            }
+    async function handleAddPetSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const successMessage = document.getElementById('petSuccessMessage');
+        const errorMessage = document.getElementById('petErrorMessage');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton?.innerHTML || 'Saving...';
 
-            // Use FormData like the Customer side does
-            const formData = new FormData();
-            formData.append('customerId', customerId);
-            formData.append('petName', petName);
-            formData.append('petType', petType);
-            formData.append('petBreed', petBreed);
-            if (petAge !== null) formData.append('petAge', petAge);
-            formData.append('petRemark', petRemark);
-            formData.append('__RequestVerificationToken', getAntiForgeryToken());
+        if(successMessage) successMessage.style.display = 'none';
+        if(errorMessage) errorMessage.style.display = 'none';
+        if(submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Saving...';
+        }
 
-            console.log('Sending pet data with FormData...');
-            console.log('Token:', getAntiForgeryToken());
-
-            fetch('/Admin/Home/AddPetToCustomer', {
+        try {
+            // Use the correct action name defined in controller
+            const response = await fetch('@Url.Action("AddPetToCustomer", "Home", new { area = "Admin" })', {
                 method: 'POST',
                 body: formData
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (!response.ok) {
-                    throw new Error('Server returned ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    showMessage('pet', 'Pet added successfully!', 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    showMessage('pet', data.message || 'Failed to add pet', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                showMessage('pet', 'An error occurred: ' + error.message, 'error');
             });
-        }
 
-        function editPet(petId) {
-            openEditPetModal(petId);
-        }
+            // Read response as text first so we can detect non-JSON responses (e.g. HTML login page due to redirect)
+            const raw = await response.text();
+            let json = null;
+            try {
+                json = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                // Not JSON (likely HTML), fall through
+            }
 
-        function deletePet(petId, petName) {
-            if (confirm(`Are you sure you want to delete ${petName}?`)) {
+            if (response.ok && json && json.success) {
+                if (successMessage) {
+                    successMessage.textContent = 'Pet added successfully! Reloading...';
+                    successMessage.style.display = 'block';
+                }
+                setTimeout(() => window.location.reload(),1500);
+            } else {
+                // If server returned JSON, prefer its message. Otherwise use raw text or a generic error.
+                let errorMsg = 'An unknown error occurred.';
+                if (json && json.message) errorMsg = json.message;
+                else if (raw && raw.trim().length >0) errorMsg = raw;
+
+                // Common cause: session expired and server returned login HTML. Detect by checking if HTML contains '<form' or 'login'.
+                if (!json && /<form\b|login/i.test(raw)) {
+                    errorMsg = 'Session expired or redirected to login. Please reload the page and sign in again.';
+                    console.warn('AddPetToCustomer: server returned HTML (possible redirect):', raw.substring(0,200));
+                }
+
+                if (errorMessage) { errorMessage.textContent = errorMsg; errorMessage.style.display = 'block'; }
+            }
+        } catch (error) {
+            console.error('Error adding pet:', error);
+            if(errorMessage) { errorMessage.textContent = 'A network error occurred. Please try again.'; errorMessage.style.display = 'block'; }
+        } finally {
+            if(submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalButtonText; }
+        }
+    }
+
+    async function handleAdjustLoyaltySubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const successMessage = document.getElementById('loyaltySuccessMessage');
+        const errorMessage = document.getElementById('loyaltyErrorMessage');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton?.innerHTML || 'Saving...';
+        
+        const data = {
+            customerId: form.querySelector('input[name="customerId"]').value,
+            adjustmentType: form.querySelector('input[name="adjustmentType"]:checked').value,
+            loyaltyAmount: form.querySelector('input[name="loyaltyAmount"]').value,
+            __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]')?.value
+        };
+
+        if(successMessage) successMessage.style.display = 'none';
+        if(errorMessage) errorMessage.style.display = 'none';
+        if(submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
+
+        try {
+            const response = await fetch('@Url.Action("AdjustLoyalty", "Home", new { area = "Admin" })', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    if(successMessage){ successMessage.textContent = 'Points adjusted successfully!'; successMessage.style.display = 'block'; }
+
+                    const newPoints = result.newLoyaltyPoints;
+                    currentLoyaltyPoints = newPoints; // Update mutable global state
+                    
+                    const loyaltyPointsEl = document.getElementById('loyaltyPointsDisplay');
+                    if(loyaltyPointsEl) loyaltyPointsEl.textContent = `${newPoints} pts`;
+
+                    document.querySelectorAll('#loyaltyBalanceDisplay, #currentBalance').forEach(el => {
+                        el.textContent = `${newPoints}`;
+                    });
+
+                    updateLoyaltyPreview();
+
+                    setTimeout(() => {
+                        closeModal(document.getElementById('adjustLoyaltyOverlay'));
+                        if(successMessage) successMessage.style.display = 'none';
+                    },1500);
+                } else {
+                    if(errorMessage){ errorMessage.textContent = result.message || 'An unknown error occurred.'; errorMessage.style.display = 'block'; }
+                }
+            } else {
+                let errorMsg = 'An unknown server error occurred.';
+                const text = await response.text();
+                try {
+                    const errorData = text ? JSON.parse(text) : null;
+                    errorMsg = (errorData && (errorData.message || errorData.error)) ? (errorData.message || errorData.error) : text || errorMsg;
+                } catch (e) {
+                    errorMsg = text || errorMsg;
+                }
+                if(errorMessage) { errorMessage.textContent = errorMsg; errorMessage.style.display = 'block'; }
+            }
+        } catch (error) {
+            console.error('Error adjusting loyalty points:', error);
+            if(errorMessage) { errorMessage.textContent = 'A network error occurred. Please check the console.'; errorMessage.style.display = 'block'; }
+        } finally {
+            if(submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalButtonText; }
+        }
+    }
+
+    async function deleteCustomerPhoto(photoUrl, button) {
+        if (!confirm('Are you sure you want to delete this photo?')) return;
+        
+        button.disabled = true;
+        try {
+            const response = await fetch('@Url.Action("DeleteCustomerPhoto", "Home", new { area = "Admin" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiForgeryToken
+                },
+                body: JSON.stringify({ customerId, photoUrl })
+            });
+
+            if (response.ok) {
+                 // On success, remove the photo from the modal and the carousel
+                document.querySelector(`.existing-photo-item[data-photo="${photoUrl}"]`)?.remove();
+                const carouselPhoto = document.querySelector(`#adminAnimatedAvatar .avatar-photo[src="${photoUrl}"]`);
+                if(carouselPhoto){
+                    const wasActive = carouselPhoto.classList.contains('active');
+                    carouselPhoto.remove();
+                    // Refresh photos nodeList and reset animation
+                    const freshPhotos = avatarContainer?.querySelectorAll('.avatar-photo');
+                    if(freshPhotos.length > 0 && wasActive){
+                        goToPhoto(0);
+                    } else if (freshPhotos.length <= 1) {
+                         clearInterval(avatarInterval);
+                    }
+                }
+                // Check if no photos are left
+                if (document.querySelectorAll('.existing-photo-item').length === 0) {
+                     const container = document.getElementById('existingPhotosContainer');
+                     if(container) container.innerHTML = '<p style="color:#999;">No photos remaining.</p>';
+                }
+                // TODO: Add a more robust success notification
+            } else {
+                throw new Error('Server responded with an error.');
+            }
+        } catch (error) {
+            console.error('Error deleting photo:', error);
+            alert('Failed to delete the photo. Please check the console and try again.');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+
+    // --- Event Listener Setup ---
+    
+    function setupEventListeners() {
+        // --- Modal Triggers ---
+        document.getElementById('editProfileBtn')?.addEventListener('click', () => {
+             const status = '@Model?.Status';
+             document.getElementById('editStatus').value = status;
+             openModal(editProfileModal)
+        });
+        
+        document.getElementById('addPetBtn')?.addEventListener('click', () => openModal(addPetModal));
+        document.querySelectorAll('.add-new-pet-btn').forEach(btn => btn.addEventListener('click', () => openModal(addPetModal)));
+
+        document.getElementById('adjustLoyaltyBtn')?.addEventListener('click', () => openModal(adjustLoyaltyModal));
+        document.querySelectorAll('.adjust-points-btn').forEach(btn => btn.addEventListener('click', () => openModal(adjustLoyaltyModal)));
+
+        // --- Modal Close/Cancel Buttons ---
+        document.querySelectorAll('.edit-modal-overlay').forEach(modal => {
+            // Close when clicking the background overlay
+            modal.addEventListener('click', function (e) {
+                if (e.target === this) {
+                    closeModal(modal);
+                }
+            });
+            // Close when clicking a "close" or "cancel" button inside the modal
+            modal.querySelector('.edit-modal-close-btn')?.addEventListener('click', () => closeModal(modal));
+            modal.querySelector('.cancel-btn')?.addEventListener('click', () => closeModal(modal));
+        });
+
+        // --- Tab Navigation ---
+        document.querySelector('.profile-tabs')?.addEventListener('click', (e) => {
+            if (e.target.matches('[data-tab]')) {
+                switchTab(e.target.dataset.tab);
+            }
+        });
+        
+        // --- Pet Actions ---
+        document.getElementById('pets-content')?.addEventListener('click', e => {
+            const editBtn = e.target.closest('.edit-pet-btn');
+            const deleteBtn = e.target.closest('.delete-pet-btn');
+            if (editBtn) {
+                // Populate edit modal using data- attributes (mirror Customer-side behavior)
+                const petId = editBtn.dataset.petId || '';
+                document.getElementById('editPetId').value = petId;
+                document.getElementById('editPetName').value = editBtn.dataset.petName || '';
+                document.getElementById('editPetAge').value = editBtn.dataset.petAge || '';
+                document.getElementById('editPetType').value = editBtn.dataset.petType || '';
+                document.getElementById('editPetBreed').value = editBtn.dataset.petBreed || '';
+                document.getElementById('editPetRemark').value = editBtn.dataset.petRemark || '';
+                const photo = editBtn.dataset.petPhoto || '';
+                const preview = document.getElementById('editPetPhotoPreview');
+                if (preview) preview.src = photo || '/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg';
+                document.getElementById('petModalTitle').textContent = '🐾 Edit Pet';
+                openModal(editPetModal);
+                return;
+            }
+            if (deleteBtn) {
+                const petId = deleteBtn.dataset.petId;
+                const petName = deleteBtn.dataset.petName || 'this pet';
+                if (!confirm(`Delete ${petName}?`)) return;
+
+                // build FormData like customer-side to ensure antiforgery token binds
                 const formData = new FormData();
                 formData.append('petId', petId);
-                formData.append('__RequestVerificationToken', getAntiForgeryToken());
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                if (token) formData.append('__RequestVerificationToken', token);
 
-                fetch('/Admin/Home/DeletePet', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('🗑️ Pet deleted successfully');
-                        location.reload();
-                    } else {
-                        alert('Failed to delete pet: ' + data.message);
+                // disable button while request is running
+                deleteBtn.disabled = true;
+                const originalText = deleteBtn.innerHTML;
+                deleteBtn.innerHTML = 'Deleting...';
+
+                fetch('@Url.Action("DeletePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData })
+                .then(async response => {
+                    const text = await response.text();
+                    try {
+                        const data = text ? JSON.parse(text) : {};
+                        if (data.success) {
+                            // mirror customer behavior: reload on success
+                            location.reload();
+                        } else {
+                            console.error('DeletePet error response:', data);
+                            alert(data.message || 'Delete failed');
+                            deleteBtn.disabled = false;
+                            deleteBtn.innerHTML = originalText;
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse DeletePet response as JSON:', text, err);
+                        alert('Server error while deleting pet. See console for details.');
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = originalText;
                     }
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error deleting pet');
+                .catch(err => {
+                    console.error('DeletePet request failed:', err);
+                    alert('Request failed. See console for details.');
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = originalText;
                 });
             }
-        }
+        });
 
-        // ========== EDIT PET MODAL MANAGEMENT ==========
-        function openEditPetModal(petId) {
-            // Find pet from petsData array
-            const pet = petsData.find(p => p.petId === petId);
-
-            if (!pet) {
-                showMessage('editPet', 'Pet not found', 'error');
-                return;
-            }
-
-            // Populate form with pet data
-            document.getElementById('editPetId').value = pet.petId;
-            document.getElementById('editPetName').value = pet.name || '';
-            document.getElementById('editPetType').value = pet.type || '';
-            document.getElementById('editPetBreed').value = pet.breed || '';
-            document.getElementById('editPetAge').value = pet.age || '';
-            document.getElementById('editPetRemark').value = pet.remark || '';
-
-            // Update modal title
-            document.getElementById('petModalTitle').textContent = `✏️ Edit ${pet.name}`;
-
-            // Show modal
-            document.getElementById('editPetOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            hideMessages('editPet');
-        }
-
-        function closeEditPetModal() {
-            document.getElementById('editPetOverlay').classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }
-
-        function submitEditPet(event) {
+        // --- Edit Pet Form Submit ---
+        document.getElementById('editPetForm')?.addEventListener('submit', async function (event) {
             event.preventDefault();
-            console.log('Editing pet...');
+            const form = event.target;
+            const successMessage = document.getElementById('editPetSuccessMessage');
+            const errorMessage = document.getElementById('editPetErrorMessage');
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton?.innerHTML || 'Saving...';
 
-            const petId = document.getElementById('editPetId').value;
-            const petName = document.getElementById('editPetName').value.trim();
-            const petType = document.getElementById('editPetType').value.trim();
-            const petBreed = document.getElementById('editPetBreed').value.trim();
-            const petAge = document.getElementById('editPetAge').value ? parseInt(document.getElementById('editPetAge').value) : null;
-            const petRemark = document.getElementById('editPetRemark').value.trim();
+            if (successMessage) successMessage.style.display = 'none';
+            if (errorMessage) errorMessage.style.display = 'none';
+            if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
 
-            // Validation
-            if (!petId || !petName || !petType) {
-                showMessage('editPet', 'Pet ID, name, and type are required', 'error');
-                return;
-            }
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('@Url.Action("UpdatePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData });
+                const text = await response.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch { data = { success: false, message: text || 'Invalid server response' }; }
 
-            // Use FormData like the Customer side does
-            const formData = new FormData();
-            formData.append('petId', petId);
-            formData.append('petName', petName);
-            formData.append('petType', petType);
-            formData.append('petBreed', petBreed);
-            if (petAge !== null) formData.append('petAge', petAge);
-            formData.append('petRemark', petRemark);
-            formData.append('__RequestVerificationToken', getAntiForgeryToken());
-
-            console.log('Sending pet edit data with FormData...');
-
-            fetch('/Admin/Home/UpdatePet', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (!response.ok) {
-                    throw new Error('Server returned ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    showMessage('editPet', 'Pet updated successfully!', 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
+                if (response.ok && data.success) {
+                    if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
+                    setTimeout(() => { closeModal(editPetModal); location.reload(); },900);
                 } else {
-                    showMessage('editPet', data.message || 'Failed to update pet', 'error');
+                    if (errorMessage) { errorMessage.textContent = data.message || 'Failed to update pet'; errorMessage.style.display = 'block'; }
                 }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                showMessage('editPet', 'An error occurred: ' + error.message, 'error');
-            });
-        }
-
-        // ========== LOYALTY POINTS MANAGEMENT ==========
-        function updateLoyaltyPreview() {
-            const adjustmentTypeRadio = document.querySelector('input[name="adjustmentType"]:checked');
-            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
-
-            if (!adjustmentTypeRadio || !loyaltyAmountInput) return;
-
-            const adjustmentType = adjustmentTypeRadio.value;
-            const amount = parseInt(loyaltyAmountInput.value) || 0;
-            let newBalance = currentLoyaltyPoints;
-
-            if (adjustmentType === 'add') {
-                newBalance = currentLoyaltyPoints + amount;
-            } else if (adjustmentType === 'subtract') {
-                newBalance = Math.max(0, currentLoyaltyPoints - amount);
-            }
-
-            const newBalanceEl = document.getElementById('newBalance');
-            if (newBalanceEl) {
-                newBalanceEl.textContent = newBalance;
-            }
-        }
-
-        function submitAdjustLoyalty(event) {
-            event.preventDefault();
-            console.log('Adjusting loyalty points...');
-
-            const adjustmentTypeRadio = document.querySelector('input[name="adjustmentType"]:checked');
-            const loyaltyAmountInput = document.getElementById('loyaltyAmount');
-
-            if (!adjustmentTypeRadio || !loyaltyAmountInput) {
-                showMessage('loyalty', 'Form elements not found', 'error');
-                return;
-            }
-
-            const adjustmentType = adjustmentTypeRadio.value;
-            const amount = parseInt(loyaltyAmountInput.value) || 0;
-
-            if (amount <= 0) {
-                showMessage('loyalty', 'Amount must be a positive number', 'error');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('customerId', customerId);
-            formData.append('adjustmentType', adjustmentType);
-            formData.append('amount', amount);
-
-            console.log('Sending loyalty data...');
-
-            fetch('/Admin/Home/AdjustLoyaltyPoints', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    showMessage('loyalty', 'Loyalty points adjusted successfully!', 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    showMessage('loyalty', data.message || 'Failed to adjust points', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                showMessage('loyalty', 'An error occurred: ' + error.message, 'error');
-            });
-        }
-
-        // ========== MESSAGE HANDLING ==========
-        function showMessage(type, message, messageType) {
-            const errorEl = document.getElementById(type + 'ErrorMessage');
-            const successEl = document.getElementById(type + 'SuccessMessage');
-
-            if (!errorEl || !successEl) {
-                console.error('Message elements not found for type:', type);
-                return;
-            }
-
-            if (messageType === 'error') {
-                errorEl.textContent = message;
-                errorEl.style.display = 'block';
-                successEl.style.display = 'none';
-            } else {
-                successEl.textContent = message;
-                successEl.style.display = 'block';
-                errorEl.style.display = 'none';
-            }
-
-            setTimeout(() => {
-                hideMessages(type);
-            }, 5000);
-        }
-
-        function hideMessages(type) {
-            const errorEl = document.getElementById(type + 'ErrorMessage');
-            const successEl = document.getElementById(type + 'SuccessMessage');
-
-            if (errorEl) errorEl.style.display = 'none';
-            if (successEl) successEl.style.display = 'none';
-        }
-
-        // ========== KEYBOARD HANDLING ==========
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeEditModal();
-                closeAddPetModal();
-                closeEditPetModal();
-                closeAdjustLoyaltyModal();
+            } catch (err) {
+                console.error('Error updating pet:', err);
+                if (document.getElementById('editPetErrorMessage')) { document.getElementById('editPetErrorMessage').textContent = 'Request failed'; document.getElementById('editPetErrorMessage').style.display = 'block'; }
+            } finally {
+                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalText; }
             }
         });
-    </script>
+    }
+
+
+    // --- Initialization ---
+    initAvatarAnimation();
+    setupEventListeners();
+    updateLoyaltyPreview(); // Initial calculation
+
+    // preview handler for add pet photo
+    const addPetPhotoUpload = document.getElementById('addPetPhotoUpload');
+    if (addPetPhotoUpload) {
+      addPetPhotoUpload.addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+          const img = document.getElementById('addPetPhotoPreview');
+          if (img) img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    
+</script>
 }

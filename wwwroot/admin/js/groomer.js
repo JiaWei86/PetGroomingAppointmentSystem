@@ -146,12 +146,12 @@ function showGlobalSuccessMessage(message) {
  alertDiv.className = 'alert alert-success';
  alertDiv.id = 'tempSuccessAlert';
  alertDiv.innerHTML = `<strong> Success:</strong> ${message}`;
- alertDiv.style.cssText = `position: fixed; top:85px; left: calc(var(--sidebar-width) +35px); right:35px; z-index:9999; padding:24px32px; font-size:18px; font-weight:600; border-radius:12px; background: linear-gradient(135deg, #d1fae50%, #a7f3d0100%); color: #065f46; border-left:6px solid #10b981; box-shadow:08px20px rgba(0,0,0,0.25); animation: slideDown0.5s ease;`;
+ alertDiv.style.cssText = `position: fixed; top:85px; left: calc(var(--sidebar-width) +35px); right:35px; z-index:9999; padding:24px 32px; font-size:18px; font-weight:600; border-radius:12px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border-left:6px solid #10b981; box-shadow:0 8px 20px rgba(0,0,0,0.25); animation: slideDown 0.5s ease;`;
 
  document.body.appendChild(alertDiv);
 
  setTimeout(() => {
- alertDiv.style.transition = 'opacity0.5s ease';
+ alertDiv.style.transition = 'opacity 0.5s ease';
  alertDiv.style.opacity = '0';
  setTimeout(() => alertDiv.remove(),500);
  },5000);
@@ -162,12 +162,12 @@ function showGlobalErrorMessage(message) {
  alertDiv.className = 'alert alert-danger';
  alertDiv.id = 'tempErrorAlert';
  alertDiv.innerHTML = `<strong>? Error:</strong> ${message}`;
- alertDiv.style.cssText = `position: fixed; top:85px; left: calc(var(--sidebar-width) +35px); right:35px; z-index:9999; padding:24px32px; font-size:18px; font-weight:600; border-radius:12px; background: linear-gradient(135deg, #fee2e20%, #fecaca100%); color: #991b1b; border-left:6px solid #ef4444; box-shadow:08px20px rgba(0,0,0,0.25); animation: slideDown0.5s ease;`;
+ alertDiv.style.cssText = `position: fixed; top:85px; left: calc(var(--sidebar-width) +35px); right:35px; z-index:9999; padding:24px 32px; font-size:18px; font-weight:600; border-radius:12px; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #991b1b; border-left:6px solid #ef4444; box-shadow:0 8px 20px rgba(0,0,0,0.25); animation: slideDown 0.5s ease;`;
 
  document.body.appendChild(alertDiv);
 
  setTimeout(() => {
- alertDiv.style.transition = 'opacity0.5s ease';
+ alertDiv.style.transition = 'opacity 0.5s ease';
  alertDiv.style.opacity = '0';
  setTimeout(() => alertDiv.remove(),500);
  },5000);
@@ -336,11 +336,8 @@ function validateAgeVsExperience() {
     try {
         const rawIC = icValue.replace(/-/g, '');
         const yy = parseInt(rawIC.substr(0, 2), 10);
-        const currentCentury = Math.floor(new Date().getFullYear() / 100) * 100; // e.g., 2000
-        const currentYY = new Date().getFullYear() % 100; // e.g., 25 for 2025
-        
-        // If YY is greater than current YY, it's likely previous century
-        const year = (yy > currentYY) ? (currentCentury - 100 + yy) : (currentCentury + yy);
+        // Use same century rule as server: if yy >=50 ->1900s else2000s
+        const year = (yy >=50) ? (1900 + yy) : (2000 + yy);
 
         const mm = parseInt(rawIC.substr(2, 2), 10);
         const dd = parseInt(rawIC.substr(4, 2), 10);
@@ -387,14 +384,11 @@ async function validateIC(value) {
  const dd = parseInt(raw.substr(4,2),10);
  const today = new Date();
 
-        const currentCentury = Math.floor(new Date().getFullYear() / 100) * 100; // e.g., 2000
-        const currentYY = new Date().getFullYear() % 100; // e.g., 25 for 2025
-        
-        // If YY is greater than current YY, it's likely previous century
-        const year = (yy > currentYY) ? (currentCentury - 100 + yy) : (currentCentury + yy);
+ // Use same century rule as server: if yy >=50 ->1900s else2000s
+ const year = (yy >=50) ? (1900 + yy) : (2000 + yy);
  
  const birth = new Date(year, mm -1, dd);
- if (isNaN(birth.getTime()) || birth.getFullYear() !== year || birth.getMonth() + 1 !== mm || birth.getDate() !== dd) {
+ if (isNaN(birth.getTime()) || birth.getFullYear() !== year || birth.getMonth() +1 !== mm || birth.getDate() !== dd) {
  setFieldInvalid(errorSpan, input, 'Invalid birth date inside IC.');
  return false;
  }
@@ -412,27 +406,27 @@ async function validateIC(value) {
  return false;
  }
  
-  // After validating age, check against experience
-  validateAgeVsExperience();
+ // After validating age, check against experience
+ validateAgeVsExperience();
 
 
  // server-side uniqueness check
  try {
-      const resp = await fetch('/Admin/Home/ValidateGroomerField', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              FieldName: 'IC',
-              FieldValue: value,
-              StaffId: '' // Pass empty StaffId for 'add' mode
-          })
-      });
+ const resp = await fetch('/Admin/Home/ValidateGroomerField', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({
+ FieldName: 'IC',
+ FieldValue: value,
+ StaffId: '' // Pass empty StaffId for 'add' mode
+ })
+ });
  const data = await resp.json();
-      if (data.isValid) {
+ if (data.isValid) {
  setFieldValid(errorSpan, input, `Valid (Age: ${age})`);
  return true;
  } else {
-          setFieldInvalid(errorSpan, input, data.errorMessage || 'IC validation failed.');
+ setFieldInvalid(errorSpan, input, data.errorMessage || 'IC validation failed.');
  return false;
  }
  } catch (e) {
@@ -577,7 +571,7 @@ function validateDescription(value) {
  const input = document.getElementById('description');
  if (!input) return true;
  if (value && value.length >500) {
- setFieldInvalid(errorSpan, input, 'Description must not exceed500 characters.');
+ setFieldInvalid(errorSpan, input, 'Description must not exceed 500 characters.');
  return false;
  } else {
  setFieldValid(errorSpan, input, 'Valid');
@@ -587,51 +581,94 @@ function validateDescription(value) {
 
 // formatting helpers
 function formatICNumber(input) {
-  const originalValue = input.value;
-  const originalCursorPos = input.selectionStart;
+ const originalValue = input.value || '';
+ const originalCursorPos = input.selectionStart ||0;
 
-  // Count dashes before cursor in original value
-  const dashesBeforeCursorOld = (originalValue.substring(0, originalCursorPos).match(/-/g) || []).length;
+ // Count how many digits are before the original cursor position
+ const digitsBeforeCursor = (originalValue.slice(0, originalCursorPos).match(/\d/g) || []).length;
 
-  // Get only digits from the input
-  let digits = originalValue.replace(/\D/g, '');
+ // Get only digits and limit to 12
+ let digits = originalValue.replace(/\D/g, '');
+ if (digits.length >12) digits = digits.substring(0,12);
 
-  // Truncate to max length of 12 digits
-  if (digits.length > 12) {
-    digits = digits.substring(0, 12);
-  }
+ // Build formatted string while tracking where the cursor should land
+ let formatted = '';
+ let digitCount =0;
+ let newCursorPos =0;
 
-  // Apply formatting: xxxxxx-xx-xxxx
-  let formattedValue = digits;
-  if (digits.length > 6) {
-    formattedValue = `${digits.substring(0, 6)}-${digits.substring(6, 8)}`;
-    if (digits.length > 8) {
-      formattedValue += `-${digits.substring(8)}`;
-    }
-  }
+ for (let i =0; i < digits.length; i++) {
+ // Insert dashes at positions after 6 and after 8 digits
+ if (i ===6) formatted += '-';
+ if (i ===8) formatted += '-';
 
-  // Count dashes before cursor in new value
-  const dashesBeforeCursorNew = (formattedValue.substring(0, originalCursorPos).match(/-/g) || []).length;
+ formatted += digits[i];
+ digitCount++;
 
-  // Calculate new cursor position
-  const newCursorPos = originalCursorPos + (dashesBeforeCursorNew - dashesBeforeCursorOld);
+ // When we've placed the digit that was just before the original cursor,
+ // set the new cursor after the current formatted length.
+ if (digitCount === digitsBeforeCursor) {
+ newCursorPos = formatted.length;
+ }
+ }
 
-  // Set the new value and cursor position
-  input.value = formattedValue;
-  input.setSelectionRange(newCursorPos, newCursorPos);
+ // If there were no digits before cursor, put cursor at start
+ if (digitsBeforeCursor ===0) newCursorPos =0;
+ // If cursor was after all digits, place at end
+ if (digitsBeforeCursor >= digits.length) newCursorPos = formatted.length;
+
+ input.value = formatted;
+
+ // Ensure cursor position is within bounds
+ try {
+ input.setSelectionRange(newCursorPos, newCursorPos);
+ } catch (e) {
+ // ignore if element not focusable
+ }
 }
 
 function formatPhoneNumber(input) {
- let value = input.value.replace(/\D/g, '');
- if (value.length >3) value = value.slice(0,3) + '-' + value.slice(3);
- if (value.length >12) value = value.slice(0,12);
- input.value = value;
+ const originalValue = input.value || '';
+ const originalCursorPos = input.selectionStart ||0;
+
+ // Count digits before cursor
+ const digitsBeforeCursor = (originalValue.slice(0, originalCursorPos).match(/\d/g) || []).length;
+
+ // Extract digits and limit to 11 (e.g., 01X +7-8 digits)
+ let digits = originalValue.replace(/\D/g, '');
+ if (digits.length >11) digits = digits.slice(0,11);
+
+ // Build formatted string and compute new cursor pos based on digitsBeforeCursor
+ let formatted = '';
+ let digitCount =0;
+ let newCursorPos =0;
+
+ for (let i =0; i < digits.length; i++) {
+ // insert dash after the first 3 digits
+ if (i ===3) formatted += '-';
+ formatted += digits[i];
+ digitCount++;
+
+ if (digitCount === digitsBeforeCursor) {
+ newCursorPos = formatted.length;
+ }
+ }
+
+ if (digitsBeforeCursor ===0) newCursorPos =0;
+ if (digitsBeforeCursor >= digits.length) newCursorPos = formatted.length;
+
+ input.value = formatted;
+ try {
+ input.setSelectionRange(newCursorPos, newCursorPos);
+ } catch (e) {
+ // ignore
+ }
 }
 
 // Photo upload handler (keeps existing behavior expected by markup)
 if (typeof handlePhotoUpload === 'undefined') {
  window.handlePhotoUpload = function(input, userId) {
-
+ // Find the status span for this user or the create form
+ const statusSpan = document.getElementById(userId ? `uploadStatus_${userId}` : 'uploadStatus_create') || document.getElementById('uploadStatus_create');
 
  if (!statusSpan) return;
 
@@ -642,7 +679,7 @@ if (typeof handlePhotoUpload === 'undefined') {
  statusSpan.style.display = 'block';
 
  if (input.files[0].size >5 *1024 *1024) {
- statusSpan.innerHTML = `? File too large: ${fileSize}MB (Max5MB)`;
+ statusSpan.innerHTML = `? File too large: ${fileSize}MB (Max 5MB)`;
  statusSpan.style.color = '#ef4444';
  statusSpan.style.fontWeight = '600';
  input.value = '';
@@ -679,3 +716,99 @@ function openConfirmAdd() {
  modal?.classList.add('show');
  console.log('modal shown');
 }
+
+// --- Edit Confirm ---
+function openConfirmEdit(userId) {
+ console.log('openConfirmEdit called with userId:', userId);
+ const form = document.getElementById(`editGroomerForm_${userId}`);
+ if (!form) {
+ console.warn(`Edit form not found for userId ${userId}`);
+ return;
+ }
+ currentEditForm = form;
+
+ const modal = document.getElementById('confirmModal');
+ const title = document.getElementById('confirmTitle');
+ const message = document.getElementById('confirmMessage');
+ const icon = document.getElementById('confirmIcon');
+
+ if (title) title.textContent = 'Confirm Edit';
+ if (message) message.textContent = 'Are you sure you want to save these changes?';
+ if (icon) icon.textContent = 'edit';
+
+ modal?.classList.add('show');
+}
+
+// --- Delete Confirm ---
+function openConfirmDelete(userId) {
+ console.log('openConfirmDelete called with userId:', userId);
+ const form = document.getElementById(`deleteForm_${userId}`);
+ if (!form) {
+ console.warn(`Delete form not found for userId ${userId}`);
+ return;
+ }
+ currentDeleteForm = form;
+
+ const modal = document.getElementById('confirmModal');
+ const title = document.getElementById('confirmTitle');
+ const message = document.getElementById('confirmMessage');
+ const icon = document.getElementById('confirmIcon');
+
+ if (title) title.textContent = 'Confirm Delete';
+ if (message) message.textContent = 'Are you sure you want to delete this groomer? This action cannot be undone.';
+ if (icon) icon.textContent = 'delete';
+
+ modal?.classList.add('show');
+}
+
+function closeConfirmModal() {
+ const modal = document.getElementById('confirmModal');
+ if (modal) modal.classList.remove('show');
+ currentAddForm = null;
+ currentEditForm = null;
+ currentDeleteForm = null;
+}
+
+// Helper function for edit submission
+async function handleEditGroomerSubmit(userId) {
+ console.log('handleEditGroomerSubmit called with userId:', userId);
+ const form = document.getElementById(`editGroomerForm_${userId}`);
+ if (!form) {
+ console.warn(`Edit form not found for userId: ${userId}`);
+ return;
+ }
+
+ const formData = new FormData(form);
+ const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+ const token = tokenInput ? tokenInput.value : '';
+
+ try {
+ const response = await fetch('/Admin/Home/EditGroomerAjax', {
+ method: 'POST',
+ headers: { 'RequestVerificationToken': token },
+ body: formData
+ });
+
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+
+ const data = await response.json();
+ if (data.success) {
+ showGlobalSuccessMessage(data.message || 'Groomer updated successfully!');
+ setTimeout(() => window.location.reload(), 1500);
+ } else {
+ showGlobalErrorMessage(data.message || 'Failed to update groomer.');
+ }
+ } catch (error) {
+ console.error('Error during edit submission:', error);
+ showGlobalErrorMessage('Failed to update groomer. Please try again.');
+ }
+}
+
+// Optional: Allow forms to be submitted via Enter key in the modal
+document.addEventListener('keydown', function(e) {
+ if (e.key === 'Escape') {
+ closeConfirmModal();
+ }
+});
