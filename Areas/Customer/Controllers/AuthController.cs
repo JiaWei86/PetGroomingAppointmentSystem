@@ -14,6 +14,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         private readonly IPhoneService _phoneService;
         private readonly IValidationService _validationService;
         private readonly IRecaptchaService _recaptchaService;
+        private readonly IPasswordService _passwordService;  // ✅ 新增
 
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
 
@@ -24,13 +25,15 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             DB dbContext,
             IPhoneService phoneService,
             IValidationService validationService,
-            IRecaptchaService recaptchaService)
+            IRecaptchaService recaptchaService,
+            IPasswordService passwordService)  // ✅ 新增
         {
             _emailService = emailService;
             _dbContext = dbContext;
             _phoneService = phoneService;
             _validationService = validationService;
             _recaptchaService = recaptchaService;
+            _passwordService = passwordService;  // ✅ 新增
         }
 
         public IActionResult Login()
@@ -75,10 +78,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // ✅ 检查 reCAPTCHA（使用 g-recaptcha-response）
+            // ✅ 检查 reCAPTCHA
             if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
             {
-                // reCAPTCHA token 来自 g-recaptcha-response 字段
                 recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
             }
 
@@ -112,9 +114,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
             // Query database with formatted phone number
             var user = _dbContext.Customers
-                .FirstOrDefault(u => u.Phone == formattedPhoneNumber && u.Password == model.Password && u.Role == "customer");
+                .FirstOrDefault(u => u.Phone == formattedPhoneNumber && u.Role == "customer");
 
-            if (user == null)
+            // ✅ 改动：先查询用户，再验证密码哈希
+            if (user == null || !_passwordService.VerifyPassword(model.Password, user.Password))
             {
                 // Invalid credentials - increment failed attempts
                 IncrementFailedAttempts(formattedPhoneNumber);
@@ -396,8 +399,8 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View();
             }
 
-            // Update password
-            customer.Password = newPassword;
+            // ✅ 改动：使用密码服务哈希密码
+            customer.Password = _passwordService.HashPassword(newPassword);
             _dbContext.SaveChanges();
 
             // Clear session
@@ -476,6 +479,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 int newIdNumber = int.Parse(lastId.Substring(1)) + 1;
                 string newUserId = $"C{newIdNumber:D3}";
 
+                // ✅ 改动：使用密码服务哈希密码
+                string hashedPassword = _passwordService.HashPassword(model.Password);
+
                 // Create new Customer record (inherits from User)
                 var newCustomer = new Models.Customer
                 {
@@ -484,7 +490,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     IC = model.IC,
                     Email = model.Email,
                     Phone = formattedPhone,
-                    Password = model.Password,
+                    Password = hashedPassword,  // ✅ 保存哈希后的密码
                     Role = "customer",
                     CreatedAt = DateTime.UtcNow,
                     LoyaltyPoint = 0,

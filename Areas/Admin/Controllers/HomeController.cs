@@ -11,11 +11,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
-using PetGroomingAppointmentSystem.Areas.Admin.Services;
 using PetGroomingAppointmentSystem.Areas.Customer.ViewModels;
 using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
-using PetGroomingAppointmentSystem.Services; 
+using PetGroomingAppointmentSystem.Services;
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
@@ -26,7 +25,7 @@ public class HomeController : Controller
 {
     private readonly DB _db;
     private readonly AdminServices.IEmailService _emailService;  // Use alias
-    private readonly AdminServices.IPasswordService _passwordService;  // Use alias
+    private readonly IPasswordService _passwordService;  // Use alias
     private readonly AdminServices.IPhoneService _phoneService;  // Use alias
     private readonly AdminServices.IValidationService _validationService;  // Use alias
     private readonly IS3StorageService _s3Service;
@@ -35,7 +34,7 @@ public class HomeController : Controller
     public HomeController(
         DB context,
         AdminServices.IEmailService emailService,  // Use alias
-        AdminServices.IPasswordService passwordService,  // Use alias
+        IPasswordService passwordService,  // Use alias
         AdminServices.IPhoneService phoneService,  // Use alias
         AdminServices.IValidationService validationService,  // Use alias
         IS3StorageService s3Service,
