@@ -25,6 +25,7 @@
 <!-- Link to external CSS -->
 <link rel="stylesheet" href="~/Customer/css/multi-avatar.css" />
 <link rel="stylesheet" href="~/Customer/css/status-control.css" />
+<link rel="stylesheet" href="~/Customer/css/redeemed-gifts.css" />
 
 @* ========== BLOCKED ACCOUNT OVERLAY ========== *@
 @if (isBlocked)
@@ -200,7 +201,7 @@
                                 <button onclick="openAddPetModal()" class="btn btn-orange-primary btn-sm">
                                     <i class="fa fa-plus"></i> Add Pet
                                 </button>
-                                <a href="/Customer/Home/Appointment" class="btn btn-orange-outline btn-sm">
+                                <a href="/Customer/Home/Index#services_booking" class="btn btn-orange-outline btn-sm">
                                     <i class="fa fa-calendar"></i> Book Service
                                 </a>
                             }
@@ -324,6 +325,57 @@
                                             }
                                         </div>
                                     </div>
+                                </div>
+                                
+                                <!-- ✅ NEW: Redeemed Gifts Section -->
+                                <hr class="my-4" />
+                                <div class="redeemed-gifts-section">
+                                    <h6 class="mb-3"><i class="fa fa-history text-warning"></i> Redeemed Gifts History</h6>
+                                
+                                    @{
+                                        var redeemedGifts = ViewBag.RedeemedGifts as List<PetGroomingAppointmentSystem.Models.CustomerRedeemGift> ?? new List<PetGroomingAppointmentSystem.Models.CustomerRedeemGift>();
+                                    }
+                                
+                                    @if (redeemedGifts.Any())
+                                    {
+                                        <div class="redeemed-gifts-list">
+                                            @foreach (var item in redeemedGifts)
+                                            {
+                                                <div class="redeemed-gift-card">
+                                                    <div class="gift-image">
+                                                        <img src="@(string.IsNullOrEmpty(item.Gift?.Photo) ? "/Customer/img/service/pet_icon.png" : item.Gift.Photo)" 
+                                                             alt="@item.Gift?.Name" />
+                                                    </div>
+                                                    <div class="gift-details">
+                                                        <h6 class="gift-name">@item.Gift?.Name</h6>
+                                                        <p class="gift-meta">
+                                                            <span class="gift-quantity"><i class="fa fa-cube"></i> Qty: @item.QuantityRedeemed</span>
+                                                            <span class="gift-points"><i class="fa fa-star"></i> @((item.Gift?.LoyaltyPointCost ?? 0) * item.QuantityRedeemed) pts</span>
+                                                        </p>
+                                                        <p class="gift-date">
+                                                            <i class="fa fa-calendar"></i> @item.RedeemDate?.ToString("MMM dd, yyyy")
+                                                        </p>
+                                                    </div>
+                                                    <div class="gift-status">
+                                                        <span class="status-badge-used">REDEEMED</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="empty-redeemed text-center text-muted py-4">
+                                            <i class="fa fa-gift fa-3x mb-3" style="opacity: 0.3;"></i>
+                                            <p>No gifts redeemed yet.</p>
+                                            @if (!isBlocked && !isInactive)
+                                            {
+                                                <a href="/Customer/Home/Index#redeem_gift_area_start" class="btn btn-sm btn-orange-outline">
+                                                    <i class="fa fa-gift"></i> Browse Rewards
+                                                </a>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                             </div>
 
@@ -1061,14 +1113,14 @@ closeWebcamModal = function() {
  bar.classList.add('bg-danger');
  feedback = 'Weak';
  } else if (strength <50) {
- bar.classList.add('bg-warning');
- feedback = 'Fair';
+    bar.classList.add('bg-warning');
+    feedback = 'Fair';
  } else if (strength <75) {
- bar.classList.add('bg-info');
- feedback = 'Good';
+    bar.classList.add('bg-info');
+    feedback = 'Good';
  } else {
- bar.classList.add('bg-success');
- feedback = 'Strong';
+    bar.classList.add('bg-success');
+    feedback = 'Strong';
  }
  
  text.textContent = feedback;
@@ -1127,9 +1179,9 @@ closeWebcamModal = function() {
  }
  
  if (newPassword !== confirmPassword) {
- document.getElementById('passwordErrorMessage').textContent = 'New passwords do not match.';
- document.getElementById('passwordErrorMessage').style.display = 'block';
- return;
+    document.getElementById('passwordErrorMessage').textContent = 'New passwords do not match.';
+    document.getElementById('passwordErrorMessage').style.display = 'block';
+    return;
  }
  
  if (currentPassword === newPassword) {

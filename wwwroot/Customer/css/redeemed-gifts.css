@@ -1,0 +1,141 @@
+﻿/* ========================================
+   Redeemed Gifts Section Styles
+   ======================================== */
+
+.redeemed-gifts-section {
+    margin-top: 20px;
+}
+
+.redeemed-gifts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.redeemed-gift-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%);
+    border: 1px solid #ffe4c4;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.redeemed-gift-card:hover {
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* ✅ 强制固定图片容器为正方形 - 使用 !important 确保优先级 */
+.redeemed-gift-card .gift-image {
+    flex: 0 0 60px !important;
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    min-height: 60px !important;
+    max-width: 60px !important;
+    max-height: 60px !important;
+    border-radius: 8px;
+    overflow: hidden !important;
+    border: 2px solid #ff9500;
+    display: block;
+    position: relative;
+    background-color: #fff;
+}
+
+/* ✅ 强制图片填满容器并裁剪 */
+.redeemed-gift-card .gift-image img {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+.gift-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.gift-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gift-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.gift-meta i {
+    color: #ff9500;
+    margin-right: 4px;
+}
+
+.gift-date {
+    font-size: 11px;
+    color: #999;
+    margin: 0;
+}
+
+.gift-date i {
+    margin-right: 4px;
+}
+
+.gift-status {
+    flex-shrink: 0;
+}
+
+.status-badge-used {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.empty-redeemed {
+    padding: 30px 20px;
+}
+
+.empty-redeemed i {
+    color: #ff9500;
+}
+
+/* Scrollbar Styling */
+.redeemed-gifts-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.redeemed-gifts-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.redeemed-gifts-list::-webkit-scrollbar-thumb {
+    background: #ff9500;
+    border-radius: 3px;
+}
+
+.redeemed-gifts-list::-webkit-scrollbar-thumb:hover {
+    background: #e08600;
+} 
