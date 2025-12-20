@@ -81,8 +81,10 @@
 
             <header id="topbar">
                 <div class="user-profile">
-                    <span>@(Context.Session.GetString("AdminUsername") ?? "Admin User")</span>
-                    <i class="material-icons">account_circle</i>
+                    <a href="@Url.Action("Profile", "Home", new { area = "Admin" })" class="profile-link">
+                        <span>@(Context.Session.GetString("AdminUsername") ?? "Admin User")</span>
+                        <i class="material-icons">account_circle</i>
+                    </a>
                 </div>
             </header>
 

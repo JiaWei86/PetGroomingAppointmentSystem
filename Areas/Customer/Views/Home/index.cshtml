@@ -534,7 +534,8 @@
 
 
 
-        let userPoints = @Model.CustomerLoyaltyPoints;
+              let userPoints = @Model.CustomerLoyaltyPoints;
+
         const redeemButtons = document.querySelectorAll('.redeem-btn');
         const container = document.getElementById('loyaltyContainer');
 
@@ -543,11 +544,13 @@
         redeemButtons.forEach(btn => {
             const giftId = btn.dataset.giftId;
             const cost = parseInt(btn.dataset.cost);
+            const stock = parseInt(btn.dataset.maxqty); // ✅ Added this line to define stock
 
             // ❌ Skip owl-carousel clones & duplicates
             if (shownGiftIds.has(giftId)) return;
 
-            if (!isNaN(cost) && userPoints >= cost) {
+            // ✅ Added check for stock > 0
+            if (!isNaN(cost) && userPoints >= cost && !isNaN(stock) && stock > 0) {
                 shownGiftIds.add(giftId); // ✅ mark as shown
 
                 const toast = document.createElement('div');
@@ -578,6 +581,7 @@
                     toast.remove();
                 }, 5000);
             }
+        
         });
     </script>
 }
