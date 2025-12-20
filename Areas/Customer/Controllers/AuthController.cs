@@ -13,6 +13,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         private readonly DB _dbContext;
         private readonly IPhoneService _phoneService;
         private readonly IValidationService _validationService;
+        private readonly IRecaptchaService _recaptchaService;
 
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
 
@@ -22,12 +23,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             IEmailService emailService,
             DB dbContext,
             IPhoneService phoneService,
-            IValidationService validationService)
+            IValidationService validationService,
+            IRecaptchaService recaptchaService)
         {
             _emailService = emailService;
             _dbContext = dbContext;
             _phoneService = phoneService;
             _validationService = validationService;
+            _recaptchaService = recaptchaService;
         }
 
         public IActionResult Login()
@@ -37,21 +40,25 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             ViewData.Remove("IsLocked");
             ViewData.Remove("LockoutSeconds");
             
-            // ✅ 关键改动：检查 "Remember Me" cookie 并填充 Model
+            // ✅ 总是显示 reCAPTCHA（改这里）
+            var recaptchaSiteKey = HttpContext.RequestServices
+                .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
+            ViewData["RecaptchaSiteKey"] = recaptchaSiteKey;
+            ViewData["RequireRecaptcha"] = true;  // 👈 改成 true
+            
             var model = new LoginViewModel();
             
-            // 如果有 "RememberPhone" cookie，读取它
             if (Request.Cookies.TryGetValue("RememberPhone", out string rememberPhone))
             {
                 model.PhoneNumber = rememberPhone;
-                model.RememberMe = true;  // 勾选 Remember Me 复选框
+                model.RememberMe = true;
             }
             
             return View(model);
         }
 
         [HttpPost]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string recaptchaToken = null)
         {
             if (!ModelState.IsValid)
             {
@@ -65,6 +72,27 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             if (!ValidatePhoneFormat(formattedPhoneNumber))
             {
                 ModelState.AddModelError(nameof(model.PhoneNumber), "Invalid phone number format. Use 01X-XXXXXXX or 01X-XXXXXXXX");
+                return View(model);
+            }
+
+            // ✅ 检查 reCAPTCHA（使用 g-recaptcha-response）
+            if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
+            {
+                // reCAPTCHA token 来自 g-recaptcha-response 字段
+                recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(recaptchaToken))
+            {
+                ModelState.AddModelError("", "Please complete the reCAPTCHA verification");
+                return View(model);
+            }
+
+            // 验证 reCAPTCHA token
+            bool recaptchaValid = await _recaptchaService.VerifyTokenAsync(recaptchaToken);
+            if (!recaptchaValid)
+            {
+                ModelState.AddModelError("", "reCAPTCHA verification failed. Please try again.");
                 return View(model);
             }
 
@@ -121,7 +149,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     Expires = DateTimeOffset.UtcNow.AddDays(30),
                     HttpOnly = true,
-                    Secure = HttpContext.Request.IsHttps,  // ✅ 改这里：HTTP 开发环境下为 false
+                    Secure = HttpContext.Request.IsHttps,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
                 });
             }
@@ -458,7 +486,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 if (isAjaxRequest)
                 {
-                    // ✅ 返回重定向 URL 给 AJAX 客户端，带上 registered 参数
+                    // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                    HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
+                    
                     return Json(new { 
                         success = true, 
                         message = "Registration successful! Redirecting to login...",
@@ -466,7 +496,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     });
                 }
 
-                // ✅ 设置 TempData 来在 Login 页面显示成功消息
+                // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
+    
                 TempData["RegistrationSuccess"] = "Registration successful! Please login with your credentials.";
                 return RedirectToAction("Login");
             }
