@@ -21,6 +21,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
         [StringLength(20, MinimumLength = 14, ErrorMessage = "IC number must be in format xxxxxx-xx-xxxx")]
         [RegularExpression(@"^\d{6}-\d{2}-\d{4}$", ErrorMessage = "IC number must be in format xxxxxx-xx-xxxx (e.g., 123456-78-9012)")]
         [ValidMalaysianIC]
+        [ValidMinimumAge(18)]
         public string IC { get; set; }
 
         [Required(ErrorMessage = "Email cannot be empty")]
@@ -40,6 +41,78 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         [DataType(DataType.Password)]
         public string ConfirmPassword { get; set; }
+    }
+
+    /// <summary>
+    /// Custom validation attribute for minimum age based on Malaysian IC number
+    /// Extracts birth date from IC format YYMMDD-SS-GGGG and validates age
+    /// </summary>
+    public class ValidMinimumAgeAttribute : ValidationAttribute
+    {
+        private readonly int _minimumAge;
+
+        public ValidMinimumAgeAttribute(int minimumAge)
+        {
+            _minimumAge = minimumAge;
+        }
+
+        public override string FormatErrorMessage(string name)
+        {
+            return $"Age must be at least {_minimumAge} years old.";
+        }
+
+        public override bool IsValid(object value)
+        {
+            if (value is not string ic || string.IsNullOrEmpty(ic))
+                return true; // Let [Required] handle empty values
+
+            try
+            {
+                // Extract date part (first 6 digits: YYMMDD)
+                string datePart = ic.Substring(0, 6);
+
+                if (!int.TryParse(datePart.Substring(0, 2), out int year) ||
+                    !int.TryParse(datePart.Substring(2, 2), out int month) ||
+                    !int.TryParse(datePart.Substring(4, 2), out int day))
+                {
+                    return false;
+                }
+
+                // Convert 2-digit year to 4-digit year
+                // IC numbers use: 00-22 for 2000-2022, 23-99 for 1923-1999
+                int fullYear = year <= 22 ? 2000 + year : 1900 + year;
+
+                // Validate date exists
+                if (month < 1 || month > 12 || day < 1)
+                    return false;
+
+                int[] daysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+                if (IsLeapYear(fullYear))
+                    daysInMonth[1] = 29;
+
+                if (day > daysInMonth[month - 1])
+                    return false;
+
+                // Create birth date and calculate age
+                var birthDate = new DateTime(fullYear, month, day);
+                var today = DateTime.Today;
+                int age = today.Year - birthDate.Year;
+
+                if (birthDate.Date > today.AddYears(-age))
+                    age--;
+
+                return age >= _minimumAge;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsLeapYear(int year)
+        {
+            return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        }
     }
 
     /// <summary>
