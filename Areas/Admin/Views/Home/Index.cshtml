@@ -83,16 +83,12 @@
             <i class="material-icons loyalty-icon">card_giftcard</i>
         </div>
         <h3 class="panel-title">Loyalty Points</h3>
-        <p class="stat-value-large">@(Model?.LoyaltyPoints?.AwardedThisWeek.ToString("N0") ?? "7,650")</p>
+        <p class="stat-value-large">@(Model?.LoyaltyPoints?.RedeemedThisWeek.ToString("N0") ?? "2,340")</p>
         <p class="panel-subtitle">Points Awarded This Week</p>
         <div class="loyalty-stats">
             <div class="loyalty-stat-item">
                 <span class="loyalty-stat-label">Active Members</span> 
                 <span class="loyalty-stat-value">@(Model?.LoyaltyPoints?.ActiveMembers.ToString("N0") ?? "156")</span>
-            </div>
-            <div class="loyalty-stat-item">
-                <span class="loyalty-stat-label">Points Redeemed</span>
-                <span class="loyalty-stat-value">@(Model?.LoyaltyPoints?.RedeemedThisWeek.ToString("N0") ?? "2,340")</span>
             </div>
         </div>
     </div>
@@ -120,7 +116,12 @@
                 <i class="material-icons">event</i>
                 <span>Appointments</span>
             </div>
-            <span id="selectedDate" class="selected-date-badge">Today</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="/Staff/Profile" title="View Profile" style="display: flex; align-items: center; cursor: pointer;">
+                    <i class="material-icons" style="font-size: 24px; color: #10b981;">account_circle</i>
+                </a>
+                <span id="selectedDate" class="selected-date-badge">Today</span>
+            </div>
         </div>
 
         <div id="appointmentsList">

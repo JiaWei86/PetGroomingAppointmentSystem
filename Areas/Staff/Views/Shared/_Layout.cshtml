@@ -7,8 +7,10 @@
 
     <!-- Force fresh CSS load -->
     <link rel="stylesheet" href="~/admin/css/site.css?v=@DateTime.Now.Ticks" />
+    <link rel="stylesheet" href="~/admin/css/dashboard.css" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @RenderSection("Styles", required: false)
 </head>
 <body>
     <div id="app-container">
@@ -22,7 +24,6 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a class="@(ViewData["ActivePage"] as string == "Appointment" ? "active" : "")" asp-area="Staff" asp-controller="Home" asp-action="Index"><i class="material-icons">event</i>Appointments</a></li>
-                    <li><a class="@(ViewData["ActivePage"] as string == "ApplyLeave" ? "active" : "")" asp-area="Staff" asp-controller="Home" asp-action="ApplyLeave"><i class="material-icons">assignment</i>Apply Leave</a></li>
 
                     <!-- ========== LOGOUT BUTTON ========== -->
                     <li style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
@@ -39,16 +40,15 @@
         <div id="main-content-wrapper">
 
             <header id="topbar">
-
                 <div class="user-profile">
-                    <span>@(Context.Session.GetString("StaffUsername") ?? "Staff User")</span>
-                    <i class="material-icons">account_circle</i>
+                    <a href="@Url.Action("Profile", "Home", new { area = "Staff" })" class="profile-link">
+                        <span>@(Context.Session.GetString("StaffUsername") ?? "Staff User")</span>
+                        <i class="material-icons">account_circle</i>
+                    </a>
                 </div>
             </header>
 
-            <main role="main" class="pb-3">
-                @RenderBody()
-            </main>
+            @RenderBody()
 
         </div>
     </div>

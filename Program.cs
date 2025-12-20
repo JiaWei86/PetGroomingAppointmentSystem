@@ -31,6 +31,11 @@ builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IEmailService,
                            PetGroomingAppointmentSystem.Services.EmailService>();
 
 // ========== Shared Services (for both Admin & Customer) ==========
+// ✅ 新增：Customer 区域的服务（你的代码）
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IPhoneService, PetGroomingAppointmentSystem.Services.PhoneService>();
+builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IValidationService, PetGroomingAppointmentSystem.Services.ValidationService>();
+
+// Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddHttpClient<ChatbotService>();
 
@@ -47,6 +52,9 @@ builder.Services.AddSession(options =>
 // MVC + Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+// Add Recaptcha Service
+builder.Services.AddHttpClient<IRecaptchaService, RecaptchaService>();
 
 var app = builder.Build();
 

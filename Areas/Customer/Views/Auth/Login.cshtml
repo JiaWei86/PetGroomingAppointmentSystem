@@ -4,6 +4,12 @@
     ViewData["Title"] = "Customer Login";
     Layout = null;
     bool isLocked = ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"];
+    
+    string rememberPhone = Context.Request.Cookies["RememberPhone"] ?? "";
+    bool hasRemembered = !string.IsNullOrEmpty(rememberPhone);
+    
+    // ✅ 修复：改为 Context.Request.Query
+    bool isRegistered = Context.Request.Query["registered"] == "true";
 }
 
 <!DOCTYPE html>
@@ -31,6 +37,17 @@
                 display: block;
             }
 
+        .success-message {
+            color: #28a745;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+            .success-message.show {
+                display: block;
+            }
+
         .form-hint {
             color: #6c757d;
             font-size: 0.8rem;
@@ -40,61 +57,60 @@
         .form-group input[type="text"],
         .form-group input[type="password"] {
             transition: all 0.3s ease;
-            border-color: #ced4da;
+            border: 2px solid #e0e0e0;
             background-color: #fff;
-            padding-right: 40px;
             width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus {
+            border-color: #ff8800;
+            box-shadow: 0 0 0 3px rgba(255, 136, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group input[type="text"]::placeholder,
+        .form-group input[type="password"]::placeholder {
+            color: #b0b0b0;
         }
 
         .form-group input:disabled {
-            background-color: #e9ecef;
-            border-color: #dee2e6;
-            color: #6c757d;
+            background-color: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
         }
 
         .form-group.has-error input {
             border-color: #dc3545;
-            background-color: #fff5f5;
+            background-color: #fff8f8;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-group.has-error input:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .form-group.has-success input {
             border-color: #28a745;
-            background-color: #f5fff9;
+            background-color: #f8fdf9;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        .validation-icon {
-            position: absolute;
-            right: 12px;
-            top: 38px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            display: none;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            z-index: 2;
+        .form-group.has-success input:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-
-            .validation-icon.show {
-                display: flex;
-            }
-
-            .validation-icon.error {
-                color: white;
-                background-color: #dc3545;
-            }
-
-            .validation-icon.success {
-                color: white;
-                background-color: #28a745;
-            }
 
         .password-toggle {
             position: absolute;
-            right: 45px;
+            right: 12px;
             top: 38px;
             background: none;
             border: none;
@@ -204,6 +220,18 @@
             border: 1px solid #ffeeba;
         }
 
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
         .links-container {
             display: flex;
             justify-content: space-between;
@@ -233,6 +261,14 @@
                 <p>Enter your phone number and password</p>
             </div>
 
+            @* ✅ 显示注册成功消息 *@
+            @if (isRegistered)
+            {
+                <div class="alert alert-success">
+                    <strong>Success!</strong> Registration successful! Please login with your credentials.
+                </div>
+            }
+
             @if (ViewData["Error"] != null)
             {
                 <div class="alert alert-danger">
@@ -247,6 +283,13 @@
                 </div>
             }
 
+            @if (hasRemembered)
+            {
+                <div class="alert alert-info">
+                    <strong>Welcome back!</strong> Your phone number has been restored from your last login.
+                </div>
+            }
+
             <form id="loginForm" method="post">
                 <div class="form-group">
                     <label for="phoneNumber">PHONE NUMBER</label>
@@ -254,12 +297,13 @@
                            id="phoneNumber" 
                            name="phoneNumber" 
                            placeholder="Enter your phone number" 
-                           value="@Model?.PhoneNumber" 
+                           value="@(Model?.PhoneNumber ?? rememberPhone)" 
                            maxlength="13" 
+                           inputmode="numeric"
                            @(isLocked ? "disabled" : "") />
-                    <div class="validation-icon" id="phoneNumberIcon"></div>
                     <div class="form-hint">Accepts: 012-3456789 or 0123456789</div>
                     <div class="error-message" id="phoneNumberError"></div>
+                    <div class="success-message" id="phoneNumberSuccess"></div>
                 </div>
 
                 <div class="form-group">
@@ -276,15 +320,28 @@
                             @(isLocked ? "disabled" : "")>
                         <i class="bi bi-eye-slash"></i>
                     </button>
-                    <div class="validation-icon" id="passwordIcon"></div>
                     <div class="error-message" id="passwordError"></div>
                 </div>
+
+                @{
+                    bool requireRecaptcha = ViewData["RequireRecaptcha"] != null && (bool)ViewData["RequireRecaptcha"];
+                    string recaptchaSiteKey = ViewData["RecaptchaSiteKey"]?.ToString() ?? "";
+                }
+
+                <!-- reCAPTCHA v2 Checkbox -->
+                @if (requireRecaptcha)
+                {
+                    <div class="form-group" style="margin-top: 20px; border: 2px solid #ff8800; padding: 15px; border-radius: 8px; background-color: #fff9f0;">
+                        <div class="g-recaptcha" data-sitekey="@recaptchaSiteKey"></div>
+                    </div>
+                }
 
                 <div class="checkbox-group">
                     <input type="checkbox" 
                            id="rememberMe" 
                            name="rememberMe" 
                            value="true"
+                           @(hasRemembered ? "checked" : "")
                            @(isLocked ? "disabled" : "") />
                     <label for="rememberMe">Remember me for 30 days</label>
                 </div>
@@ -299,11 +356,21 @@
         </div>
     </div>
 
+    <!-- reCAPTCHA v2 脚本 -->
+    <script src="https://www.google.com/recaptcha/api.js"></script>
     <script>
+        @{
+            bool requireRecaptcha = ViewData["RequireRecaptcha"] != null && (bool)ViewData["RequireRecaptcha"];
+        }
+        
         const isLocked = @(isLocked ? "true" : "false");
+        const requireRecaptcha = @(requireRecaptcha ? "true" : "false");  // ✅ 添加这行
+        let phoneValidationTimeout;
+        let isPhoneRegistered = false;
+        let isPasswordFilled = false;
 
         // Disable all form inputs when locked
-        if (isLocked) {
+        if (isLocked === "true") {
             document.getElementById('phoneNumber').disabled = true;
             document.getElementById('password').disabled = true;
             document.getElementById('passwordToggle').disabled = true;
@@ -311,9 +378,21 @@
             document.getElementById('submitBtn').disabled = true;
         }
 
-        // Phone number formatting
+        // ✅ 页面加载时验证预填充的电话号码
+        window.addEventListener('load', function () {
+            const phoneInput = document.getElementById('phoneNumber');
+            if (phoneInput.value.length > 0) {
+                validatePhoneForLogin(phoneInput.value);
+            }
+        });
+
+        // ✅ Phone number formatting
         document.getElementById('phoneNumber').addEventListener('input', function () {
             let phoneNum = this.value.replace(/\D/g, '');
+
+            if (phoneNum.length > 11) {
+                phoneNum = phoneNum.substring(0, 11);
+            }
 
             if (phoneNum.length === 10) {
                 this.value = phoneNum.substring(0, 3) + '-' + phoneNum.substring(3);
@@ -322,7 +401,76 @@
             } else {
                 this.value = phoneNum;
             }
+
+            // ✅ Real-time validation for phone number
+            clearTimeout(phoneValidationTimeout);
+            phoneValidationTimeout = setTimeout(() => {
+                validatePhoneForLogin(this.value);
+            }, 50);
         });
+
+        // ✅ Real-time validation for phone number on login
+        async function validatePhoneForLogin(phoneNumber) {
+            try {
+                const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
+                
+                const phoneInput = document.getElementById('phoneNumber');
+                const formGroup = phoneInput.parentElement;
+                const errorElement = document.getElementById('phoneNumberError');
+                const successElement = document.getElementById('phoneNumberSuccess');
+
+                // If format is incomplete, don't validate yet
+                if (!phoneRegex.test(phoneNumber)) {
+                    if (phoneNumber.length === 0) {
+                        // Empty field - clear errors
+                        formGroup.classList.remove('has-error', 'has-success');
+                        errorElement.classList.remove('show');
+                        successElement.classList.remove('show');
+                        isPhoneRegistered = false;
+                    }
+                    updateSubmitButtonState();
+                    return;
+                }
+
+                // Format is correct, check if registered
+                const response = await fetch('@Url.Action("ValidatePhoneNumberRegistered", "Auth", new { area = "Customer" })', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        phoneNumber: phoneNumber
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.isRegistered) {
+                    // Phone is registered - show success
+                    formGroup.classList.remove('has-error');
+                    formGroup.classList.add('has-success');
+                    
+                    successElement.textContent = 'Phone number is registered.';
+                    successElement.classList.add('show');
+                    errorElement.classList.remove('show');
+                    isPhoneRegistered = true;
+                } else {
+                    // Phone is not registered - show error
+                    formGroup.classList.remove('has-success');
+                    formGroup.classList.add('has-error');
+                    
+                    errorElement.textContent = "Phone number hasn't registered.";
+                    errorElement.classList.add('show');
+                    successElement.classList.remove('show');
+                    isPhoneRegistered = false;
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                isPhoneRegistered = false;
+            }
+
+            updateSubmitButtonState();
+        }
 
         // Password toggle
         document.getElementById('passwordToggle').addEventListener('click', function (e) {
@@ -341,7 +489,40 @@
             }
         });
 
-        // Form validation
+        // ✅ Clear password error on input & track password state
+        document.getElementById('password').addEventListener('input', function () {
+            isPasswordFilled = this.value.length > 0;
+            
+            if (this.value.length > 0) {
+                const formGroup = this.parentElement;
+                formGroup.classList.remove('has-error');
+                document.getElementById('passwordError').classList.remove('show');
+            }
+            
+            updateSubmitButtonState();
+        });
+
+        // ✅ 根据验证状态更新按钮
+        function updateSubmitButtonState() {
+            const submitBtn = document.getElementById('submitBtn');
+            const phoneInput = document.getElementById('phoneNumber');
+            const phoneRegex = /^01[0-9]-[0-9]{7,8}$/;
+
+            const isPhoneFormatValid = phoneRegex.test(phoneInput.value);
+            const canSubmit = isPhoneRegistered && isPasswordFilled && isPhoneFormatValid && !isLocked;
+
+            if (canSubmit) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        }
+
+        // Form submit validation
         const form = document.getElementById('loginForm');
         const phoneInput = document.getElementById('phoneNumber');
         const passwordInput = document.getElementById('password');
@@ -351,78 +532,54 @@
             return phoneRegex.test(phoneNumber);
         }
 
-        function validatePassword(password) {
-            return password.trim().length > 0;
-        }
-
-        function showError(input, errorElement, message) {
-            input.parentElement.classList.add('has-error');
+        function showError(fieldName, message) {
+            const input = document.getElementById(fieldName);
+            const errorElement = document.getElementById(fieldName + 'Error');
+            const formGroup = input.parentElement;
+            
+            formGroup.classList.add('has-error');
             errorElement.textContent = message;
             errorElement.classList.add('show');
         }
 
-        function clearError(input, errorElement) {
-            input.parentElement.classList.remove('has-error');
-            errorElement.classList.remove('show');
-        }
-
-        // Phone number validation
-        phoneInput.addEventListener('blur', function () {
-            const phoneNumberError = document.getElementById('phoneNumberError');
-            const phoneNumberIcon = document.getElementById('phoneNumberIcon');
-
-            if (this.value.trim() === '') {
-                showError(this, phoneNumberError, 'Phone number is required');
-                phoneNumberIcon.classList.remove('show');
-            } else if (!validatePhoneNumber(this.value)) {
-                showError(this, phoneNumberError, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX');
-                phoneNumberIcon.classList.add('show', 'error');
-                phoneNumberIcon.innerHTML = '✕';
-            } else {
-                clearError(this, phoneNumberError);
-                phoneNumberIcon.classList.add('show', 'success');
-                phoneNumberIcon.innerHTML = '✓';
-            }
-        });
-
-        // Password validation
-        passwordInput.addEventListener('blur', function () {
-            const passwordError = document.getElementById('passwordError');
-            const passwordIcon = document.getElementById('passwordIcon');
-
-            if (this.value.trim() === '') {
-                showError(this, passwordError, 'Password is required');
-                passwordIcon.classList.remove('show');
-            } else {
-                clearError(this, passwordError);
-                passwordIcon.classList.add('show', 'success');
-                passwordIcon.innerHTML = '✓';
-            }
-        });
-
-        // Form submit
+        // Form submit event
         form.addEventListener('submit', function (e) {
-            const phoneNumberError = document.getElementById('phoneNumberError');
-            const passwordError = document.getElementById('passwordError');
-            const phoneNumberIcon = document.getElementById('phoneNumberIcon');
-            const passwordIcon = document.getElementById('passwordIcon');
-
             let isValid = true;
 
+            // Validate phone number
             if (!validatePhoneNumber(phoneInput.value)) {
-                showError(phoneInput, phoneNumberError, 'Phone number must be in format 01X-XXXXXXX or 01X-XXXXXXXX');
-                phoneNumberIcon.classList.add('show', 'error');
-                phoneNumberIcon.innerHTML = '✕';
+                const cleanedPhone = phoneInput.value.replace(/\D/g, '');
+                
+                if (cleanedPhone.length < 10) {
+                    showError('phoneNumber', `Phone number too short. ${cleanedPhone.length}/10 digits entered`);
+                } else {
+                    showError('phoneNumber', 'Invalid format. Use 01X-XXXXXXX or 01X-XXXXXXXX');
+                }
                 isValid = false;
             }
 
-            if (!validatePassword(passwordInput.value)) {
-                showError(passwordInput, passwordError, 'Password is required');
-                passwordIcon.classList.add('show', 'error');
-                passwordIcon.innerHTML = '✕';
+            // ✅ 检查电话号码是否已注册
+            if (!isPhoneRegistered) {
+                showError('phoneNumber', "Phone number hasn't registered.");
                 isValid = false;
             }
 
+            // Validate password
+            if (passwordInput.value.length === 0) {
+                showError('password', 'Password is required');
+                isValid = false;
+            }
+
+            // ✅ 修复：检查 reCAPTCHA 是否被勾选（仅当需要 reCAPTCHA 时）
+            if (requireRecaptcha === "true") {
+                const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+                if (!recaptchaResponse || recaptchaResponse.value.length === 0) {
+                    alert('Please complete the reCAPTCHA verification');
+                    isValid = false;
+                }
+            }
+
+            // Prevent submit if validation fails
             if (!isValid) {
                 e.preventDefault();
             }
@@ -441,7 +598,7 @@
                         lockoutTimerElement.textContent = lockoutSeconds;
                         setTimeout(updateLockoutTimer, 1000);
                     } else {
-                        location.reload();
+                        window.location.href = '@Url.Action("Login", "Auth", new { area = "Customer" })';
                     }
                 }
 

@@ -103,6 +103,57 @@ public class HomeController : Controller
 
         // 假设每次使用礼品兑换都消耗500积分
         viewModel.LoyaltyPoints.RedeemedThisWeek = 0; // 您需要一个礼品兑换记录表来计算这个值
+ {
+ ViewData["ActivePage"] = "Dashboard";
+
+ var viewModel = new DashboardViewModel();
+ var now = DateTime.Now;
+
+ // --- 1. 填充统计卡片 (Stat Cards) ---
+
+ // 总预约数 (本月 vs 上月)
+ var firstDayOfCurrentMonth = new DateTime(now.Year, now.Month, 1);
+ var firstDayOfLastMonth = firstDayOfCurrentMonth.AddMonths(-1);
+ var lastDayOfLastMonth = firstDayOfCurrentMonth.AddDays(-1);
+
+ int currentMonthAppointments = await _db.Appointments
+ .CountAsync(a => a.AppointmentDateTime >= firstDayOfCurrentMonth && a.AppointmentDateTime < firstDayOfCurrentMonth.AddMonths(1));
+
+ int lastMonthAppointments = await _db.Appointments
+ .CountAsync(a => a.AppointmentDateTime >= firstDayOfLastMonth && a.AppointmentDateTime < firstDayOfCurrentMonth);
+
+ viewModel.TotalAppointments.Count = currentMonthAppointments;
+ if (lastMonthAppointments > 0)
+ {
+ viewModel.TotalAppointments.ChangePercentage = Math.Round(((decimal)(currentMonthAppointments - lastMonthAppointments) / lastMonthAppointments) * 100, 2);
+ }
+ else if (currentMonthAppointments > 0)
+ {
+ viewModel.TotalAppointments.ChangePercentage = 100; // 如果上月为0，本月有，则增长100%
+ }
+
+ // 活跃美容师数量
+ viewModel.ActiveGroomers.Count = await _db.Staffs.CountAsync(s => s.Role == "staff");
+
+ // 总顾客数量 (替换了原来的"待处理预约")
+ viewModel.PendingAppointments.Count = await _db.Customers.CountAsync();
+
+
+        // --- 2. 填充忠诚度积分 (Loyalty Points) ---
+        // Note: Calculate based on actual customer loyalty point activities
+        var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
+        var endOfWeek = startOfWeek.AddDays(7);
+
+        // Total points awarded this week (sum of completed appointments * 10 points each)
+        viewModel.LoyaltyPoints.RedeemedThisWeek = await _db.CustomerRedeemGifts
+            .Where(crg => crg.RedeemDate >= startOfWeek && crg.RedeemDate < endOfWeek)
+            .Include(crg => crg.Gift)
+            .SumAsync(crg => crg.Gift.LoyaltyPointCost * crg.QuantityRedeemed);
+
+        // Active members count (customers with active status)
+        viewModel.LoyaltyPoints.ActiveMembers = await _db.Customers
+            .CountAsync(c => c.Status == "active");
+
 
 
         // --- 3. 填充图表数据 (Chart Data) ---
@@ -181,6 +232,78 @@ public class HomeController : Controller
 
         return View(viewModel);
     }
+ var weeklyData = await _db.Appointments
+ .Where(a => a.AppointmentDateTime.HasValue && a.AppointmentDateTime.Value.Date >= last7Days.First() && a.AppointmentDateTime.Value.Date <= last7Days.Last())
+ .GroupBy(a => a.AppointmentDateTime.Value.Date)
+ .Select(g => new { Date = g.Key, Count = g.Count() })
+ .ToListAsync();
+
+ var weeklyDict = weeklyData.ToDictionary(x => x.Date, x => x.Count);
+ viewModel.ChartData.Week = new ChartSeriesModel
+ {
+ Labels = last7Days.Select(d => d.ToString("ddd")).ToList(),
+ Data = last7Days.Select(d => weeklyDict.ContainsKey(d) ? weeklyDict[d] : 0).ToList()
+ };
+
+ // 月视图 (本月按周)
+ var weeksInMonth = Enumerable.Range(0, 4)
+ .Select(i => $"Week {i + 1}")
+ .ToList();
+ var monthData = new List<int>();
+ for (int i = 0; i < 4; i++)
+ {
+ var weekStart = firstDayOfCurrentMonth.AddDays(i * 7);
+ var weekEnd = weekStart.AddDays(7);
+ int weekCount = await _db.Appointments
+ .CountAsync(a => a.AppointmentDateTime >= weekStart && a.AppointmentDateTime < weekEnd);
+ monthData.Add(weekCount);
+ }
+ viewModel.ChartData.Month = new ChartSeriesModel { Labels = weeksInMonth, Data = monthData };
+
+ // 日视图 (今天按小时)
+ var todayStart = now.Date.AddHours(9); // 9 AM
+ var todayEnd = now.Date.AddHours(17); // 5 PM
+ var hourlyData = await _db.Appointments
+ .Where(a => a.AppointmentDateTime >= todayStart && a.AppointmentDateTime < todayEnd)
+ .GroupBy(a => a.AppointmentDateTime.Value.Hour)
+ .Select(g => new { Hour = g.Key, Count = g.Count() })
+ .ToListAsync();
+
+ var hourlyDict = hourlyData.ToDictionary(x => x.Hour, x => x.Count);
+ var dayLabels = new List<string>();
+ var dayData = new List<int>();
+ for (int hour = 9; hour <= 16; hour++)
+ {
+ dayLabels.Add(new DateTime(1, 1, 1, hour, 0, 0).ToString("h tt"));
+ dayData.Add(hourlyDict.ContainsKey(hour) ? hourlyDict[hour] : 0);
+ }
+ viewModel.ChartData.Day = new ChartSeriesModel { Labels = dayLabels, Data = dayData };
+
+
+ // --- 4. 填充日历预约 (Calendar Appointments) ---
+ var calendarStartDate = firstDayOfCurrentMonth.AddMonths(-1);
+ var calendarEndDate = firstDayOfCurrentMonth.AddMonths(2);
+
+ viewModel.AppointmentsForCalendar = await _db.Appointments
+ .Where(a => a.AppointmentDateTime >= calendarStartDate && a.AppointmentDateTime < calendarEndDate)
+ .Include(a => a.Pet)
+ .Include(a => a.Staff)
+ .Include(a => a.Service)
+ .Select(a => new CalendarAppointmentModel
+ {
+ Id = a.AppointmentId,
+ Date = a.AppointmentDateTime.Value.ToString("yyyy-MM-dd"),
+ Time = a.AppointmentDateTime.Value.ToString("HH:mm"),
+ PetName = a.Pet.Name,
+ GroomerName = a.Staff.Name,
+ ServiceType = a.Service.Name,
+ Status = a.Status.ToLower()
+ })
+ .ToListAsync();
+
+
+ return View(viewModel);
+ }
 
     /// <summary>
     /// AJAX endpoint for real-time field validation for the Groomer edit form.
@@ -781,6 +904,14 @@ public class HomeController : Controller
             TempData["SuccessMessage"] = $"✅ Customer {customer.Name} created! ⚠️ Email failed - Temp Password: {temporaryPassword}";
         }
 
+        // ✅ ADD LOYALTY POINTS (10 points per confirmed appointment when admin creates it)
+        var appointmentCustomer = await _db.Customers.FirstOrDefaultAsync(c => c.UserId == customer.UserId);
+        if (appointmentCustomer != null && customer.Status == "Confirmed")
+        {
+            appointmentCustomer.LoyaltyPoint += 10;
+            _db.Customers.Update(appointmentCustomer);
+        }
+
         return RedirectToAction(nameof(Customer));
     }
 
@@ -877,6 +1008,7 @@ public class HomeController : Controller
                 // Extract numeric part and find the maximum
                 nextNumber = existingPetIds
                     .Select(id => int.TryParse(id.Substring(1), out var n) ? n : 0)
+                    .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
                     .Where(n => n > 0)
                     .OrderBy(n => n)
                     .ToList()
@@ -1372,6 +1504,22 @@ public class HomeController : Controller
                     foreach (var appt in newAppointments)
                     {
                         TempData["DebugMessage"] += $"AppointmentId: '{appt.AppointmentId}', CustomerId: '{appt.CustomerId}', PetId: '{appt.PetId}', ServiceId: '{appt.ServiceId}', StaffId: '{appt.StaffId}', AdminId: '{appt.AdminId}'\n";
+                        _db.Appointments.AddRange(newAppointments);
+                        await _db.SaveChangesAsync();
+
+                        // ========== ADD LOYALTY POINTS FOR EACH APPOINTMENT ==========
+                        // Award 10 loyalty points per service to the customer
+                        var customer = await _db.Customers.FindAsync(model.CustomerId);
+                        if (customer != null)
+                        {
+                            // 10 points for each appointment created
+                            int totalPointsToAdd = newAppointments.Count * 10;
+                            customer.LoyaltyPoint += totalPointsToAdd;
+                            _db.Customers.Update(customer);
+                            await _db.SaveChangesAsync();
+                        }
+
+                        TempData["SuccessMessage"] = $"{newAppointments.Count} appointment(s) have been successfully created! Customer earned {newAppointments.Count * 10} loyalty points.";
                     }
                     _db.Appointments.AddRange(newAppointments);
                     await _db.SaveChangesAsync();
@@ -1417,6 +1565,8 @@ public class HomeController : Controller
             if (appointmentToUpdate.Status != "Confirmed" || model.Status != "Completed")
             {
                 TempData["ErrorMessage"] = "Invalid status change. Only 'Confirmed' appointments can be changed to 'Completed'.";
+
+                // 重定向回当前筛选结果，并保持编辑状态
                 return RedirectToAction(nameof(Appointment), new { status = model.FilterStatus, groomerid = model.FilterGroomerId, date = model.FilterDate?.ToString("yyyy-MM-dd"), editId = model.EditAppointmentId });
             }
 
@@ -1484,6 +1634,787 @@ public class HomeController : Controller
                 .Select(id => int.Parse(id.Substring(1)))
                 .OrderBy(n => n)
            .ToList();
+
+                int nextNumber = 1;
+                bool foundGap = false;
+
+                foreach (var num in usedNumbers)
+                {
+                    if (num != nextNumber)
+                    {
+                        foundGap = true;
+                        break;
+                    }
+                    nextNumber++;
+                }
+
+                if (!foundGap)
+                {
+                    nextNumber = usedNumbers.Max() + 1;
+                }
+
+                bool isBusy = await _db.Appointments.AnyAsync(a =>
+                    a.StaffId == groomerId &&
+                    a.AppointmentDateTime < finalEndTime &&
+                    a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentStartTime);
+
+                if (isBusy)
+                {
+                    var groomer = await _db.Staffs.FindAsync(groomerId);
+                    return Json(new { isValid = false, field = "StaffId", message = $"Groomer '{groomer?.Name}' is unavailable at this time." });
+                }
+            }
+        }
+        // --- "Any Groomer" validation is too complex for real-time and is best handled on final submission ---
+
+        return Json(new { isValid = true });
+    }
+
+    // ========== LOYALTY POINT ==========
+    public IActionResult LoyaltyPoint()
+    {
+        ViewData["ActivePage"] = "LoyaltyPoint";
+        return View();
+    }
+
+    // ========== REDEEM GIFT ==========
+    // LIST & optionally CREATE (GET)
+    public async Task<IActionResult> RedeemGift()
+    {
+        ViewData["ActivePage"] = "RedeemGift";
+
+        var gifts = await _db.RedeemGifts
+            .Where(g => g.IsDeleted == false)   // filter out deleted items
+            .OrderByDescending(g => g.GiftId)
+            .ToListAsync();
+
+        return View(gifts);
+    }
+
+
+    // CREATE (POST)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RedeemGift(
+        RedeemGift gift,
+        string actionType,
+        IFormFile PhotoUpload,
+        string editGiftId,
+        string deleteGiftId)
+    {
+        // --- CREATE ---
+        if (actionType == "add")
+        {
+            // ========== SMART ID GENERATION ==========
+            var allGiftIds = await _db.RedeemGifts
+                .Select(g => g.GiftId)
+                .OrderBy(id => id)
+                .ToListAsync();
+
+            string newGiftId;
+
+            if (!allGiftIds.Any())
+            {
+                newGiftId = "G001";
+            }
+            else
+            {
+                var usedNumbers = allGiftIds
+                    .Select(id => int.Parse(id.Substring(1)))
+                    .OrderBy(n => n)
+                    .ToList();
+
+                int nextNumber = 1;
+                bool foundGap = false;
+
+                foreach (var num in usedNumbers)
+                {
+                    if (num != nextNumber)
+                    {
+                        foundGap = true;
+                        break;
+                    }
+                    nextNumber++;
+                }
+
+                if (!foundGap)
+                {
+                    nextNumber = usedNumbers.Max() + 1;
+                }
+
+                newGiftId = "G" + nextNumber.ToString("D3");
+            }
+
+            gift.GiftId = newGiftId;
+            gift.AdminId = HttpContext.Session.GetString("AdminId");
+
+            if (string.IsNullOrEmpty(gift.AdminId))
+            {
+                ViewData["Error"] = "? Unable to save: Admin is not logged in. Please login again.";
+                var list = await _db.RedeemGifts
+                    .OrderByDescending(g => g.GiftId)
+                    .ToListAsync();
+                return View(list);
+            }
+
+            if (PhotoUpload != null && PhotoUpload.Length > 0)
+            {
+                var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
+                var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                if (!Directory.Exists(uploadPath))
+                    Directory.CreateDirectory(uploadPath);
+                var filePath = Path.Combine(uploadPath, fileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await PhotoUpload.CopyToAsync(stream);
+                gift.Photo = "/uploads/" + fileName;
+            }
+            else
+            {
+                gift.Photo = "/uploads/placeholder.png";
+            }
+
+            _db.RedeemGifts.Add(gift);
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = $" Gift '{gift.Name}' created successfully!";
+            return RedirectToAction(nameof(RedeemGift));
+
+
+        }
+
+        // --- EDIT ---
+        else if (actionType == "edit")
+        {
+            if (editGiftId == null) return NotFound();
+            var dbGift = await _db.RedeemGifts.FindAsync(editGiftId);
+            if (dbGift == null) return NotFound();
+
+            dbGift.Name = gift.Name;
+            dbGift.Quantity = gift.Quantity;
+            dbGift.LoyaltyPointCost = gift.LoyaltyPointCost;
+
+            if (PhotoUpload != null && PhotoUpload.Length > 0)
+            {
+                var fileName = Guid.NewGuid() + Path.GetExtension(PhotoUpload.FileName);
+                var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                if (!Directory.Exists(uploadPath))
+                    Directory.CreateDirectory(uploadPath);
+                var filePath = Path.Combine(uploadPath, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await PhotoUpload.CopyToAsync(stream);
+                }
+                dbGift.Photo = "/uploads/" + fileName;
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = $" Gift '{gift.Name}' updated successfully!";
+            return RedirectToAction(nameof(RedeemGift));
+        }
+
+        // --- DELETE ---
+        else if (actionType == "delete")
+        {
+            if (string.IsNullOrEmpty(deleteGiftId))
+                return NotFound();
+
+            var dbGift = await _db.RedeemGifts
+                .IgnoreQueryFilters() // important if you added global filter
+                .FirstOrDefaultAsync(g => g.GiftId == deleteGiftId);
+
+            if (dbGift == null)
+                return NotFound();
+
+            dbGift.IsDeleted = true; // ✅ SOFT DELETE
+            _db.RedeemGifts.Update(dbGift);
+            await _db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Gift deleted successfully!";
+            return RedirectToAction(nameof(RedeemGift));
+
+
+
+        }
+
+
+
+
+        // --- FALLBACK ---
+        var gifts = await _db.RedeemGifts.OrderByDescending(g => g.GiftId).ToListAsync();
+        return View(gifts);
+    }
+
+    // ========== SERVICE
+    // GET: List all services
+    public async Task<IActionResult> Service(string ServiceName, string Category, string Status, string editId)
+    {
+        ViewData["ActivePage"] = "Service";
+        var query = _db.Services
+            .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(ServiceName))
+            query = query.Where(s => s.Name.Contains(ServiceName));
+
+        if (!string.IsNullOrEmpty(Category))
+            query = query.Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.Contains(Category)));
+
+        if (!string.IsNullOrEmpty(Status))
+            query = query.Where(s => s.Status == Status);
+
+        var services = await query.OrderByDescending(s => s.ServiceId).ToListAsync();
+
+        // Load categories for dropdowns in the view
+        var categories = await _db.ServiceCategories.OrderBy(c => c.CategoryId).ToListAsync();
+        ViewBag.ServiceCategories = categories;
+
+        // Pass editId to view
+        ViewBag.EditId = editId;
+
+        return View(services);
+    }
+
+    // POST: Create/Edit/Delete Service
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Service(
+        Service service,
+        string actionType,
+        string editServiceId,
+        string deleteServiceId,
+        string[] SelectedCategories)
+    {
+        // ================= CREATE =================
+        if (actionType == "create")
+        {
+            string adminId = HttpContext.Session.GetString("AdminId");
+            if (string.IsNullOrEmpty(adminId))
+            {
+                TempData["ErrorMessage"] = "Admin not logged in. Please login again.";
+                return RedirectToAction(nameof(Service));
+            }
+
+            // Generate ServiceId
+            var allServiceIds = await _db.Services
+                .Select(s => s.ServiceId)
+                .ToListAsync();
+
+            string newServiceId;
+
+            if (!allServiceIds.Any())
+            {
+                newServiceId = "SE001";
+            }
+            else
+            {
+                var usedNumbers = allServiceIds
+                    .Select(id => int.Parse(id.Substring(2)))
+                    .OrderBy(n => n)
+                    .ToList();
+
+                int nextNumber = 1;
+                bool foundGap = false;
+
+                foreach (var num in usedNumbers)
+                {
+                    if (num != nextNumber)
+                    {
+                        foundGap = true;
+                        break;
+                    }
+                    nextNumber++;
+                }
+
+                if (!foundGap)
+                {
+                    nextNumber = usedNumbers.Max() + 1;
+                }
+                
+                newServiceId = "SE" + nextNumber.ToString("D3");
+            }
+
+            service.ServiceId = newServiceId;
+            service.AdminId = adminId;
+            service.Status = service.Status ?? "Active";
+            _db.Services.Add(service);
+
+            // ===== CREATE SSC =====
+            var selectedCats = SelectedCategories?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).Distinct().ToList() ?? new List<string>();
+            TempData["Debug_RawSelectedCategories_Create"] = SelectedCategories != null && SelectedCategories.Any() ? string.Join(", ", SelectedCategories) : "None (raw)";
+            TempData["Debug_FilteredSelectedCats_Create"] = selectedCats.Any() ? string.Join(", ", selectedCats) : "None (filtered)";
+
+            if (!selectedCats.Any())
+            {
+                // No categories selected, just save the service
+                await _db.SaveChangesAsync();
+                return RedirectToAction(nameof(Service));
+            }
+
+
+            var sscEntries = new List<ServiceServiceCategory>();
+            var assignedSscIds = new HashSet<string>();
+            foreach (var catId in selectedCats)
+            {
+                int nextNum = await GetNextAvailableNumericId("SSC", assignedSscIds);
+                string newSscId = $"SSC{nextNum:D3}";
+                assignedSscIds.Add(newSscId); // Add to the set of assigned IDs for this batch
+
+                var ssc = new ServiceServiceCategory
+                {
+                    SscId = newSscId,
+                    ServiceId = service.ServiceId,
+                    CategoryId = catId
+                };
+                TempData[$"Debug_SSC_Create_{catId}"] = $"catId: {catId}, newSscId: {newSscId}";
+                sscEntries.Add(ssc);
+            }
+
+            _db.ServiceServiceCategories.AddRange(sscEntries);
+            await _db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Service '{service.Name}' created successfully!";
+
+        }
+
+        // ================= EDIT =================
+        else if (actionType == "edit")
+        {
+            if (string.IsNullOrEmpty(editServiceId))
+                return NotFound();
+
+            var dbService = await _db.Services
+                .Include(s => s.ServiceServiceCategories)
+                .FirstOrDefaultAsync(s => s.ServiceId == editServiceId);
+
+            if (dbService == null)
+                return NotFound();
+
+            dbService.Name = service.Name;
+            dbService.DurationTime = service.DurationTime;
+            dbService.Status = service.Status;
+            dbService.Description = service.Description;
+
+            // Remove old SSC
+            if (dbService.ServiceServiceCategories.Any())
+            {
+                _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
+                await _db.SaveChangesAsync();
+            }
+
+            // Add new SSC
+            var editSelectedCats = SelectedCategories?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).Distinct().ToList() ?? new List<string>();
+
+            if (editSelectedCats.Any())
+            {
+                var sscEntries = new List<ServiceServiceCategory>();
+                var assignedSscIds = new HashSet<string>();
+                foreach (var catId in editSelectedCats)
+                {
+                    int nextNum = await GetNextAvailableNumericId("SSC", assignedSscIds);
+                    string newSscId = $"SSC{nextNum:D3}";
+                    assignedSscIds.Add(newSscId); // Add to the set of assigned IDs for this batch
+
+                    var ssc = new ServiceServiceCategory
+                    {
+                        SscId = newSscId,
+                        ServiceId = dbService.ServiceId,
+                        CategoryId = catId
+                    };
+                    TempData[$"Debug_SSC_Edit_{catId}"] = $"catId: {catId}, newSscId: {newSscId}"; sscEntries.Add(ssc);
+                }
+
+                _db.ServiceServiceCategories.AddRange(sscEntries);
+            }
+
+            await _db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Service '{service.Name}' updated successfully!";
+            return RedirectToAction(nameof(Service));
+        }
+
+        // ================= DELETE =================
+        else if (actionType == "delete")
+        {
+            if (string.IsNullOrEmpty(deleteServiceId))
+                return NotFound();
+
+            var dbService = await _db.Services
+ .Include(s => s.ServiceServiceCategories)
+ .FirstOrDefaultAsync(s => s.ServiceId == deleteServiceId);
+            if (dbService == null)
+                return NotFound();
+
+            // Remove related junction rows first to avoid FK constraint errors
+            if (dbService.ServiceServiceCategories != null && dbService.ServiceServiceCategories.Any())
+            {
+                _db.ServiceServiceCategories.RemoveRange(dbService.ServiceServiceCategories);
+            }
+
+            _db.Services.Remove(dbService);
+            await _db.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Service deleted successfully!";
+            return RedirectToAction(nameof(Service));
+        }
+
+        return RedirectToAction(nameof(Service));
+    }
+
+    // ========== PET ==========
+    public IActionResult Pet()
+    {
+        ViewData["ActivePage"] = "Pet";
+        return View();
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteAppointmentAjax([FromForm] string appointmentId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(appointmentId))
+            {
+                return Json(new { success = false, message = "Invalid appointment id." });
+            }
+
+            var dbAppointment = await _db.Appointments.FindAsync(appointmentId);
+
+            if (dbAppointment == null)
+            {
+                return Json(new { success = false, message = "Appointment not found." });
+            }
+
+            _db.Appointments.Remove(dbAppointment);
+            await _db.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Appointment deleted successfully." });
+        }
+        catch (Exception)
+        {
+            // Log the error in a real app
+            return Json(new { success = false, message = "Failed to delete appointment." });
+        }
+    }
+
+
+      [HttpGet]
+    public async Task<IActionResult> SearchCustomers(string term)
+    {
+        // When term is empty, return a default set of customers so opening the Select2 shows DB entries.
+        List<object> customers;
+
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            customers = await _db.Customers
+                .Where(c => c.Status == "Active")
+                .OrderBy(c => c.Name)
+                .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
+                .Take(20)
+                .ToListAsync<object>();
+        }
+        else
+        {
+            customers = await _db.Customers
+                .Where(c => c.Name.Contains(term) || c.Phone.Contains(term) || c.Email.Contains(term))
+                .OrderBy(c => c.Name)
+                .Select(c => new { id = c.UserId, text = c.Name + " (" + c.Phone + ")" })
+                .Take(50)
+                .ToListAsync<object>();
+        }
+
+        // Return Select2-friendly shape
+        return Json(new { results = customers });
+    }
+    // ========== REPORTS ==========
+
+    public IActionResult reports()
+    {
+        ViewData["ActivePage"] = "reports";
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBookingDensity(int month, int year)
+    {
+        try
+        {
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1);
+
+            var bookingCounts = await _db.Appointments
+                .Where(a => a.AppointmentDateTime >= startDate && a.AppointmentDateTime < endDate && a.Status != "Cancelled")
+                .GroupBy(a => a.AppointmentDateTime.Value.Date)
+                .Select(g => new {
+                    Date = g.Key,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            var countsDict = bookingCounts.ToDictionary(
+                item => item.Date.ToString("yyyy-MM-dd"),
+                item => item.Count
+            );
+
+            return Json(new { success = true, counts = countsDict });
+        }
+        catch (Exception)
+        {
+            return Json(new { success = false, message = "Could not retrieve booking data." });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GenerateReportData(DateTime startDate, DateTime endDate, string reportType)
+    {
+        try
+        {
+            // Adjust endDate to include the whole day
+            var adjustedEndDate = endDate.AddDays(1);
+
+            var appointments = await _db.Appointments
+                .Include(a => a.Customer)
+                .Include(a => a.Staff)
+                .Include(a => a.Service)
+                .Include(a => a.Pet)
+                .Where(a => a.AppointmentDateTime >= startDate && a.AppointmentDateTime < adjustedEndDate)
+                .ToListAsync();
+
+            var totalAppointments = appointments.Count;
+            object reportData;
+
+            switch (reportType)
+            {
+                case "volume":
+                    reportData = new
+                    {
+                        TotalAppointments = totalAppointments,
+                        StartDate = startDate.ToString("MMM dd, yyyy"),
+                        EndDate = endDate.ToString("MMM dd, yyyy"),
+                        GroupedData = new Dictionary<string, object>
+                        {
+                            {
+                                "Appointments by Groomer", appointments
+                                    .Where(a => a.Staff != null)
+                                    .GroupBy(a => a.Staff.Name)
+                                    .Select(g => new { Label = g.Key, Value = g.Count() })
+                                    .OrderByDescending(x => x.Value)
+                                    .ToList<object>()
+                            },
+                            {
+                                "Appointments by Service", appointments
+                                    .Where(a => a.Service != null)
+                                    .GroupBy(a => a.Service.Name)
+                                    .Select(g => new { Label = g.Key, Value = g.Count() })
+                                    .OrderByDescending(x => x.Value)
+                                    .ToList<object>()
+                            },
+                            {
+                                "Appointments by Pet Type", appointments
+                                    .Where(a => a.Pet != null)
+                                    .GroupBy(a => a.Pet.Type)
+                                    .Select(g => new { Label = g.Key, Value = g.Count() })
+                                    .OrderByDescending(x => x.Value)
+                                    .ToList<object>()
+                            }
+                        }
+                    };
+                    break;
+
+                case "workload":
+                    reportData = new
+                    {
+                        TotalAppointments = totalAppointments,
+                        StartDate = startDate.ToString("MMM dd, yyyy"),
+                        EndDate = endDate.ToString("MMM dd, yyyy"),
+                        GroupedData = new Dictionary<string, object>
+                        {
+                            {
+                                "Groomer Workload", appointments
+                                    .Where(a => a.Staff != null)
+                                    .GroupBy(a => a.Staff.Name)
+                                    .Select(g => new
+                                    {
+                                        Label = g.Key,
+                                        Value = $"{g.Count()} appointments ({g.Sum(a => a.DurationTime ?? 0)} mins)"
+                                    })
+                                    .OrderByDescending(x => x.Label)
+                                    .ToList<object>()
+                            }
+                        }
+                    };
+                    break;
+
+                case "topCustomers":
+                    reportData = new
+                    {
+                        TotalAppointments = totalAppointments,
+                        StartDate = startDate.ToString("MMM dd, yyyy"),
+                        EndDate = endDate.ToString("MMM dd, yyyy"),
+                        GroupedData = new Dictionary<string, object>
+                        {
+                            {
+                                "Top Customers by Appointments", appointments
+                                    .Where(a => a.Customer != null)
+                                    .GroupBy(a => a.Customer.Name)
+                                    .Select(g => new { Label = g.Key, Value = g.Count() })
+                                    .OrderByDescending(x => x.Value)
+                                    .Take(20) // Limit to top 20 customers
+                                    .ToList<object>()
+                            }
+                        }
+                    };
+                    break;
+
+                default:
+                    return Json(new { success = false, message = "Invalid report type." });
+            }
+
+            return Json(new { success = true, data = reportData });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details on the server
+            Console.WriteLine($"Error generating report: {ex.Message}");
+            return Json(new { success = false, message = "An error occurred while generating the report." });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadReportAsExcel(DateTime startDate, DateTime endDate, string reportType)
+    {
+        try
+        {
+            var adjustedEndDate = endDate.AddDays(1);
+
+            var appointments = await _db.Appointments
+                .Include(a => a.Customer)
+                .Include(a => a.Staff)
+                .Include(a => a.Service)
+                .Include(a => a.Pet)
+                .Where(a => a.AppointmentDateTime >= startDate && a.AppointmentDateTime < adjustedEndDate)
+                .ToListAsync();
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Report Type: {reportType}");
+            sb.AppendLine($"Date Range: {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}");
+            sb.AppendLine(); // Add a blank line
+
+            switch (reportType)
+            {
+                case "volume":
+                    sb.AppendLine("Appointments by Groomer");
+                    sb.AppendLine("Groomer,Appointment Count");
+                    var byGroomer = appointments.Where(a => a.Staff != null).GroupBy(a => a.Staff.Name)
+                                                .Select(g => new { Label = g.Key, Value = g.Count() });
+                    foreach (var item in byGroomer) sb.AppendLine($"{item.Label},{item.Value}");
+                    sb.AppendLine();
+
+                    sb.AppendLine("Appointments by Service");
+                    sb.AppendLine("Service,Appointment Count");
+                    var byService = appointments.Where(a => a.Service != null).GroupBy(a => a.Service.Name)
+                                                .Select(g => new { Label = g.Key, Value = g.Count() });
+                    foreach (var item in byService) sb.AppendLine($"{item.Label},{item.Value}");
+                    sb.AppendLine();
+
+                    sb.AppendLine("Appointments by Pet Type");
+                    sb.AppendLine("Pet Type,Appointment Count");
+                    var byPetType = appointments.Where(a => a.Pet != null).GroupBy(a => a.Pet.Type)
+                                                .Select(g => new { Label = g.Key, Value = g.Count() });
+                    foreach (var item in byPetType) sb.AppendLine($"{item.Label},{item.Value}");
+                    break;
+
+                case "workload":
+                    sb.AppendLine("Groomer,Appointment Count,Total Duration (mins)");
+                    var workload = appointments.Where(a => a.Staff != null).GroupBy(a => a.Staff.Name)
+                                               .Select(g => new
+                                               {
+                                                   Label = g.Key,
+                                                   Count = g.Count(),
+                                                   Duration = g.Sum(a => a.DurationTime ?? 0)
+                                               });
+                    foreach (var item in workload) sb.AppendLine($"{item.Label},{item.Count},{item.Duration}");
+                    break;
+
+                case "topCustomers":
+                    sb.AppendLine("Customer Name,Appointment Count");
+                    var topCustomers = appointments.Where(a => a.Customer != null).GroupBy(a => a.Customer.Name)
+                                                   .Select(g => new { Label = g.Key, Value = g.Count() })
+                                                   .OrderByDescending(x => x.Value).Take(100);
+                    foreach (var item in topCustomers) sb.AppendLine($"{item.Label},{item.Value}");
+                    break;
+
+                default:
+                    sb.AppendLine("Invalid report type specified.");
+                    break;
+            }
+
+            var fileName = $"Report_{reportType}_{startDate:yyyyMMdd}-{endDate:yyyyMMdd}.csv";
+            return File(System.Text.Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
+        }
+        catch (Exception ex)
+        {
+            // Log error
+            Console.WriteLine($"Error downloading report as Excel: {ex.Message}");
+            // Return a simple text file with the error message
+            return Content("An error occurred while generating the Excel file: " + ex.Message);
+        }
+    }
+
+    [HttpGet]
+    public JsonResult GetServicesByPetType(string petType)
+    {
+    if (string.IsNullOrEmpty(petType))
+    {
+        return Json(new List<object>());
+    }
+
+    var services = _db.Services
+        .Where(s => s.Status == "Active" && s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType == petType))
+        .Select(s => new { id = s.ServiceId, text = s.Name })
+        .ToList();
+
+    return Json(services);
+    }
+
+
+    /// <summary>
+    /// AJAX endpoint for creating groomer with validation
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateGroomerAjax(
+     [FromForm] Models.Staff staff,
+        [FromForm] IFormFile PhotoUpload)
+    {
+        try
+        {
+            // ========== VALIDATE INPUTS USING SERVICES =========
+            var errors = await ValidateStaffAsync(staff);
+
+            // If there are validation errors, return them
+            if (errors.Any())
+            {
+                return Json(new { success = false, errors = errors });
+            }
+
+            // ========== SMART ID GENERATION ==========
+            var allStaffIds = await _db.Staffs
+  .Select(s => s.UserId)
+     .OrderBy(id => id)
+          .ToListAsync();
+
+            string newStaffId;
+
+            if (!allStaffIds.Any())
+            {
+                newStaffId = "S001";
+            }
+            else
+            {
+                var usedNumbers = allStaffIds
+                .Select(id => int.Parse(id.Substring(1)))
+                          .OrderBy(n => n)
+             .ToList();
 
                 int nextNumber = 1;
                 bool foundGap = false;

@@ -298,16 +298,18 @@ public class RedeemGift
     public int Quantity { get; set; } = 0;
     public int LoyaltyPointCost { get; set; }
 
+    public bool IsDeleted { get; set; } = false;   // ✅ ADD THIS
+
     [MaxLength(300)]
     public string Photo { get; set; }
 
     [MaxLength(10)]
     public string AdminId { get; set; }
-    [ForeignKey(nameof(AdminId))]
     public virtual Admin Admin { get; set; }
 
-    public virtual List<CustomerRedeemGift> CustomerRedeemGifts { get; set; } = new List<CustomerRedeemGift>();
+    public virtual List<CustomerRedeemGift> CustomerRedeemGifts { get; set; }
 }
+
 
 /* =========================
  JUNCTION TABLE

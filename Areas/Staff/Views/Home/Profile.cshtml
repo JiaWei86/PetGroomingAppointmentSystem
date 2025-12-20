@@ -1,0 +1,868 @@
+﻿@model PetGroomingAppointmentSystem.Models.Staff
+
+@{
+    ViewData["Title"] = "Staff Profile";
+    ViewData["ActivePage"] = "Profile";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/admin/css/responsive.css" />
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" integrity="sha512-********" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        .profile-wrapper {
+            min-height: calc(100vh - 70px);
+            margin-top: 70px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #f9fafb 100%);
+            padding: 40px 20px;
+        }
+
+        .profile-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .profile-container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 56px rgba(0, 0, 0, 0.15);
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .profile-header-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 56px;
+            color: #d97706;
+            border: 6px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+            object-fit: cover;
+        }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-name {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .profile-position {
+            font-size: 13px;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .profile-body {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .profile-section {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #b45309;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: #d97706;
+            border-radius: 50%;
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            padding: 14px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .profile-info:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .info-value {
+            color: #000000;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .info-value a {
+            color: #d97706;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .info-value a:hover {
+            color: #b45309;
+        }
+
+        .description-box {
+            background: linear-gradient(135deg, #fffbf0 0%, #f9fafb 100%);
+            padding: 20px;
+            border-radius: 10px;
+            line-height: 1.8;
+            color: #374151;
+            border-left: 4px solid #d97706;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1);
+            margin-top: 12px;
+            font-style: italic;
+        }
+
+        .profile-full-width {
+            grid-column: 1 / -1;
+        }
+
+        .profile-stats {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .profile-stat {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #fffbf0 0%, #ffffff 100%);
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .profile-stat:hover {
+            border-color: #d97706;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #d97706;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        .profile-footer {
+            padding: 24px 40px;
+            background: #f9fafb;
+            display: flex;
+            gap: 16px;
+            justify-content: flex-start;
+        }
+
+        .btn-edit {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+        }
+
+        .btn-edit:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #dc2626;
+            padding: 24px;
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-radius: 12px;
+            margin: 40px auto;
+            max-width: 100%;
+            border-left: 4px solid #dc2626;
+            font-weight: 500;
+        }
+
+        .success-message {
+            color: #059669;
+            padding: 24px;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-radius: 12px;
+            margin: 40px auto;
+            max-width: 100%;
+            border-left: 4px solid #10b981;
+            font-weight: 500;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            margin: auto;
+        }
+
+        .modal-box h2 {
+            margin-bottom: 20px;
+            color: #b45309;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 6px;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+        }
+
+        .form-group input:disabled {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Photo Upload Styles */
+        .photo-upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .photo-preview-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9fafb;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .photo-preview-container:hover {
+            border-color: #d97706;
+            background: #fffbf0;
+        }
+
+        .photo-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            font-size: 48px;
+            color: #d97706;
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+        }
+
+        #photoInput {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .photo-error {
+            color: #dc2626;
+            font-size: 13px;
+            padding: 8px;
+            background: #fee2e2;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .photo-error.show {
+            display: block;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .error-text {
+            color: #dc2626;
+            font-size: 13px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-save {
+            background: #d97706;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+            transition: all 0.3s ease;
+        }
+
+        .btn-save:hover {
+            background: #b45309;
+        }
+
+        .btn-cancel {
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .btn-cancel:hover {
+            background: #d1d5db;
+        }
+    </style>
+}
+
+<div class="profile-wrapper">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="success-message">
+            ✅ @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="error-message">
+            ⚠️ @TempData["ErrorMessage"]
+        </div>
+    }
+
+    @if (Model != null)
+    {
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-header-content">
+                    <div class="profile-avatar">
+                        @if (!string.IsNullOrEmpty(Model.Photo))
+                        {
+                            <img src="@Model.Photo" alt="@Model.Name" />
+                        }
+                        else
+                        {
+                            <span>👤</span>
+                        }
+                    </div>
+                    <div class="profile-name">@Model.Name</div>
+                    <div class="profile-position">@(Model.Position ?? "Groomer")</div>
+                </div>
+            </div>
+
+            <div class="profile-body">
+                <!-- Contact Information Section -->
+                <div class="profile-section">
+                    <div class="section-title">Contact Information</div>
+                    <div class="profile-info">
+                        <span class="info-label">User ID</span>
+                        <span class="info-value">@Model.UserId</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="info-label">Email Address</span>
+                        <span class="info-value">@Model.Email</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Phone))
+                    {
+                        <div class="profile-info">
+                            <span class="info-label">Phone Number</span>
+                            <span class="info-value">@Model.Phone</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.IC))
+                    {
+                        <div class="profile-info">
+                            <span class="info-label">Identity Card</span>
+                            <span class="info-value">@Model.IC</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Professional Information Section -->
+                <div class="profile-section">
+                    <div class="section-title">Professional Info</div>
+                    <div class="profile-info">
+                        <span class="info-label">Position</span>
+                        <span class="info-value">@(Model.Position ?? "Not Specified")</span>
+                    </div>
+                    <div class="profile-info">
+                        <span class="info-label">Experience Level</span>
+                        <span class="info-value">
+                            @if (Model.ExperienceYear.HasValue)
+                            {
+                                @($"{Model.ExperienceYear} year{(Model.ExperienceYear > 1 ? "s" : "")}")
+                            }
+                            else
+                            {
+                                <text>Not Specified</text>
+                            }
+                        </span>
+                    </div>
+                    @if (Model.CreatedAt.HasValue)
+                    {
+                        <div class="profile-info">
+                            <span class="info-label">Joined Date</span>
+                            <span class="info-value">@Model.CreatedAt?.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Description Section -->
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <div class="profile-section profile-full-width">
+                        <div class="section-title">About</div>
+                        <div class="description-box">
+                            @Model.Description
+                        </div>
+                    </div>
+                }
+
+            </div>
+
+            <div class="profile-footer">
+                <button type="button" class="btn-edit" onclick="openEditModal()">
+                    <span>✎</span> Edit Profile
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="error-message">
+            ⚠️ Staff member profile not found. Please contact the administrator.
+        </div>
+    }
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="editProfileModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>Edit Profile</h2>
+
+        <form asp-action="EditProfile" asp-controller="Home" asp-area="Staff" method="post" enctype="multipart/form-data" onsubmit="return validatePassword()">
+
+            <input type="hidden" name="UserId" value="@Model.UserId" />
+
+            <!-- Photo Upload Section -->
+            <div class="form-group">
+                <label>Profile Photo</label>
+                <div class="photo-upload-section" id="photoUploadSection">
+                    <div class="photo-preview-container" id="photoPreview">
+                        @if (!string.IsNullOrEmpty(Model.Photo))
+                        {
+                            <img src="@Model.Photo" alt="Current Photo" />
+                        }
+                        else
+                        {
+                            <div class="photo-placeholder">📷</div>
+                        }
+                    </div>
+
+                    <div class="cropper-controls" id="cropperControls" style="display:none; text-align:center; margin-top:10px; gap:8px;">
+                        <button type="button" class="btn-small" id="rotateLeft">⟲ Rotate Left</button>
+                        <button type="button" class="btn-small" id="rotateRight">⟳ Rotate Right</button>
+                        <button type="button" class="btn-small" id="flipHorizontal">↔ Flip Horizontal</button>
+                        <button type="button" class="btn-small" id="flipVertical">↕ Flip Vertical</button>
+                        <button type="button" class="btn-small" id="cropImage">✔ Crop</button>
+                        <button type="button" class="btn-small" id="resetCrop">✖ Reset</button>
+                    </div>
+
+                    <div class="file-input-wrapper">
+                        <label for="photoInput" class="file-input-label">
+                            <span>📁</span> Choose Photo
+                        </label>
+                        <input type="file" id="photoInput" name="Photo" accept="image/jpeg,image/png,image/gif,image/webp" />
+                    </div>
+
+                    <div class="photo-error" id="photoError"></div>
+                    <small class="hint">Max 5MB. Supported: JPG, PNG, GIF, WebP</small>
+                </div>
+            </div>
+
+
+
+            <!-- Name -->
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="Name" value="@Model.Name" required />
+            </div>
+
+
+            <!-- New Password -->
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="password" name="Password" />
+                <small class="hint">
+                    Must include uppercase, lowercase, number, symbol, min 8 characters
+                </small>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="confirmPassword" />
+                <span id="passwordError" class="error-text"></span>
+            </div>
+
+            <!-- Buttons -->
+            <div class="modal-actions">
+                <button type="submit" class="btn-save">Save Changes</button>
+                <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cropper.js JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js" integrity="sha512-********" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+<script>
+    let cropper;
+    const photoInput = document.getElementById("photoInput");
+    const photoPreview = document.getElementById("photoPreview");
+    const photoError = document.getElementById("photoError");
+    const cropperControls = document.getElementById("cropperControls");
+    const photoUploadSection = document.getElementById("photoUploadSection");
+
+    function openEditModal() {
+        document.getElementById("editProfileModal").style.display = "flex";
+    }
+
+    function closeEditModal() {
+        document.getElementById("editProfileModal").style.display = "none";
+        resetPhotoInput();
+    }
+
+    function validatePassword() {
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const error = document.getElementById("passwordError");
+
+        if (password.length === 0) return true; // Allow name-only update
+
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!regex.test(password)) {
+            error.innerText = "Password does not meet requirements.";
+            return false;
+        }
+
+        if (password !== confirmPassword) {
+            error.innerText = "Passwords do not match.";
+            return false;
+        }
+
+        error.innerText = "";
+        return true;
+    }
+
+    function resetPhotoInput() {
+        photoInput.value = "";
+        photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+        photoError.classList.remove("show");
+        photoError.innerText = "";
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+            cropperControls.style.display = "none";
+        }
+        showPhotoInputWrapper(true);
+    }
+
+    // Helper to show/hide file input + error + hint
+    function showPhotoInputWrapper(show) {
+        const fileWrapper = photoUploadSection.querySelector(".file-input-wrapper");
+        const hint = photoUploadSection.querySelector("small.hint");
+        const errorDiv = photoUploadSection.querySelector(".photo-error");
+
+        if (show) {
+            fileWrapper.style.display = "block";
+            hint.style.display = "block";
+            errorDiv.style.display = photoError.classList.contains("show") ? "block" : "none";
+        } 
+    }
+
+    // File input change (handles validation and Cropper initialization)
+    photoInput.addEventListener("change", function(e) {
+        const file = e.target.files[0];
+
+        photoError.classList.remove("show");
+        photoError.innerText = "";
+
+        if (!file) {
+            resetPhotoInput();
+            return;
+        }
+
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+        if (file.size > maxSize || !allowedTypes.includes(file.type)) {
+            let errorMsg = "";
+            if (file.size > maxSize) {
+                errorMsg = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 5MB.`;
+            } else {
+                errorMsg = "Invalid file type. Only JPG, PNG, GIF, WebP allowed.";
+            }
+
+            photoError.innerText = errorMsg;
+            photoError.classList.add("show");
+
+            // Reset preview and hide the file input section
+            photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+            showPhotoInputWrapper(false);
+            photoInput.value = "";
+            return;
+        }
+
+        showPhotoInputWrapper(true);
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" style="max-width:100%;" />`;
+
+            if (cropper) cropper.destroy();
+            const image = document.getElementById("cropperImage");
+            cropper = new Cropper(image, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 1
+            });
+            cropperControls.style.display = "flex";
+        };
+        reader.readAsDataURL(file);
+    });
+
+       // Drag & Drop
+    photoUploadSection.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d97706";
+        photoPreview.style.background = "#fffbf0";
+    });
+
+    photoUploadSection.addEventListener("dragleave", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d1d5db";
+        photoPreview.style.background = "#f9fafb";
+    });
+
+    photoUploadSection.addEventListener("drop", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d1d5db";
+        photoPreview.style.background = "#f9fafb";
+
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+
+        // Assign the dropped file to the input
+        photoInput.files = e.dataTransfer.files;
+
+        // Always show the input and hint for valid files
+        showPhotoInputWrapper(true);
+
+        // Trigger the existing change event for validation & preview
+        photoInput.dispatchEvent(new Event("change"));
+    });
+
+    // Cropper controls
+    document.getElementById("rotateLeft").onclick = () => cropper.rotate(-90);
+    document.getElementById("rotateRight").onclick = () => cropper.rotate(90);
+
+    document.getElementById("flipHorizontal").onclick = () => {
+        cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1);
+    };
+
+    document.getElementById("flipVertical").onclick = () => {
+        cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1);
+    };
+
+    document.getElementById("resetCrop").onclick = () => {
+        cropper.reset();
+    };
+
+    document.getElementById("cropImage").onclick = () => {
+        const canvas = cropper.getCroppedCanvas({
+            width: 600,
+            height: 600,
+            fillColor: "#fff"
+        });
+
+        canvas.toBlob(blob => {
+            const newFile = new File([blob], "cropped.png", { type: "image/png" });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(newFile);
+            photoInput.files = dataTransfer.files;
+
+            const url = URL.createObjectURL(blob);
+            photoPreview.innerHTML = `<img src="${url}" style="max-width:100%;" />`;
+        });
+
+        cropper.destroy();
+        cropperControls.style.display = "none";
+    };
+
+    // Close modal by clicking outside
+    document.getElementById("editProfileModal").addEventListener("click", function(e) {
+        if (e.target === this) closeEditModal();
+    });
+</script>
+
+
+
+

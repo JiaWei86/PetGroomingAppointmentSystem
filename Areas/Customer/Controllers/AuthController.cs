@@ -11,24 +11,54 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
     {
         private readonly IEmailService _emailService;
         private readonly DB _dbContext;
+        private readonly IPhoneService _phoneService;
+        private readonly IValidationService _validationService;
+        private readonly IRecaptchaService _recaptchaService;
 
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
 
         private const int LOCKOUT_THRESHOLD = 3;
 
-        public AuthController(IEmailService emailService, DB dbContext)
+        public AuthController(
+            IEmailService emailService,
+            DB dbContext,
+            IPhoneService phoneService,
+            IValidationService validationService,
+            IRecaptchaService recaptchaService)
         {
             _emailService = emailService;
             _dbContext = dbContext;
+            _phoneService = phoneService;
+            _validationService = validationService;
+            _recaptchaService = recaptchaService;
         }
 
         public IActionResult Login()
         {
-            return View();
+            // ✅ 改进：完全清除所有错误状态
+            ViewData.Remove("Error");
+            ViewData.Remove("IsLocked");
+            ViewData.Remove("LockoutSeconds");
+            
+            // ✅ 总是显示 reCAPTCHA（改这里）
+            var recaptchaSiteKey = HttpContext.RequestServices
+                .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
+            ViewData["RecaptchaSiteKey"] = recaptchaSiteKey;
+            ViewData["RequireRecaptcha"] = true;  // 👈 改成 true
+            
+            var model = new LoginViewModel();
+            
+            if (Request.Cookies.TryGetValue("RememberPhone", out string rememberPhone))
+            {
+                model.PhoneNumber = rememberPhone;
+                model.RememberMe = true;
+            }
+            
+            return View(model);
         }
 
         [HttpPost]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string recaptchaToken = null)
         {
             if (!ModelState.IsValid)
             {
@@ -45,11 +75,32 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // Clear expired lockouts before checking
+            // ✅ 检查 reCAPTCHA（使用 g-recaptcha-response）
+            if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
+            {
+                // reCAPTCHA token 来自 g-recaptcha-response 字段
+                recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(recaptchaToken))
+            {
+                ModelState.AddModelError("", "Please complete the reCAPTCHA verification");
+                return View(model);
+            }
+
+            // 验证 reCAPTCHA token
+            bool recaptchaValid = await _recaptchaService.VerifyTokenAsync(recaptchaToken);
+            if (!recaptchaValid)
+            {
+                ModelState.AddModelError("", "reCAPTCHA verification failed. Please try again.");
+                return View(model);
+            }
+
+            // ✅ 关键：先清除过期的 lockout
             ClearExpiredLockouts(formattedPhoneNumber);
             var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
-            // Check if account is currently locked
+            // ✅ 检查 lockout 状态
             if (lockoutInfo.isLocked)
             {
                 var remainingSeconds = (int)(lockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
@@ -73,7 +124,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     ViewData["IsLocked"] = true;
                     ViewData["LockoutSeconds"] = (int)(updatedLockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
-                    ViewData["Error"] = "Too many login attempts. Please try again later.";
+                    ViewData["Error"] = "Too many login attempts. Please wait a moment and try again later.";
                 }
                 else
                 {
@@ -110,7 +161,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     Expires = DateTimeOffset.UtcNow.AddDays(30),
                     HttpOnly = true,
-                    Secure = true,
+                    Secure = HttpContext.Request.IsHttps,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
                 });
             }
@@ -151,6 +202,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             return System.Text.RegularExpressions.Regex.IsMatch(phoneNumber, @"^01[0-9]-[0-9]{7,8}$");
         }
+
 
         public IActionResult ForgotPassword()
         {
@@ -228,7 +280,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 }
                 else
                 {
-                    ViewData["Success"] = "If an account exists with that phone number and email, a verification code will be sent.";
+                    // ✅ 修改：显示错误，而不是成功消息
+                    ViewData["Error"] = "No account found with that phone number and email combination. Please verify and try again.";
+                    ViewData["Email"] = email;
+                    ViewData["Phone"] = formattedPhoneNumber;
                 }
 
                 return View();
@@ -385,20 +440,28 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // Format phone number first
-            string formattedPhone = FormatPhoneNumber(model.PhoneNumber);
+            // Format phone number using service
+            string formattedPhone = _phoneService.FormatPhoneNumber(model.PhoneNumber);
 
-            // Check if phone number already exists in database
-            if (_dbContext.Users.Any(u => u.Phone == formattedPhone))
+            // Validate phone format using service
+            if (!_phoneService.ValidatePhoneFormat(formattedPhone))
+            {
+                ModelState.AddModelError("PhoneNumber", "Invalid phone number format. Use 01X-XXXXXXX or 01X-XXXXXXXX");
+                if (isAjaxRequest)
+                {
+                    return Json(new { success = false, message = "Invalid phone number format." });
+                }
+                return View(model);
+            }
+
+            // Check if phone number is available
+            if (!_phoneService.IsPhoneNumberAvailable(model.PhoneNumber))
             {
                 ModelState.AddModelError("PhoneNumber", "Phone number already registered.");
-
                 if (isAjaxRequest)
                 {
                     return Json(new { success = false, message = "Phone number already registered." });
                 }
-
-                ViewData["Error"] = "Phone number already registered.";
                 return View(model);
             }
 
@@ -435,10 +498,20 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 if (isAjaxRequest)
                 {
-                    return Json(new { success = true, message = "Registration successful! Redirecting to login..." });
+                    // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                    HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
+                    
+                    return Json(new { 
+                        success = true, 
+                        message = "Registration successful! Redirecting to login...",
+                        redirectUrl = Url.Action("Login", "Auth", new { area = "Customer", registered = "true" })
+                    });
                 }
 
-                ViewData["Success"] = "Registration successful! Please login.";
+                // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
+    
+                TempData["RegistrationSuccess"] = "Registration successful! Please login with your credentials.";
                 return RedirectToAction("Login");
             }
             catch (Exception ex)
@@ -560,6 +633,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             if (loginAttempts.ContainsKey(phoneNumber))
             {
                 var lockoutInfo = loginAttempts[phoneNumber];
+                // ✅ 改进：完全清除过期的lockout，重置尝试次数
                 if (DateTime.UtcNow > lockoutInfo.lockoutUntil)
                 {
                     loginAttempts.Remove(phoneNumber);
@@ -580,6 +654,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
             bool isLocked = attempts >= LOCKOUT_THRESHOLD && DateTime.UtcNow < lockoutUntil;
 
+            // ✅ 新增：如果lockout已过期，重置数据
+            if (DateTime.UtcNow > lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
+            {
+                loginAttempts.Remove(phoneNumber);
+                return (false, 0, DateTime.UtcNow);
+            }
+
             return (isLocked, attempts, lockoutUntil);
         }
 
@@ -590,26 +671,40 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             if (!loginAttempts.ContainsKey(phoneNumber))
             {
-                loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddMinutes(15));
+                // First failed attempt - set lockout to 15 seconds from now
+                loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
             }
             else
             {
-                var (attempts, _) = loginAttempts[phoneNumber];
-                attempts++;
-
-                if (attempts >= LOCKOUT_THRESHOLD)
+                var (attempts, currentLockoutUntil) = loginAttempts[phoneNumber];
+                
+                // ✅ 改进：如果lockout已过期，重置计数器
+                if (DateTime.UtcNow > currentLockoutUntil)
                 {
-                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddMinutes(15));
+                    // Lockout expired - reset to first attempt
+                    loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
                 }
                 else
                 {
-                    loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddMinutes(15));
+                    // Still within lockout period - increment
+                    attempts++;
+
+                    if (attempts >= LOCKOUT_THRESHOLD)
+                    {
+                        // Lock account for 15 seconds
+                        loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddSeconds(15));
+                    }
+                    else
+                    {
+                        // Update attempts but keep the existing lockout timer
+                        loginAttempts[phoneNumber] = (attempts, currentLockoutUntil);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Resets failed login attempts for a phone number after successful login
+        /// Resets failed login attempts for a phone number (on successful login)
         /// </summary>
         private void ResetFailedAttempts(string phoneNumber)
         {
@@ -628,6 +723,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             return random.Next(100000, 999999).ToString();
         }
 
+        [HttpGet]
         public IActionResult Logout()
         {
             // Remove only customer-specific session keys to avoid clearing admin/staff sessions
@@ -641,6 +737,425 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             HttpContext.Session.Remove("ResetPhone");
 
             return RedirectToAction("Index", "Home", new { area = "Customer" });
+            // 清除 session
+            HttpContext.Session.Clear();
+
+            // ✅ 改动：不删除 RememberPhone cookie，这样下次登录时仍能显示"Welcome back!"
+            // Response.Cookies.Delete("RememberPhone", new Microsoft.AspNetCore.Http.CookieOptions
+            // {
+            //     HttpOnly = true,
+            //     Secure = true,
+            //     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
+            // });
+
+            // Redirect to Login page (instead of Home)
+            return RedirectToAction("Login", "Auth", new { area = "Customer" });
+        }
+
+        /// <summary>
+        /// Validates name
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidateName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return Json(new { isValid = false, errorMessage = "Name cannot be empty." });
+            }
+
+            name = name.Trim();
+
+            if (name.Length < 3 || name.Length > 200)
+            {
+                return Json(new { isValid = false, errorMessage = "Name must be between 3-200 characters." });
+            }
+
+            // Check if contains only letters and spaces
+            if (!System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z\s]+$"))
+            {
+                return Json(new { isValid = false, errorMessage = "Name must contain only letters and spaces." });
+            }
+
+            return Json(new { isValid = true, message = "Valid name." });
+        }
+
+        /// <summary>
+        /// Validates email
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidateEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Json(new { isValid = false, errorMessage = "Email cannot be empty." });
+            }
+
+            email = email.Trim();
+
+            if (email.Length > 150)
+            {
+                return Json(new { isValid = false, errorMessage = "Email must not exceed 150 characters." });
+            }
+
+            // Check email format
+            if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return Json(new { isValid = false, errorMessage = "Please enter a valid email address." });
+            }
+
+            // Check if email already exists
+            if (_dbContext.Users.Any(u => u.Email == email))
+            {
+                return Json(new { isValid = false, errorMessage = "Email already registered." });
+            }
+
+            return Json(new { isValid = true, message = "Valid email." });
+        }
+
+        /// <summary>
+        /// Validates Malaysian IC number
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidateIC(string ic)
+        {
+            if (string.IsNullOrWhiteSpace(ic))
+            {
+                return Json(new { isValid = false, errorMessage = "IC number cannot be empty." });
+            }
+
+            ic = ic.Trim();
+
+            // Check format
+            if (!System.Text.RegularExpressions.Regex.IsMatch(ic, @"^\d{6}-\d{2}-\d{4}$"))
+            {
+                return Json(new { isValid = false, errorMessage = "IC number must be in format xxxxxx-xx-xxxx." });
+            }
+
+            // Extract date part
+            string datePart = ic.Substring(0, 6);
+            if (!int.TryParse(datePart.Substring(0, 2), out int year))
+                return Json(new { isValid = false, errorMessage = "Invalid year in IC." });
+            if (!int.TryParse(datePart.Substring(2, 2), out int month))
+                return Json(new { isValid = false, errorMessage = "Invalid month in IC." });
+            if (!int.TryParse(datePart.Substring(4, 2), out int day))
+                return Json(new { isValid = false, errorMessage = "Invalid day in IC." });
+
+            // Validate month
+            if (month < 1 || month > 12)
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid month in IC (must be 01-12)." });
+            }
+
+            // Days in month
+            int[] daysInMonth = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+            if (day < 1 || day > daysInMonth[month - 1])
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid day in IC for the given month." });
+            }
+
+            // Convert year
+            int fullYear = year >= 50 ? 1900 + year : 2000 + year;
+
+            // Check leap year for Feb 29
+            if (month == 2 && day == 29)
+            {
+                bool isLeapYear = (fullYear % 4 == 0 && fullYear % 100 != 0) || (fullYear % 400 == 0);
+                if (!isLeapYear)
+                {
+                    return Json(new { isValid = false, errorMessage = "Invalid leap year date in IC." });
+                }
+            }
+
+            // Check date not in future
+            int currentYear = DateTime.Now.Year;
+            int currentMonth = DateTime.Now.Month;
+            int currentDay = DateTime.Now.Day;
+
+            if (fullYear > currentYear || (fullYear == currentYear && month > currentMonth) || (fullYear == currentYear && month == currentMonth && day > currentDay))
+            {
+                return Json(new { isValid = false, errorMessage = "IC date cannot be in the future." });
+            }
+
+            // Validate state code - ✅ 改为 Substring(7, 2)
+            string stateCode = ic.Substring(7, 2);
+            var validStates = new[] { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16" };
+            if (!validStates.Contains(stateCode))
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid state code (must be 01-16)." });
+            }
+
+            return Json(new { isValid = true, message = "Valid IC number." });
+        }
+
+        /// <summary>
+        /// Validates password
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidatePassword(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                return Json(new { isValid = false, errorMessage = "Password cannot be empty." });
+            }
+
+            if (password.Length < 8)
+            {
+                return Json(new { isValid = false, errorMessage = "Password must be at least 8 characters." });
+            }
+
+            // Check for uppercase
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[A-Z]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 uppercase letter." });
+            }
+
+            // Check for lowercase
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[a-z]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 lowercase letter." });
+            }
+
+            // Check for symbol
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 symbol." });
+            }
+
+            return Json(new { isValid = true, message = "Valid password." });
+        }
+
+        // 在 AuthController 类内部添加这个内部类
+        public class ValidateFieldRequest
+        {
+            public string FieldName { get; set; }
+            public string FieldValue { get; set; }
+        }
+
+        /// <summary>
+        /// AJAX endpoint for real-time field validation during registration
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidateRegisterField([FromBody] ValidateFieldRequest request)  // ✅ 改这里
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.FieldName) || string.IsNullOrWhiteSpace(request.FieldValue))
+                {
+                    return Json(new { isValid = false, errorMessage = "Invalid validation request." });
+                }
+
+                string fieldValue = request.FieldValue.Trim();
+
+                return request.FieldName.ToLower() switch
+                {
+                    "phonenumber" => ValidatePhoneField(fieldValue),
+                    "name" => ValidateNameField(fieldValue),
+                    "ic" => ValidateICField(fieldValue),
+                    "email" => ValidateEmailField(fieldValue),
+                    "password" => ValidatePasswordField(fieldValue),
+                    _ => Json(new { isValid = false, errorMessage = "Invalid field for validation." })
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ValidateRegisterField Error] {ex.Message}");
+                Console.WriteLine($"[ValidateRegisterField StackTrace] {ex.StackTrace}");
+                return Json(new { isValid = false, errorMessage = $"Validation error: {ex.Message}" });
+            }
+        }
+
+        private IActionResult ValidatePhoneField(string phoneNumber)
+        {
+            // Format phone using service
+            string formattedPhone = _phoneService.FormatPhoneNumber(phoneNumber);
+
+            // Validate format using service
+            if (!_phoneService.ValidatePhoneFormat(formattedPhone))
+            {
+                return Json(new { isValid = false, errorMessage = "Phone must be in format 01X-XXXXXXX or 01X-XXXXXXXX." });
+            }
+
+            // Check if already registered using service
+            if (!_phoneService.IsPhoneNumberAvailable(phoneNumber))
+            {
+                return Json(new { isValid = false, errorMessage = "This phone number is already registered." });
+            }
+
+            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+        }
+
+        private IActionResult ValidateNameField(string name)
+        {
+            if (name.Length < 3 || name.Length > 200)
+            {
+                return Json(new { isValid = false, errorMessage = "Name must be between 3-200 characters." });
+            }
+
+            var nameRegex = new System.Text.RegularExpressions.Regex(@"^[a-zA-Z\s]+$");
+            if (!nameRegex.IsMatch(name))
+            {
+                return Json(new { isValid = false, errorMessage = "Name must contain only letters and spaces." });
+            }
+
+            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+        }
+
+        private IActionResult ValidateICField(string ic)
+        {
+            // Check format
+            var icRegex = new System.Text.RegularExpressions.Regex(@"^\d{6}-\d{2}-\d{4}$");
+            if (!icRegex.IsMatch(ic))
+            {
+                return Json(new { isValid = false, errorMessage = "IC must be in format xxxxxx-xx-xxxx." });
+            }
+
+            // Extract date part for additional validation
+            string datePart = ic.Substring(0, 6);
+            if (!int.TryParse(datePart.Substring(0, 2), out int year) ||
+                !int.TryParse(datePart.Substring(2, 2), out int month) ||
+                !int.TryParse(datePart.Substring(4, 2), out int day))
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid date in IC." });
+            }
+
+            // Validate month
+            if (month < 1 || month > 12)
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid month in IC (must be 01-12)." });
+            }
+
+            // Validate day
+            int[] daysInMonth = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+            if (day < 1 || day > daysInMonth[month - 1])
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid day in IC for the given month." });
+            }
+
+            // ✅ Convert year (05 -> 2005, 85 -> 1985)
+            int fullYear = year >= 50 ? 1900 + year : 2000 + year;
+
+            // ✅ Check leap year for Feb 29
+            if (month == 2 && day == 29)
+            {
+                bool isLeapYear = (fullYear % 4 == 0 && fullYear % 100 != 0) || (fullYear % 400 == 0);
+                if (!isLeapYear)
+                {
+                    return Json(new { isValid = false, errorMessage = "Invalid leap year date in IC." });
+                }
+            }
+
+            // ✅ Check date not in future
+            int currentYear = DateTime.Now.Year;
+            int currentMonth = DateTime.Now.Month;
+            int currentDay = DateTime.Now.Day;
+
+            if (fullYear > currentYear || (fullYear == currentYear && month > currentMonth) || (fullYear == currentYear && month == currentMonth && day > currentDay))
+            {
+                return Json(new { isValid = false, errorMessage = "IC date cannot be in the future." });
+            }
+
+            // Validate state code - ✅ 改为 Substring(7, 2)
+            string stateCode = ic.Substring(7, 2);
+            var validStates = new[] { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16" };
+            if (!validStates.Contains(stateCode))
+            {
+                return Json(new { isValid = false, errorMessage = "Invalid state code (must be 01-16)." });
+            }
+
+            // ✅ CHECK IF IC IS ALREADY REGISTERED
+            if (!_phoneService.IsICAvailable(ic))
+            {
+                return Json(new { isValid = false, errorMessage = "This IC number is already registered." });
+            }
+
+            return Json(new { isValid = true, errorMessage = "" });
+        }
+
+        private IActionResult ValidateEmailField(string email)
+        {
+            if (email.Length > 150)
+            {
+                return Json(new { isValid = false, errorMessage = "Email must not exceed 150 characters." });
+            }
+
+            var emailRegex = new System.Text.RegularExpressions.Regex(@"^[^\s@]+@[^\s@]+\.[^\s@]+$");
+            if (!emailRegex.IsMatch(email))
+            {
+                return Json(new { isValid = false, errorMessage = "Please enter a valid email address." });
+            }
+
+            if (_dbContext.Users.Any(u => u.Email == email))
+            {
+                return Json(new { isValid = false, errorMessage = "This email is already registered." });
+            }
+
+            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+        }
+
+        private IActionResult ValidatePasswordField(string password)
+        {
+            if (password.Length < 8)
+            {
+                return Json(new { isValid = false, errorMessage = "Password must be at least 8 characters." });
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[A-Z]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 uppercase letter." });
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[a-z]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 lowercase letter." });
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(password, @"[!@#$%^&*()_+\-=\[\]{};':""\\|,.<>\/?]"))
+            {
+                return Json(new { isValid = false, errorMessage = "Password must contain at least 1 symbol." });
+            }
+
+            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+        }
+
+        /// <summary>
+        /// Validates if phone number is registered (for login page real-time validation)
+        /// </summary>
+        [HttpPost]
+        public IActionResult ValidatePhoneNumberRegistered(string phoneNumber)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    return Json(new { isRegistered = false, message = "Phone number is required." });
+                }
+
+                // Format phone number
+                string formattedPhone = FormatPhoneNumber(phoneNumber);
+
+                // Validate format
+                if (!ValidatePhoneFormat(formattedPhone))
+                {
+                    return Json(new { isRegistered = false, message = "Invalid phone number format." });
+                }
+
+                // Check if phone number exists in database
+                var user = _dbContext.Customers
+                    .FirstOrDefault(u => u.Phone == formattedPhone && u.Role == "customer");
+
+                if (user != null)
+                {
+                    return Json(new { isRegistered = true, message = "Phone number is registered." });
+                }
+                else
+                {
+                    return Json(new { isRegistered = false, message = "Phone number hasn't registered." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { isRegistered = false, message = $"Validation error: {ex.Message}" });
+            }
         }
     }
 }

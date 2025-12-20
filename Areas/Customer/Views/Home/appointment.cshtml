@@ -1,8 +1,8 @@
 ﻿@{
-    ViewData["Title"] = "Book an Appointment";
+ViewData["Title"] = "Book an Appointment";
 }
 
-<link rel="stylesheet" href="~/Customer/css/appointment.css"/>
+<link rel="stylesheet" href="~/Customer/css/appointment.css" />
 
 <!-- bradcam_area_start -->
 <div class="bradcam_area breadcam_bg">
@@ -17,158 +17,170 @@
     </div>
 </div>
 
-        <div class="appt-bg">
-            <div class="appt-row">
-                <!-- Calendar card -->
-                <div class="card calendar-card" role="region" aria-label="appointments calendar">
-                    <div class="cal-head">
-                        <div class="cal-title" id="monthTitle">Month Year</div>
-                        <div class="nav">
-                            <button id="prevBtn" class="nav-btn" aria-label="Previous month">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
-                                </svg>
-                            </button>
-                            <button id="nextBtn" class="nav-btn" aria-label="Next month">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+<div class="appt-bg">
+    <div class="appt-row">
+        <!-- 👈 NEW: Appointments Details Card (LEFT Side) -->
+        <div class="card appointments-details-card" id="appointmentsDetailsCard" style="display:none;">
+            <div class="appointments-header">
+                <h3>📅 Appointments</h3>
+                <button id="closeDetailsCard" class="close-btn">✕</button>
+            </div>
+            <div id="appointmentsDetailsList" class="appointments-details-list"></div>
+        </div>
 
-                    <div class="weekdays" aria-hidden="true">
-                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                    </div>
-
-                    <div class="days" id="daysGrid"></div>
-
-                    <div class="calendar-footer">
-                        <button type="button" id="todayBtn" class="today-btn">Today</button>
-                    </div>
-
-                    <div class="legend" aria-hidden="true">
-                        <div class="legend-row">
-                            <div class="legend-item"><span class="legend-color rateus"></span><span class="muted">Rate Us</span></div>
-                            <div class="legend-item"><span class="legend-color visited"></span><span class="muted">Visited</span></div>
-                            <div class="legend-item"><span class="legend-color confirmed"></span><span class="muted">Confirmed</span></div>
-                        </div>
-                        <div class="legend-row">
-                            <div class="legend-item"><span class="legend-color noshow"></span><span class="muted">No Show</span></div>
-                            <div class="legend-item"><span class="legend-color pending"></span><span class="muted">Pending</span></div>
-                            <div class="legend-item"><span class="legend-color unavailable"></span><span class="muted">Unavailable</span></div>
-                        </div>
-                    </div>
+        <!-- Calendar card (CENTER) -->
+        <div class="card calendar-card" role="region" aria-label="appointments calendar">
+            <div class="cal-head">
+                <div class="cal-title" id="monthTitle">Month Year</div>
+                <div class="nav">
+                    <button id="prevBtn" class="nav-btn" aria-label="Previous month">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <button id="nextBtn" class="nav-btn" aria-label="Next month">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
                 </div>
+            </div>
 
-                <!-- Form card -->
-                <div class="card form-card" id="formPanel" aria-live="polite">
-                    <div id="formPlaceholder" class="muted">Select a date (today or a future date) to show the booking form.</div>
+            <div class="weekdays" aria-hidden="true">
+                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
 
-                    <form id="apptForm" style="display:none;" onsubmit="return false;" class="appt-form">
-                        <fieldset>
-                            <legend>Booking Details</legend>
+            <div class="days" id="daysGrid"></div>
 
-                            <div class="form-group">
-                                <label class="form-label">Selected Date</label>
-                                <input id="selectedDateText" type="text" readonly class="form-control date-display" />
-                            </div>
+            <div class="calendar-footer">
+                <button type="button" id="todayBtn" class="today-btn">Today</button>
+            </div>
 
-                            <div class="form-group">
-                                <label for="categorySelect" class="form-label">Pet Category <span class="required">*</span></label>
-                                <input id="categorySelect" type="text" readonly class="form-control" />
-                                <!-- Hidden input to store the value -->
-                                <input id="categoryValue" type="hidden" />
-                            </div>
-
-                            <div class="form-group pet-grid">
-                                <label class="form-label">Choose Pet(s) <span class="required">*</span></label>
-                                <div id="petCards" class="pet-cards" aria-live="polite"></div>
-                                <div class="form-hint">Select one or more pets for the appointment</div>
-                            </div>
-                        </fieldset>
-
-                        <fieldset>
-                            <legend>Service Details</legend>
-
-                            <div class="form-group" id="serviceDetailsSection" style="display:none;">
-                                <label class="form-label">Select Service <span class="required">*</span></label>
-                                <div id="serviceDetailsList" class="service-details-list"></div>
-                                <small class="form-hint">Select the service you want to book</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="timeSelect" class="form-label">Preferred Time <span class="required">*</span></label>
-                                <select id="timeSelect" required class="form-control">
-                                    <option value="" disabled selected>-- Select time --</option>
-                                </select>
-                                <small class="form-hint">Available 9:00 AM - 4:30 PM</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="groomerSelect" class="form-label">Preferred Groomer</label>
-                                <select id="groomerSelect" class="form-control">
-                                    <option value="">Any Available</option>
-                                </select>
-                                <small class="form-hint">Leave blank for automatic assignment</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="notes" class="form-label">Special Requests</label>
-                                <textarea id="notes" placeholder="Allergies, behavior notes, special instructions..." class="form-control" rows="4"></textarea>
-                                <small class="form-hint" id="charCount">0 / 500 characters</small>
-                            </div>
-                        </fieldset>
-
-                        <div class="form-actions-main">
-                            <button id="submitBtn" type="button" class="btn btn-primary btn-lg">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                                Submit Appointment Request
-                            </button>
-                        </div>
-                    </form>
+            <div class="legend" aria-hidden="true">
+                <div class="legend-row">
+                    <div class="legend-item"><span class="legend-color rateus"></span><span class="muted">Rate Us</span></div>
+                    <div class="legend-item"><span class="legend-color confirmed"></span><span class="muted">Confirmed</span></div>
+                    <div class="legend-item"><span class="legend-color cancelled"></span><span class="muted">Cancelled</span></div>
+                    <div class="legend-item"><span class="legend-color completed"></span><span class="muted">Completed</span></div>
                 </div>
             </div>
         </div>
 
-        <!-- Success toast -->
-        <div id="apptSuccessToast" class="appt-toast appt-toast--success" aria-live="polite" role="status" style="display:none;">
-            <div class="toast-content">
-                <div class="toast-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                </div>
-                <div class="toast-body">
-                    <div class="toast-title">Appointment Request Submitted!</div>
-                    <div class="toast-message">We'll confirm your booking shortly</div>
-                </div>
-                <button class="toast-close" id="apptSuccessClose" aria-label="Close notification">&times;</button>
-            </div>
-        </div>
+        <!-- Form Panel (RIGHT) -->
+        <div class="card form-card" id="formPanel" aria-live="polite">
+            <!-- Form Placeholder -->
+            <div id="formPlaceholder" class="muted">Select a date (today or a future date) to show the booking form.</div>
 
-        <!-- Error toast -->
-        <div id="apptErrorToast" class="appt-toast appt-toast--error" aria-live="polite" role="alert" style="display:none;">
-            <div class="toast-content">
-                <div class="toast-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                </div>
-                <div class="toast-body">
-                    <div class="toast-title">Error</div>
-                    <div class="toast-message" id="errorToastMsg">Please fill in all required fields</div>
-                    <div id="loginPrompt" style="margin-top: 10px; display:none;">
-                        <a href="/Auth/Login" class="btn btn-sm btn-primary" style="text-decoration: none; display: inline-block;">Go to Login</a>
+            <form id="apptForm" style="display:none;" onsubmit="return false;" class="appt-form">
+                <fieldset>
+                    <legend>Booking Details</legend>
+
+                    <div class="form-group">
+                        <label class="form-label">Selected Date</label>
+                        <input id="selectedDateText" type="text" readonly class="form-control date-display" />
                     </div>
+
+                    <div class="form-group">
+                        <label for="categorySelect" class="form-label">Pet Category <span class="required">*</span></label>
+                        <input id="categorySelect" type="text" readonly class="form-control" />
+                        <!-- Hidden input to store the value -->
+                        <input id="categoryValue" type="hidden" />
+                    </div>
+
+                    <div class="form-group pet-grid">
+                        <label class="form-label">Choose Pet(s) <span class="required">*</span></label>
+                        <div id="petCards" class="pet-cards" aria-live="polite"></div>
+                        <div class="form-hint">Select one or more pets for the appointment</div>
+                        
+                        <!-- ✅ NEW: Per-pet groomer selection -->
+                        <div id="petGroomerSection" style="display: none; margin-top: 20px;">
+                            <div class="form-label">Groomer Preference <span class="required">*</span></div>
+                            <div id="petGroomerCards" class="pet-groomer-cards"></div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Service Details</legend>
+
+                    <div class="form-group" id="serviceDetailsSection" style="display:none;">
+                        <label class="form-label">Select Service <span class="required">*</span></label>
+                        <div id="serviceDetailsList" class="service-details-list"></div>
+                        <small class="form-hint">Select the service you want to book</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timeSelect" class="form-label">Preferred Time <span class="required">*</span></label>
+                        <select id="timeSelect" required class="form-control">
+                            <option value="" disabled selected>-- Select time --</option>
+                        </select>
+                        <small class="form-hint">Available 9:00 AM - 4:30 PM</small>
+                    </div>
+
+@*                     <div class="form-group">
+                        <label for="groomerSelect" class="form-label">Preferred Groomer</label>
+                        <select id="groomerSelect" class="form-control">
+                            <option value="">Any Available</option>
+                        </select>
+                        <small class="form-hint">Leave blank for automatic assignment</small>
+                    </div> *@
+
+                    <div class="form-group">
+                        <label for="notes" class="form-label">Special Requests</label>
+                        <textarea id="notes" placeholder="Allergies, behavior notes, special instructions..." class="form-control" rows="4"></textarea>
+                        <small class="form-hint" id="charCount">0 / 500 characters</small>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions-main">
+                    <button id="submitBtn" type="button" class="btn btn-primary btn-lg">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Submit Appointment Request
+                    </button>
                 </div>
-                <button class="toast-close" id="apptErrorClose" aria-label="Close notification">&times;</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Success toast -->
+<div id="apptSuccessToast" class="appt-toast appt-toast--success" aria-live="polite" role="status" style="display:none;">
+    <div class="toast-content">
+        <div class="toast-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        </div>
+        <div class="toast-body">
+            <div class="toast-title">Appointment Request Submitted!</div>
+            <div class="toast-message">We'll confirm your booking shortly</div>
+        </div>
+        <button class="toast-close" id="apptSuccessClose" aria-label="Close notification">&times;</button>
+    </div>
+</div>
+
+<!-- Error toast -->
+<div id="apptErrorToast" class="appt-toast appt-toast--error" aria-live="polite" role="alert" style="display:none;">
+    <div class="toast-content">
+        <div class="toast-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <div class="toast-body">
+            <div class="toast-title">Error</div>
+            <div class="toast-message" id="errorToastMsg">Please fill in all required fields</div>
+            <div id="loginPrompt" style="margin-top: 10px; display:none;">
+                <a href="/Auth/Login" class="btn btn-sm btn-primary" style="text-decoration: none; display: inline-block;">Go to Login</a>
             </div>
         </div>
+        <button class="toast-close" id="apptErrorClose" aria-label="Close notification">&times;</button>
+    </div>
+</div>
 </section>
 
 <script>
@@ -191,12 +203,17 @@
 
         // Initial user pets - will be loaded from database
         let userPets = [];
+        
+        // ✅ NEW: Store available groomers globally
+        let availableGroomers = [];
 
         // Available services by category - will be populated from database
         const servicesByCategory = {
             'dog': [],
             'cat': []
         };
+
+        let appointmentsByDate = {}; // Store fetched appointments
 
         // DOM Elements
         const elements = {
@@ -211,7 +228,6 @@
             categorySelect: document.getElementById('categorySelect'),
             petCards: document.getElementById('petCards'),
             timeSelect: document.getElementById('timeSelect'),
-            groomerSelect: document.getElementById('groomerSelect'),
             notes: document.getElementById('notes'),
             charCount: document.getElementById('charCount'),
             submitBtn: document.getElementById('submitBtn'),
@@ -236,11 +252,62 @@
             return CONFIG.CLOSED_DAYS.includes(dateObj.getDay());
         }
 
+        // Fetch appointments for the month from database
+        async function fetchMonthAppointments(year, month) {
+            try {
+                const response = await fetch(`/Customer/Home/GetMonthAppointments?year=${year}&month=${month}`);
+                const data = await response.json();
+
+                if (data.success && data.appointments) {
+                    appointmentsByDate = {};
+                    data.appointments.forEach(appt => {
+                        appointmentsByDate[appt.date] = appt.status;
+                    });
+                }
+                return true;
+            } catch (error) {
+                console.error('Error fetching appointments:', error);
+                return false;
+            }
+        }
+
+        // Get statuses for month - show actual appointments + random Rate Us on past dates only
+        async function getMonthStatuses(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth() + 1;
+
+            await fetchMonthAppointments(year, month);
+
+            const statuses = {};
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 第一步：添加数据库中的实际appointment状态
+            for (const [date, status] of Object.entries(appointmentsByDate)) {
+                statuses[date] = status;
+            }
+
+            // 第二步：只在过去和现在的日期随机添加紫色Rate Us点
+            for (let day = 1; day <= new Date(year, month, 0).getDate(); day++) {
+                const dateStr = `${year}-${pad(month)}-${pad(day)}`;
+                const cellDate = new Date(year, month - 1, day);
+
+                // 只在过去或今天的日期添加紫色Rate Us
+                if (cellDate <= today && !statuses[dateStr] && !isClosedDay(cellDate)) {
+                    if (Math.random() < 0.3) {
+                        statuses[dateStr] = 'rateus';
+                    }
+                }
+            }
+
+            return statuses;
+        }
+
         function generateTimeSlots() {
             const slots = [];
             const start = CONFIG.TIME_START * 60;
             const end = CONFIG.TIME_END * 60 + CONFIG.TIME_INTERVAL;
-            
+
             for (let t = start; t <= end; t += CONFIG.TIME_INTERVAL) {
                 const hours = String(Math.floor(t / 60)).padStart(2, '0');
                 const mins = String(t % 60).padStart(2, '0');
@@ -300,7 +367,7 @@
                 input.className = 'service-radio';
                 input.style.marginRight = '10px';
                 input.style.cursor = 'pointer';
-                
+
                 if (selectedServiceId && service.id === selectedServiceId) {
                     input.checked = true;
                 }
@@ -326,7 +393,7 @@
 
                 label.appendChild(input);
                 label.appendChild(details);
-                
+
                 label.addEventListener('click', (e) => {
                     if (e.target !== input) {
                         input.checked = true;
@@ -349,7 +416,7 @@
         });
 
         // Calendar Rendering
-        function renderCalendar() {
+        async function renderCalendar() {
             elements.daysGrid.innerHTML = '';
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             elements.monthTitle.textContent = `${monthNames[calendarState.getMonth()]} ${calendarState.getFullYear()}`;
@@ -360,12 +427,14 @@
             const startDay = firstDay.getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const prevDays = new Date(year, month, 0).getDate();
-            const statuses = getMonthStatuses(calendarState);
+
+            // 等待获取appointment数据
+            const statuses = await getMonthStatuses(calendarState);
 
             for (let i = 0; i < 42; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'day';
-                
+
                 let dayNum, cellDate, isOutside = false;
                 const index = i - startDay + 1;
 
@@ -401,6 +470,7 @@
                 const key = `${y}-${m}-${d}`;
                 const status = statuses[key];
 
+                // 只在有状态时添加dot和class
                 if (status) {
                     cell.classList.add(`day--${status}`);
                     const dot = document.createElement('span');
@@ -420,19 +490,7 @@
             }
         }
 
-        function getMonthStatuses(dateObj) {
-            const y = dateObj.getFullYear();
-            const m = pad(dateObj.getMonth() + 1);
-            return {
-                [`${y}-${m}-05`]: 'visited',
-                [`${y}-${m}-12`]: 'pending',
-                [`${y}-${m}-18`]: 'noshow',
-                [`${y}-${m}-24`]: 'confirmed',
-                [`${y}-${m}-02`]: 'rateus',
-                [`${y}-${m}-27`]: 'unavailable'
-            };
-        }
-
+        // 修改 selectDate 函数
         function selectDate(dateObj) {
             if (isClosedDay(dateObj)) {
                 showErrorToast('Sorry, we are closed on Mondays. Please select another date.');
@@ -449,17 +507,221 @@
             });
 
             elements.selectedDateText.value = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+
+            // 👇 检查该日期是否有预约并显示在左边卡片
+            checkAndDisplayAppointmentsForDate(dateObj);
+
             populateTimeSlots();
+            
+            // ✅ CRITICAL: Reset time selection when date changes
+            elements.timeSelect.value = '';
+            
+            // ✅ Check if any pets are selected
+            const selectedPets = getSelectedPets();
+            if (selectedPets.length === 0) {
+                // No pets selected - hide groomer section
+                resetGroomerSelection();
+            } else {
+                // Pets are selected - re-render groomer dropdowns CLEANLY
+                // This will show all groomers without availability status
+                updatePetGroomerSelectionClean();
+            }
+            
             elements.apptForm.style.display = 'block';
             elements.formPlaceholder.style.display = 'none';
             elements.apptForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function hideForm() {
-            elements.apptForm.style.display = 'none';
-            elements.formPlaceholder.style.display = 'flex';
-            const selected = elements.daysGrid.querySelector('.day--selected');
-            if (selected) selected.classList.remove('day--selected');
+        // ✅ NEW: Clean re-render of groomer dropdowns without availability status
+        function updatePetGroomerSelectionClean() {
+            const selectedPets = getSelectedPets();
+            const petGroomerSection = document.getElementById('petGroomerSection');
+            const petGroomerCards = document.getElementById('petGroomerCards');
+
+            if (selectedPets.length === 0) {
+                petGroomerSection.style.display = 'none';
+                return;
+            }
+
+            petGroomerSection.style.display = 'block';
+            petGroomerCards.innerHTML = '';
+
+            selectedPets.forEach(pet => {
+                const petGroomerCard = document.createElement('div');
+                petGroomerCard.className = 'pet-groomer-card';
+                petGroomerCard.style.marginBottom = '15px';
+                petGroomerCard.style.padding = '10px';
+                petGroomerCard.style.border = '1px solid #e0e0e0';
+                petGroomerCard.style.borderRadius = '4px';
+
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.style.display = 'block';
+                label.style.marginBottom = '8px';
+                label.style.fontWeight = '600';
+                label.textContent = `${pet.name}'s Groomer`;
+
+                const select = document.createElement('select');
+                select.className = 'form-control';
+                select.setAttribute('data-pet-id', pet.id);
+                select.style.marginBottom = '5px';
+
+                const anyOption = document.createElement('option');
+                anyOption.value = '';
+                anyOption.textContent = 'Any Available';
+                select.appendChild(anyOption);
+
+                // Add all groomers without availability status
+                availableGroomers.forEach(groomer => {
+                    const option = document.createElement('option');
+                    option.value = groomer.id;
+                    option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
+                    // ✅ All groomers are ENABLED at this stage
+                    option.disabled = false;
+                    select.appendChild(option);
+                });
+
+                const hint = document.createElement('small');
+                hint.className = 'form-hint';
+                hint.textContent = 'Leave blank for automatic assignment';
+
+                petGroomerCard.appendChild(label);
+                petGroomerCard.appendChild(select);
+                petGroomerCard.appendChild(hint);
+
+                petGroomerCards.appendChild(petGroomerCard);
+            });
+        }
+
+        // ✅ NEW: Reset groomer selection when date changes
+        function resetGroomerSelection() {
+            const petGroomerSection = document.getElementById('petGroomerSection');
+            const petGroomerCards = document.getElementById('petGroomerCards');
+            
+            if (petGroomerSection && petGroomerCards) {
+                petGroomerSection.style.display = 'none';
+                petGroomerCards.innerHTML = '';
+            }
+        }
+
+        // 👇 NEW: 检查并显示该日期的预约详情（左边卡片）
+        function checkAndDisplayAppointmentsForDate(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = pad(dateObj.getMonth() + 1);
+            const d = pad(dateObj.getDate());
+            const key = `${y}-${m}-${d}`;
+
+            // 检查该日期是否有预约数据
+            if (appointmentsByDate[key]) {
+                // 如果是"rateus"，不显示详情（这是随机占位符）
+                if (appointmentsByDate[key] === 'rateus') {
+                    showAppointmentsDetailsCard(key, true);  // 👈 传递 true 表示没有预约
+                    return;
+                }
+
+                // 显示预约详情卡片
+                showAppointmentsDetailsCard(key, false);
+            } else {
+                // 该日期没有预约 - 也显示卡片，但显示"No Appointments"
+                showAppointmentsDetailsCard(key, true);
+            }
+        }
+
+        // 👇 UPDATED: 显示该日期的预约列表卡片（左边）
+        function showAppointmentsDetailsCard(dateKey, isNoAppointments = false) {
+            const detailsCard = document.getElementById('appointmentsDetailsCard');
+            const detailsList = document.getElementById('appointmentsDetailsList');
+
+            if (!detailsCard || !detailsList) return;
+
+            // 如果没有预约，直接显示"No Appointments"
+            if (isNoAppointments) {
+                detailsList.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                            <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                        </svg>
+                        <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                        <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                    </div>
+                `;
+                detailsCard.style.display = 'flex';
+                return;
+            }
+
+            // 从数据库获取该日期的预约详情
+            fetch(`/Customer/Home/GetAppointmentsByDate?date=${dateKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('GetAppointmentsByDate response:', data);
+
+                    if (data.success && data.appointments && data.appointments.length > 0) {
+                        // 生成预约卡片HTML
+                        let html = '';
+                        data.appointments.forEach(appt => {
+                            const statusClass = (appt.status || '').toLowerCase();
+                            // ✅ NEW: Determine pet type emoji and label
+                            const petTypeEmoji = appt.petType === 'dog' ? '🐶' : appt.petType === 'cat' ? '🐱' : '🐾';
+                            const petTypeLabel = appt.petType === 'dog' ? 'Dog' : appt.petType === 'cat' ? 'Cat' : 'Pet';
+                            
+                            html += `
+                                <div class="appointment-detail-card">
+                                    <div class="appointment-detail-header">
+                                        <div class="appointment-detail-time">${appt.time}</div>
+                                        <div class="appointment-detail-pet-type">${petTypeEmoji} ${petTypeLabel}</div>
+                                    </div>
+                                    <div class="appointment-detail-pet">${appt.petName}</div>
+                                    <div class="appointment-detail-service">${appt.serviceName}</div>
+                                    <div class="appointment-detail-groomer">Groomer: ${appt.groomerName || 'Not assigned'}</div>
+                                    <span class="appointment-detail-status ${statusClass}">${appt.status}</span>
+                                    ${appt.specialRequest ? `<div class="appointment-detail-notes">${appt.specialRequest}</div>` : ''}
+                                </div>
+                            `;
+                        });
+
+                        detailsList.innerHTML = html;
+                        detailsCard.style.display = 'flex';
+                    } else {
+                        // 没有找到预约，显示"No Appointments"
+                        detailsList.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                                    <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                                </svg>
+                                <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                                <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                            </div>
+                        `;
+                        detailsCard.style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching appointments:', error);
+                    detailsList.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 12px; text-align: center;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                                <path d="M8 2v4m8-4v4M4 7h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"></path>
+                            </svg>
+                            <p style="font-size: 14px; color: #6b7280; margin: 0; font-weight: 500;">No Appointments</p>
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">This date has no scheduled appointments</p>
+                        </div>
+                    `;
+                    detailsCard.style.display = 'flex';
+                });
+        }
+
+        // 👇 NEW: 隐藏预约列表卡片
+        function hideAppointmentsDetailsCard() {
+            const detailsCard = document.getElementById('appointmentsDetailsCard');
+            if (detailsCard) {
+                detailsCard.style.display = 'none';
+            }
+        }
+
+        // 👇 NEW: 关闭按钮处理
+        const closeDetailsCardBtn = document.getElementById('closeDetailsCard');
+        if (closeDetailsCardBtn) {
+            closeDetailsCardBtn.addEventListener('click', hideAppointmentsDetailsCard);
         }
 
         // Pet Cards Rendering - Filter by selected service category
@@ -474,7 +736,7 @@
 
             // Filter pets by the selected service category (dog/cat)
             const filteredPets = userPets.filter(p => p.category === category);
-            
+
             if (filteredPets.length === 0) {
                 elements.petCards.innerHTML = `<div class="form-hint">No ${category} pets available. Please add a ${category} to your profile first.</div>`;
                 return;
@@ -512,6 +774,8 @@
                 checkbox.value = pet.id;
                 checkbox.className = 'pet-checkbox';
                 checkbox.setAttribute('aria-label', `Select ${pet.name}`);
+                checkbox.setAttribute('data-pet-id', pet.id);
+                checkbox.setAttribute('data-pet-name', pet.name);
 
                 checkboxWrap.appendChild(checkbox);
 
@@ -522,7 +786,11 @@
                 card.addEventListener('click', (e) => {
                     if (e.target === checkbox) return;
                     checkbox.checked = !checkbox.checked;
+                    updatePetGroomerSelection();
                 });
+
+                // ✅ NEW: Update groomer selection when pet checkbox changes
+                checkbox.addEventListener('change', updatePetGroomerSelection);
 
                 elements.petCards.appendChild(card);
             });
@@ -533,6 +801,109 @@
             return checkboxes
                 .map(cb => userPets.find(p => p.id === cb.value))
                 .filter(Boolean);
+        }
+
+        // Load available groomers
+        async function loadGroomers() {
+            try {
+                const response = await fetch('/Customer/Home/GetAvailableGroomers');
+                if (!response.ok) {
+                    console.error('Failed to fetch groomers');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success && data.groomers && data.groomers.length > 0) {
+                    // ✅ UPDATED: Store in global availableGroomers array
+                    availableGroomers = data.groomers;
+                    console.log('Groomers loaded:', availableGroomers);
+                }
+            } catch (error) {
+                console.error('Error loading groomers:', error);
+            }
+        }
+
+        // ✅ NEW: Update per-pet groomer selection display
+        function updatePetGroomerSelection() {
+            const selectedPets = getSelectedPets();
+            const petGroomerSection = document.getElementById('petGroomerSection');
+            const petGroomerCards = document.getElementById('petGroomerCards');
+
+            if (selectedPets.length === 0) {
+                petGroomerSection.style.display = 'none';
+                return;
+            }
+
+            petGroomerSection.style.display = 'block';
+            petGroomerCards.innerHTML = '';
+
+            selectedPets.forEach(pet => {
+                const petGroomerCard = document.createElement('div');
+                petGroomerCard.className = 'pet-groomer-card';
+                petGroomerCard.style.marginBottom = '15px';
+                petGroomerCard.style.padding = '10px';
+                petGroomerCard.style.border = '1px solid #e0e0e0';
+                petGroomerCard.style.borderRadius = '4px';
+
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.style.display = 'block';
+                label.style.marginBottom = '8px';
+                label.style.fontWeight = '600';
+                label.textContent = `${pet.name}'s Groomer`;
+
+                const select = document.createElement('select');
+                select.className = 'form-control';
+                select.setAttribute('data-pet-id', pet.id);
+                select.style.marginBottom = '5px';
+
+                const anyOption = document.createElement('option');
+                anyOption.value = '';
+                anyOption.textContent = 'Any Available';
+                select.appendChild(anyOption);
+
+                // ✅ UPDATED: Use availableGroomers array (no longer query DOM)
+                availableGroomers.forEach(groomer => {
+                    const option = document.createElement('option');
+                    option.value = groomer.id;
+                    option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
+                    select.appendChild(option);
+                });
+
+                const hint = document.createElement('small');
+                hint.className = 'form-hint';
+                hint.textContent = 'Leave blank for automatic assignment';
+
+                petGroomerCard.appendChild(label);
+                petGroomerCard.appendChild(select);
+                petGroomerCard.appendChild(hint);
+
+                petGroomerCards.appendChild(petGroomerCard);
+            });
+
+            // ✅ NEW: Re-check groomer availability if time is already selected
+            const selectedTime = elements.timeSelect.value;
+            if (selectedTime) {
+                const date = elements.selectedDateText.value;
+                const selectedService = document.querySelector('input[name="service"]:checked');
+                if (date && selectedService) {
+                    refreshGroomerAvailability(date, selectedTime, selectedService.value);
+                }
+            }
+        }
+
+        // ✅ NEW: Get groomer selections for each pet
+        function getPetGroomerMappings() {
+            const mappings = {};
+            const petGroomerCards = document.querySelectorAll('.pet-groomer-card select');
+
+            petGroomerCards.forEach(select => {
+                const petId = select.getAttribute('data-pet-id');
+                const groomerId = select.value || 'any';
+                mappings[petId] = groomerId;
+            });
+
+            return mappings;
         }
 
         // Toast Helpers
@@ -556,19 +927,96 @@
             showToast(elements.successToast);
         }
 
-        function showErrorToast(message, isLoginError = false) {
-            elements.errorMsg.textContent = message;
-            const loginPrompt = document.getElementById('loginPrompt');
+        // ✅ FIXED: Render structured errors beautifully - Handle both string and object arrays
+        function renderErrorsList(errors) {
+            console.log('renderErrorsList called with:', errors);  // ✅ Debug
             
+            if (!Array.isArray(errors) || errors.length === 0) {
+                console.log('No errors or not an array');
+                return `<div class="error-message-text">An error occurred</div>`;
+            }
+
+            let html = '<div class="errors-container">';
+            
+            errors.forEach((error, index) => {
+                console.log(`Processing error ${index}:`, error);  // ✅ Debug
+                
+                // ✅ HANDLE BOTH STRING AND OBJECT ERRORS
+                if (typeof error === 'string') {
+                    // Simple string error message
+                    html += `
+                        <div class="error-item error">
+                            <span class="error-icon">⚠️</span>
+                            <div class="error-content">
+                                <div class="error-message">${error}</div>
+                            </div>
+                        </div>
+                    `;
+                } else if (typeof error === 'object' && error !== null) {
+                    // Complex error object with properties
+                    const petName = error.petName || '';
+                    const groomerName = error.groomerName || '';
+                    const dateTime = error.dateTime || '';
+                    const errorType = error.type || 'error';
+                    const message = error.message || '';
+                    
+                    let iconEmoji = '⚠️';
+                    if (errorType === 'pet_time_conflict') iconEmoji = '📅';
+                    else if (errorType === 'groomer_unavailable') iconEmoji = '👨‍💼';
+                    else if (errorType === 'groomer_duplicate_assignment') iconEmoji = '👥';
+                    else if (errorType === 'no_groomer_available') iconEmoji = '😟';
+                    else if (errorType === 'pet_not_found') iconEmoji = '🐾';
+
+                    html += `
+                        <div class="error-item ${errorType}">
+                            <span class="error-icon">${iconEmoji}</span>
+                            <div class="error-content">
+                                <div class="error-message">${message}</div>
+                                ${petName ? `<div class="error-detail">🐾 <strong>${petName}</strong></div>` : ''}
+                                ${groomerName ? `<div class="error-detail">👨‍💼 <strong>${groomerName}</strong></div>` : ''}
+                                ${dateTime ? `<div class="error-detail error-time">⏰ ${dateTime}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+            console.log('Generated HTML:', html);  // ✅ Debug
+            return html;
+        }
+
+        function showErrorToast(message, isLoginError = false) {
+            console.log('showErrorToast called with:', message, 'isLoginError:', isLoginError);  // ✅ Debug
+            
+            const loginPrompt = document.getElementById('loginPrompt');
+
             if (isLoginError) {
                 loginPrompt.style.display = 'block';
                 CONFIG.TOAST_DURATION = 6000;
+                elements.errorMsg.innerHTML = `<div class="error-message-text">${message}</div>`;
             } else {
                 loginPrompt.style.display = 'none';
-                CONFIG.TOAST_DURATION = 3500;
+                
+                if (typeof message === 'string') {
+                    console.log('Message is string');
+                    elements.errorMsg.innerHTML = `<div class="error-message-text">${message}</div>`;
+                    CONFIG.TOAST_DURATION = 3500;
+                } else if (Array.isArray(message)) {
+                    console.log('Message is array, calling renderErrorsList');
+                    // ✅ Message is an array of error objects - format them nicely
+                    elements.errorMsg.innerHTML = renderErrorsList(message);
+                    CONFIG.TOAST_DURATION = 5000;  // Longer for multiple errors
+                } else {
+                    console.log('Message is neither string nor array');
+                    elements.errorMsg.innerHTML = `<div class="error-message-text">An unexpected error occurred</div>`;
+                    CONFIG.TOAST_DURATION = 3500;
+                }
             }
             
-            showToast(elements.errorToast, isLoginError ? 6000 : 3500);
+            console.log('Toast HTML set to:', elements.errorMsg.innerHTML);  // ✅ Debug
+            console.log('Toast duration:', CONFIG.TOAST_DURATION);  // ✅ Debug
+            showToast(elements.errorToast, CONFIG.TOAST_DURATION);
         }
 
         elements.successClose.addEventListener('click', () => hideToast(elements.successToast));
@@ -637,25 +1085,28 @@
             renderServiceDetails();  // Show services for this category
         });
 
+        // ✅ FIXED: Handle errors from both success and failure responses
         elements.submitBtn.addEventListener('click', async () => {
             if (!validateForm()) return;
 
-            const selectedPets = getSelectedPets();
-            const selectedService = document.querySelector('input[name="service"]:checked');
-            
-            const appointmentData = {
-                date: elements.selectedDateText.value,
-                time: elements.timeSelect.value,
-                serviceId: selectedService.value,
-                petIds: selectedPets.map(p => p.id),
-                groomer: elements.groomerSelect.value || 'any',
-                notes: elements.notes.value.trim()
-            };
-
             try {
-                elements.submitBtn.disabled = true;
-                const originalText = elements.submitBtn.innerHTML;
-                elements.submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Submitting...';
+                // ✅ NEW: Disable entire form during submission
+                const formElements = elements.apptForm.querySelectorAll('input, select, textarea, button');
+                formElements.forEach(el => el.disabled = true);
+
+                const selectedPets = getSelectedPets();
+                const selectedService = document.querySelector('input[name="service"]:checked');
+                
+                const petGroomerMappings = getPetGroomerMappings();
+
+                const appointmentData = {
+                    date: elements.selectedDateText.value,
+                    time: elements.timeSelect.value,
+                    serviceId: selectedService.value,
+                    petIds: selectedPets.map(p => p.id),
+                    petGroomerMappings: petGroomerMappings,
+                    notes: elements.notes.value.trim()
+                };
 
                 const response = await fetch('/Customer/Home/SaveAppointment', {
                     method: 'POST',
@@ -666,55 +1117,37 @@
                 });
 
                 const result = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response result:', result);
+                console.log('Errors array:', result.errors);  // ✅ Debug
 
-                if (result.success) {
-                    showSuccessToast();
-                    
-                    setTimeout(() => {
-                        // ✅ REDIRECT TO HISTORY PAGE AFTER SUCCESSFUL BOOKING
-                        window.location.href = '@Url.Action("History", "Home", new { area = "Customer" })';
-                    }, 1500);
-                } else {
-                    showErrorToast(result.message || 'Failed to save appointment');
-                    elements.submitBtn.disabled = false;
-                    elements.submitBtn.innerHTML = originalText;
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showErrorToast('An error occurred while saving the appointment');
-                elements.submitBtn.disabled = false;
-                elements.submitBtn.innerHTML = originalText;
-            }
-        });
-
-        // Load available groomers
-        async function loadGroomers() {
-            try {
-                const response = await fetch('/Customer/Home/GetAvailableGroomers');
-                if (!response.ok) {
-                    console.error('Failed to fetch groomers');
+                // ✅ FIXED: Check for errors FIRST, regardless of response.ok status
+                if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
+                    console.log('Found errors array, displaying structured errors');
+                    showErrorToast(result.errors);  // Pass error array directly
+                    formElements.forEach(el => el.disabled = false);
                     return;
                 }
 
-                const data = await response.json();
-                if (data.success && data.groomers && data.groomers.length > 0) {
-                    const groomerSelect = document.getElementById('groomerSelect');
-                    
-                    data.groomers.forEach(groomer => {
-                        const option = document.createElement('option');
-                        option.value = groomer.id;  // S001, S002, etc.
-                        option.textContent = `${groomer.name} (${groomer.position || 'Groomer'})`;
-                        groomerSelect.appendChild(option);
-                    });
+                // Then check for success
+                if (result.success) {
+                    showSuccessToast();
+                    setTimeout(() => {
+                        window.location.href = '@Url.Action("History", "Home", new { area = "Customer" })';
+                    }, 1500);
+                } else {
+                    // Fallback to message if no errors array
+                    showErrorToast(result.message || 'Failed to save appointment');
+                    formElements.forEach(el => el.disabled = false);
                 }
             } catch (error) {
-                console.error('Error loading groomers:', error);
+                // ✅ Re-enable form on error
+                formElements.forEach(el => el.disabled = false);
+                console.error('Fetch error:', error);
+                showErrorToast('An error occurred while saving the appointment');
             }
-        }
+        });
 
-        // Call this function when the page loads or when the form initializes
-        // Add to your initialization code:
-        loadGroomers();
 
         // ✅ LOAD SERVICES FROM BACKEND - FILTER BY SELECTED SERVICE IF PROVIDED
         async function loadServices() {
@@ -722,9 +1155,9 @@
                 console.log('Loading services...');
                 const response = await fetch('/Customer/Home/GetServices');
                 const data = await response.json();
-                
+
                 console.log('Services response:', data);
-                
+
                 if (data.success) {
                     if (data.dogServices) {
                         let dogServices = data.dogServices.map(s => ({
@@ -732,38 +1165,42 @@
                             name: s.name,
                             duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
                         }));
-                        
+
                         // ✅ FILTER: If a specific service was selected from index, show only that service
                         if (selectedServiceId) {
                             dogServices = dogServices.filter(s => s.id === selectedServiceId);
                         }
-                        
+
                         servicesByCategory['dog'] = dogServices;
                         console.log('Dog services loaded:', servicesByCategory['dog']);
                     }
-                    
+
                     if (data.catServices) {
                         let catServices = data.catServices.map(s => ({
                             id: s.serviceId,
                             name: s.name,
                             duration: s.durationTime ? `${s.durationTime} min` : 'N/A'
                         }));
-                        
-                        // ✅ FILTER: If a specific service was selected from index, show only that service
+
                         if (selectedServiceId) {
                             catServices = catServices.filter(s => s.id === selectedServiceId);
                         }
-                        
+
                         servicesByCategory['cat'] = catServices;
                         console.log('Cat services loaded:', servicesByCategory['cat']);
                     }
                 }
-                
+
                 // Initialize form AFTER services are loaded
                 initializeForm();
+                
+                // ✅ Load groomers after services and form initialization
+                loadGroomers();
             } catch (error) {
                 console.error('Error loading services:', error);
                 initializeForm();
+                // ✅ Still load groomers even if services fail
+                loadGroomers();
             }
         }
 
@@ -771,7 +1208,7 @@
         console.log('Appointment page loaded');
         console.log('URL params - petType:', initialPetType, 'serviceId:', selectedServiceId);
         loadServices();
-        
+
         // ✅ UPDATED: Set category FIRST, then load pets
         function initializeForm() {
             // Set category FIRST, then load pets
@@ -781,12 +1218,12 @@
                 elements.categorySelect.value = categoryValue;
                 document.getElementById('categoryValue').value = initialPetType;
                 elements.categorySelect.disabled = true;
-                
+
                 console.log('Initial pet type set to:', categoryValue);
-                
+
                 // NOW load pets (they will be filtered by the category above)
                 loadPetsFromDatabase();
-                
+
                 // Then render services
                 renderServiceDetails();
             } else {
@@ -798,11 +1235,11 @@
             renderCalendar();
         }
 
-        // ✅ UPDATED: Ensure pets are loaded AND rendered correctly
+        // ✅ UPDATED: 确保宠物数据加载和渲染正确
         function loadPetsFromDatabase() {
             console.log('Starting to load pets...');
             console.log('Current category:', elements.categorySelect.value);
-            
+
             fetch('/Customer/Home/GetCustomerPets')
                 .then(response => {
                     console.log('Response status:', response.status);
@@ -810,18 +1247,19 @@
                 })
                 .then(data => {
                     console.log('Pets data received:', data);
-                    
+
                     if (data.success && data.pets && data.pets.length > 0) {
                         userPets = data.pets.map(p => ({
                             id: p.id,
                             name: p.name,
-                            category: p.type.toLowerCase(),  // 'dog' or 'cat'
+                            category: (p.type || '').toLowerCase(),  // ✅ 确保转为小写
                             photo: p.photo
                         }));
-                        
+
                         console.log('Pets loaded successfully:', userPets);
                         console.log('Current category filter:', elements.categorySelect.value.toLowerCase());
-                        
+                        console.log('Filtered pets:', userPets.filter(p => p.category === elements.categorySelect.value.toLowerCase()));
+
                         // Filter and display pets
                         renderPetCards();
                     } else {
@@ -836,6 +1274,166 @@
                     renderPetCards();
                 });
         }
-    })();
+
+        // ✅ UPDATED: Add event listener to service selection
+        document.addEventListener('change', function(e) {
+            if (e.target.className === 'service-radio') {
+                console.log('Service selected:', e.target.value);
+                
+                // Refresh groomer availability when service changes
+                const selectedTime = elements.timeSelect.value;
+                if (selectedTime) {
+                    const date = elements.selectedDateText.value;
+                    if (date) {
+                        refreshGroomerAvailability(date, selectedTime, e.target.value);
+                    }
+                }
+            }
+        });
+
+        // ✅ NEW: Show real-time groomer availability when time changes
+        elements.timeSelect.addEventListener('change', async function() {
+            const selectedTime = this.value;
+            console.log('Time selected:', selectedTime);  // ✅ Debug
+            
+            if (!selectedTime) {
+                console.log('No time selected, skipping');
+                return;
+            }
+
+            const date = elements.selectedDateText.value;
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            
+            console.log('Date:', date, 'Service:', selectedService);  // ✅ Debug
+            
+            if (!date || !selectedService) {
+                console.log('Missing date or service');
+                return;
+            }
+
+            // Refresh groomer dropdowns to show availability
+            await refreshGroomerAvailability(date, selectedTime, selectedService.value);
+        });
+
+        async function refreshGroomerAvailability(date, time, serviceId) {
+            try {
+                console.log('Refreshing groomer availability for:', { date, time, serviceId });  // ✅ Debug
+                
+                // Find service duration
+                let durationMinutes = 30; // default
+                
+                for (let category in servicesByCategory) {
+                    const service = servicesByCategory[category].find(s => s.id === serviceId);
+                    if (service && service.duration) {
+                        const durationStr = service.duration.match(/\d+/);
+                        if (durationStr) {
+                            durationMinutes = parseInt(durationStr[0]);
+                        }
+                    }
+                }
+                
+                console.log('Service duration minutes:', durationMinutes);  // ✅ Debug
+
+                const queryString = new URLSearchParams({
+                    date: date,
+                    time: time,
+                    durationMinutes: durationMinutes
+                }).toString();
+
+                const url = `/Customer/Home/CheckGroomerAvailability?${queryString}`;
+                console.log('Fetching:', url);  // ✅ Debug
+                
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Availability response:', data);  // ✅ Debug
+
+                if (data.success && data.availableGroomerIds) {
+                    // ✅ Wait a bit for DOM to update if dropdowns were just created
+                    setTimeout(() => {
+                        updateGroomerDropdowns(data.availableGroomerIds);
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Error checking groomer availability:', error);
+            }
+        }
+
+        function updateGroomerDropdowns(availableGroomerIds) {
+            console.log('Updating dropdowns with available groomers:', availableGroomerIds);
+            
+            const selects = document.querySelectorAll('.pet-groomer-card select');
+            console.log('Found', selects.length, 'groomer dropdowns');
+            
+            if (selects.length === 0) {
+                console.warn('No groomer dropdowns found! Pets may not be selected yet.');
+                return;
+            }
+            
+            selects.forEach(select => {
+                Array.from(select.options).forEach((option, idx) => {
+                    if (idx === 0) return; // Keep "Any Available" always enabled
+                    
+                    const groomerId = option.value;
+                    const isAvailable = availableGroomerIds.includes(groomerId);
+                    
+                    console.log(`Option ${groomerId}: available=${isAvailable}`);
+                    
+                    // ✅ CRITICAL: Update both disabled state AND text
+                    option.disabled = !isAvailable;
+                    
+                    // ✅ Store original text in data attribute on first run
+                    if (!option.dataset.originalText) {
+                        option.dataset.originalText = option.textContent;
+                    }
+                    
+                    // ✅ Update display text
+                    if (!isAvailable) {
+                        option.textContent = `${option.dataset.originalText} (Not available)`;
+                        // ✅ Set inline style for disabled appearance
+                        option.style.color = '#999';
+                        option.style.backgroundColor = '#f5f5f5';
+                    } else {
+                        option.textContent = option.dataset.originalText;
+                        // ✅ Reset to normal appearance
+                        option.style.color = '';
+                        option.style.backgroundColor = '';
+                    }
+                });
+
+                // ✅ NEW: Add visual feedback to the select itself
+                const hasDisabledOptions = Array.from(select.options).some(o => o.disabled && o.value !== '');
+                if (hasDisabledOptions) {
+                    select.classList.add('has-unavailable-groomers');
+                } else {
+                    select.classList.remove('has-unavailable-groomers');
+                }
+            });
+        }
+
+        // ✅ CRITICAL FIX: Remove duplicate/broken event listener and add correct date change handler
+        
+        // When date is selected (via calendar click), refresh groomer availability
+        function onDateSelected(dateObj) {
+            // Get selected time if available
+            const selectedTime = elements.timeSelect.value;
+            const selectedService = document.querySelector('input[name="service"]:checked');
+            
+            // If both time and service are selected, refresh groomer availability
+            if (selectedTime && selectedService) {
+                const date = elements.selectedDateText.value;
+                refreshGroomerAvailability(date, selectedTime, selectedService.value);
+            }
+        }
+
+        // ✅ CORRECT: When calendar date is selected, also refresh groomer availability
+        const originalSelectDate = selectDate;
+        selectDate = function(dateObj) {
+            originalSelectDate(dateObj);
+            
+            // No need to check groomer availability here since we reset it
+            // User will re-select time, which will trigger refreshGroomerAvailability
+        };
+    })();  // ✅ Close the IIFE properly
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

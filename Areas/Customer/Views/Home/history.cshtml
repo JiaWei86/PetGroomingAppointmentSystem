@@ -62,6 +62,12 @@
                                     <option value="cancelled">✗ Cancelled</option>
                                 </select>
                             </div>
+                            <div class="filter-group">
+                                <label for="apptDateFilter">
+                                    <span class="filter-label">Filter by Date</span>
+                                </label>
+                                <input type="date" id="apptDateFilter" class="date-filter" style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%;"/>
+                            </div>
                         </div>
 
                         <div class="right">
@@ -188,6 +194,7 @@
     </div>
 </div>
 
+<!-- Updated Reschedule Modal with time constraints and duration-based time slots -->
 <!-- Modal for Reschedule -->
 <div id="rescheduleModal" class="modal" style="display:none;">
     <div class="modal-overlay"></div>
@@ -203,7 +210,10 @@
             </div>
             <div class="form-group">
                 <label for="newTime">New Time</label>
-                <input type="time" id="newTime" required style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%;"/>
+                <select id="newTime" required style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%; cursor: pointer;">
+                    <option value="">-- Select time --</option>
+                </select>
+                <small style="color:#666;margin-top:5px;display:block;">⏰ Operating hours: 9:00 AM - 4:30 PM</small>
             </div>
             <div class="form-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
                 <button type="button" class="btn btn-secondary" onclick="CloseRescheduleModal()">Cancel</button>
@@ -214,18 +224,27 @@
 </div>
 
 <!-- Modal for Confirmation -->
-<div id="confirmModal" class="modal confirm-modal" style="display:none;">
-    <div class="modal-overlay"></div>
+<div id="confirmModal" class="modal" style="display:none;">
+    <div class="modal-overlay" onclick="CloseConfirmModal()"></div>
     <div class="modal-content confirm-modal">
-        <div class="modal-header">
-            <h2 id="confirmTitle">⚠️ Confirm Action</h2>
+        <div class="confirm-header">
+            <div class="confirm-icon">⚠️</div>
+            <h2 id="confirmTitle">Cancel Appointment?</h2>
         </div>
-        <div class="modal-body" id="confirmMessage" style="padding:20px;text-align:center;font-size:16px;color:#333;">
-            Are you sure?
+        
+        <div class="confirm-body">
+            <p id="confirmMessage">Are you sure you want to cancel this appointment? This action cannot be undone.</p>
         </div>
-        <div class="modal-actions confirm-actions" style="display:flex;gap:10px;justify-content:center;padding:20px;border-top:1px solid #eee;">
-            <button class="btn btn-secondary" onclick="CloseConfirmModal()">No, Keep It</button>
-            <button class="btn btn-danger" onclick="ConfirmAction()">Yes, Cancel It</button>
+        
+        <div class="confirm-footer">
+            <button type="button" class="btn btn-outline" onclick="CloseConfirmModal()">
+                <span class="btn-icon">✕</span>
+                No, Keep It
+            </button>
+            <button type="button" class="btn btn-danger" id="confirmActionBtn" onclick="ConfirmCancelAppointment()">
+                <span class="btn-icon">✓</span>
+                Yes, Cancel It
+            </button>
         </div>
     </div>
 </div>
@@ -345,6 +364,7 @@
 <script>
 let currentRescheduleId = null;
 let pendingCancelId = null;
+let isModalOpen = false;
 
 // ===== PAGINATION & DATA MANAGEMENT =====
 const appointmentState = {
@@ -353,7 +373,8 @@ const appointmentState = {
     currentPage: 1,
     pageSize: 5,
     searchTerm: '',
-    statusFilter: 'all'
+    statusFilter: 'all',
+    dateFilter: ''
 };
 
 const redeemState = {
@@ -389,6 +410,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('apptStatusFilter').addEventListener('change', (e) => {
         appointmentState.statusFilter = e.target.value;
+        appointmentState.currentPage = 1;
+        FilterAndDisplayAppointments();
+    });
+
+    document.getElementById('apptDateFilter').addEventListener('change', (e) => {
+        appointmentState.dateFilter = e.target.value;
         appointmentState.currentPage = 1;
         FilterAndDisplayAppointments();
     });
@@ -535,7 +562,24 @@ function FilterAndDisplayAppointments() {
         const matchesStatus = appointmentState.statusFilter === 'all' || 
             a.status.toLowerCase() === appointmentState.statusFilter;
         
-        return matchesSearch && matchesStatus;
+        // ✅ FIX: HTML date input returns ISO format (yyyy-MM-dd)
+        let matchesDate = true;
+        if (appointmentState.dateFilter) {
+            // Parse ISO format date from HTML input (format: yyyy-MM-dd)
+            const [year, month, day] = appointmentState.dateFilter.split('-');
+            // Convert to "MMM DD, YYYY" format to match backend format
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthName = months[parseInt(month) - 1];
+            const formattedFilterDate = `${monthName} ${parseInt(day)}, ${year}`;
+            
+            console.log(`Date Filter: ${appointmentState.dateFilter} => ${formattedFilterDate}`); // Debug
+            console.log(`Comparing with: ${a.date}`); // Debug
+            
+            // Compare with appointment date
+            matchesDate = a.date === formattedFilterDate;
+        }
+        
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
     UpdateAppointmentFilterInfo();
@@ -551,6 +595,14 @@ function UpdateAppointmentFilterInfo() {
     }
     if (appointmentState.statusFilter !== 'all') {
         activeFilters.push(`Status: ${appointmentState.statusFilter}`);
+    }
+    if (appointmentState.dateFilter) {
+        // ✅ FIX: Parse ISO format (yyyy-MM-dd) from HTML date input
+        const [year, month, day] = appointmentState.dateFilter.split('-');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthName = months[parseInt(month) - 1];
+        const formattedDate = `${monthName} ${parseInt(day)}, ${year}`;
+        activeFilters.push(`Date: ${formattedDate}`);
     }
     
     if (activeFilters.length > 0) {
@@ -791,6 +843,8 @@ function QuickCancelAppointment(appointmentId) {
 // Cancel from Modal
 function CancelAppointment(appointmentId) {
     pendingCancelId = appointmentId;
+    isModalOpen = true;
+    DisableViewButtons();
     ShowConfirmModal(
         '❌ Cancel Appointment?',
         'Are you sure you want to cancel this appointment? This action cannot be undone.',
@@ -803,7 +857,8 @@ function CancelAppointment(appointmentId) {
 function ShowConfirmModal(title, message, confirmBtnText, callback) {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
-    document.querySelector('.confirm-actions .btn-danger').textContent = confirmBtnText;
+    const confirmBtn = document.getElementById('confirmActionBtn');
+    confirmBtn.textContent = confirmBtnText;
     document.getElementById('confirmModal').style.display = 'flex';
 }
 
@@ -811,6 +866,26 @@ function ShowConfirmModal(title, message, confirmBtnText, callback) {
 function CloseConfirmModal() {
     document.getElementById('confirmModal').style.display = 'none';
     pendingCancelId = null;
+    isModalOpen = false;
+    EnableViewButtons();
+}
+
+// ✅ Disable View Buttons
+function DisableViewButtons() {
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.title = 'Please close the cancel confirmation first';
+    });
+}
+
+// ✅ Enable View Buttons
+function EnableViewButtons() {
+    const viewBtns = document.querySelectorAll('.view-btn');
+    viewBtns.forEach(btn => {
+        btn.disabled = false;
+        btn.title = '';
+    });
 }
 
 // Confirm Cancel Action
@@ -830,7 +905,7 @@ function ConfirmCancelAppointment() {
             setTimeout(() => {
                 // Close detail modal if open
                 const detailModal = document.getElementById('detailModal');
-                if (detailModal.style.display !== 'none') {
+                if (detailModal && detailModal.style.display !== 'none') {
                     detailModal.style.display = 'none';
                 }
                 LoadAppointmentHistory();
@@ -848,8 +923,44 @@ function ConfirmCancelAppointment() {
 // Reschedule Modal Functions
 function OpenRescheduleModal(appointmentId) {
     currentRescheduleId = appointmentId;
+    
+    // Get the current appointment details
+    const appointment = appointmentState.allData.find(a => a.appointmentId === appointmentId);
+    if (!appointment) return;
+    
+    const durationMinutes = appointment.durationTime || 30; // Default to 30 if not provided
+    
     document.getElementById('newDate').value = '';
-    document.getElementById('newTime').value = '';
+    
+    // ✅ Generate valid time slots based on service duration
+    const timeSelect = document.getElementById('newTime');
+    timeSelect.innerHTML = '<option value="">-- Select time --</option>';
+    
+    const startHour = 9;    // 9 AM
+    const endHour = 16;     // 4 PM
+    const endMinutes = 30;  // 4:30 PM
+    
+    // Generate time slots
+    for (let hour = startHour; hour <= endHour; hour++) {
+        for (let minutes = 0; minutes < 60; minutes += durationMinutes) {
+            // Don't exceed 4:30 PM
+            if (hour === endHour && (minutes > endMinutes || (minutes === endMinutes && durationMinutes > 0))) {
+                break;
+            }
+            if (hour === endHour && minutes + durationMinutes > endMinutes) {
+                break;
+            }
+            
+            const timeString = `${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            const displayTime = `${String(hour % 12 || 12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+            
+            const option = document.createElement('option');
+            option.value = timeString;
+            option.textContent = displayTime;
+            timeSelect.appendChild(option);
+        }
+    }
+    
     document.getElementById('rescheduleModal').style.display = 'flex';
 }
 
@@ -872,7 +983,8 @@ function SubmitReschedule() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             appointmentId: currentRescheduleId,
-            request: { newDate: newDate, newTime: newTime }
+            newDate: newDate,
+            newTime: newTime
         })
     })
     .then(r => r.json())
@@ -952,22 +1064,66 @@ function DownloadReceipt(appointmentId, format) {
     link.click();
 }
 
-// Helper toast functions
+// Helper toast functions - 改进版本（在中间偏上显示）
 function showSuccessToast(message) {
     const toast = document.createElement('div');
     toast.className = 'alert alert-success';
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#4CAF50;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    toast.style.cssText = `
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+        padding: 20px 40px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        text-align: center;
+        min-width: 300px;
+        animation: toastSlideIn 0.3s ease;
+    `;
+    
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function showErrorToast(message) {
     const toast = document.createElement('div');
     toast.className = 'alert alert-danger';
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:15px 20px;background:#f44336;color:white;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    toast.style.cssText = `
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+        padding: 20px 40px;
+        background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        text-align: center;
+        min-width: 300px;
+        animation: toastSlideIn 0.3s ease;
+    `;
+    
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 </script>

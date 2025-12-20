@@ -1,0 +1,62 @@
+@media (max-width: 768px) {
+    .profile-wrapper {
+        padding: 20px;
+    }
+
+    .profile-container {
+        border-radius: 12px;
+    }
+
+    .profile-header {
+        padding: 24px;
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 48px;
+        margin: 0 auto 12px;
+    }
+
+    .profile-name {
+        font-size: 22px;
+    }
+
+    .profile-body {
+        grid-template-columns: 1fr;
+        padding: 24px;
+        gap: 24px;
+    }
+
+    .profile-stats {
+        grid-template-columns: 1fr;
+    }
+
+
+    @media (max-width: 768px) {
+        .appointment-wrapper {
+            padding: 20px;
+        }
+
+        .appointment-container {
+            border-radius: 12px;
+        }
+
+        .appointment-header {
+            padding: 24px;
+        }
+
+        .appointment-body {
+            padding: 20px;
+        }
+
+        .calendar-section {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .appointment-header-title {
+            font-size: 22px;
+        }
+    }

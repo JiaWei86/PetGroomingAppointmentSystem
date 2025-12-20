@@ -41,7 +41,8 @@ public class HomeController : Controller
 
     private IActionResult BlockedResponse(string action = "perform this action")
     {
-        return Json(new {
+        return Json(new
+        {
             success = false,
             message = $"Your account is blocked. You cannot {action}.",
             statusCode = "BLOCKED"
@@ -140,10 +141,10 @@ public class HomeController : Controller
             customer.IC = ic;
             customer.Phone = phone;
 
-            if (Request.Form.Files.Count >0)
+            if (Request.Form.Files.Count > 0)
             {
                 var photoFile = Request.Form.Files[0];
-                if (photoFile.Length >0)
+                if (photoFile.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
                     if (!Directory.Exists(uploadsFolder))
@@ -512,7 +513,7 @@ public class HomeController : Controller
 
                     if (photoDataArray != null)
                     {
-                        for (int i =0; i < photoDataArray.Count; i++)
+                        for (int i = 0; i < photoDataArray.Count; i++)
                         {
                             var photoData = photoDataArray[i];
 
@@ -793,7 +794,7 @@ public class HomeController : Controller
             if (string.IsNullOrEmpty(request.ServiceId))
                 return BadRequest(new { success = false, message = "Service selection is required" });
 
-            if (request.PetIds == null || request.PetIds.Count ==0)
+            if (request.PetIds == null || request.PetIds.Count == 0)
                 return BadRequest(new { success = false, message = "Please select at least one pet" });
 
             // Get current user ID
@@ -824,20 +825,12 @@ public class HomeController : Controller
             if (service == null)
                 return BadRequest(new { success = false, message = "Selected service not found" });
 
-            // Get staff member (groomer) - assign the first available one if not specified
-            Models.Staff assignedStaff = null;
-            if (!string.IsNullOrEmpty(request.Groomer))
-            {
-                assignedStaff = _db.Staffs.FirstOrDefault(s => s.UserId == request.Groomer);
-            }
-            else
-            {
-                // Assign the first available staff member
-                assignedStaff = _db.Staffs.FirstOrDefault(s => s.Role == "staff");
-            }
-
             var appointmentIds = new List<string>();
             var errors = new List<string>();
+            int totalPointsEarned = 0;
+
+            // ✅ Track groomer assignments for this booking to prevent duplicates within the same time slot
+            var groomerAssignmentsForThisPeriod = new Dictionary<string, Models.Staff>();
 
             foreach (var petId in request.PetIds)
             {
@@ -849,6 +842,79 @@ public class HomeController : Controller
                     {
                         errors.Add($"Pet {petId} not found or doesn't belong to you");
                         continue;
+                    }
+
+                    // ✅ NEW: Check if this pet already has an appointment at this time with any service
+                    if (DoesPetHaveConflictingAppointment(petId, appointmentDateTime, service.DurationTime ?? 0))
+                    {
+                        errors.Add($"Pet '{pet.Name}' already has an appointment at {appointmentDateTime:MMM dd, HH:mm}. A pet cannot have multiple services at the same time.");
+                        continue;
+                    }
+
+                    // ✅ Get groomer for this specific pet from petGroomerMappings
+                    Models.Staff assignedStaff = null;
+                    
+                    if (request.PetGroomerMappings != null && request.PetGroomerMappings.ContainsKey(petId))
+                    {
+                        var groomerId = request.PetGroomerMappings[petId];
+                        if (!string.IsNullOrEmpty(groomerId) && groomerId != "any")
+                        {
+                            // ✅ Use specific groomer selected by customer
+                            assignedStaff = _db.Staffs.FirstOrDefault(s => s.UserId == groomerId);
+
+                            // ✅ Check for time conflict with this specific groomer
+                            if (assignedStaff != null)
+                            {
+                                if (!IsGroomerAvailable(assignedStaff.UserId, appointmentDateTime, service.DurationTime ?? 0))
+                                {
+                                    errors.Add($"Groomer '{assignedStaff.Name}' is not available at {appointmentDateTime:MMM dd, HH:mm}. They already have an appointment during this time.");
+                                    continue;
+                                }
+
+                                // ✅ Check if this groomer was already assigned in this batch
+                                if (groomerAssignmentsForThisPeriod.ContainsKey(assignedStaff.UserId))
+                                {
+                                    errors.Add($"Groomer '{assignedStaff.Name}' cannot be assigned to multiple pets in the same time slot.");
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
+                    // If no pet-specific groomer assigned, randomly select from available staff
+                    if (assignedStaff == null)
+                    {
+                        var availableStaff = _db.Staffs
+                            .Where(s => s.Role == "staff")
+                            .ToList();
+
+                        if (availableStaff.Count > 0)
+                        {
+                            // ✅ Find available groomers (not already booked at this time + not already assigned in this batch)
+                            var validGroomers = availableStaff
+                                .Where(s => 
+                                    IsGroomerAvailable(s.UserId, appointmentDateTime, service.DurationTime ?? 0) &&
+                                    !groomerAssignmentsForThisPeriod.ContainsKey(s.UserId)
+                                )
+                                .ToList();
+
+                            if (validGroomers.Count > 0)
+                            {
+                                // ✅ Randomly select one groomer
+                                var random = new Random();
+                                assignedStaff = validGroomers[random.Next(validGroomers.Count)];
+                            }
+                            else
+                            {
+                                errors.Add($"No available groomers for {appointmentDateTime:MMM dd, HH:mm}. All groomers are busy.");
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            errors.Add("No groomers available in the system");
+                            continue;
+                        }
                     }
 
                     // Generate unique appointment ID
@@ -865,7 +931,7 @@ public class HomeController : Controller
                         DurationTime = service.DurationTime,
                         SpecialRequest = request.Notes ?? string.Empty,
                         Status = "Confirmed",
-                        StaffId = assignedStaff?.UserId,  // ✅ Assign the groomer here
+                        StaffId = assignedStaff?.UserId,  // ✅ Use assigned groomer
                         CreatedAt = DateTime.Now
                     };
 
@@ -873,8 +939,15 @@ public class HomeController : Controller
                     _db.Appointments.Add(appointment);
                     _db.SaveChanges();
 
-                    // ✅ ADD LOYALTY POINTS (10 points per confirmed appointment)
+                    // ✅ Track this groomer for the current batch
+                    if (!groomerAssignmentsForThisPeriod.ContainsKey(assignedStaff.UserId))
+                    {
+                        groomerAssignmentsForThisPeriod[assignedStaff.UserId] = assignedStaff;
+                    }
+
+                    // ✅ ADD LOYALTY POINTS (10 points per pet booked)
                     customer.LoyaltyPoint += 10;
+                    totalPointsEarned += 10;
                     _db.Customers.Update(customer);
                     _db.SaveChanges();
 
@@ -891,19 +964,21 @@ public class HomeController : Controller
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Failed to create any appointments: " + string.Join("; ", errors)
+                    message = "Failed to create any appointments: " + string.Join("; ", errors),
+                    errors = errors
                 });
             }
 
             var message = appointmentIds.Count == request.PetIds.Count
-                ? "All appointments booked successfully!"
-                : $"Successfully booked {appointmentIds.Count} of {request.PetIds.Count} appointments. Errors: {string.Join("; ", errors)}";
+                ? $"All appointments booked successfully! You earned {totalPointsEarned} loyalty points."
+                : $"Successfully booked {appointmentIds.Count} of {request.PetIds.Count} appointments. You earned {totalPointsEarned} loyalty points. Errors: {string.Join("; ", errors)}";
 
             return Ok(new
             {
                 success = true,
                 message = message,
                 appointmentIds = appointmentIds,
+                loyaltyPointsEarned = totalPointsEarned,
                 partialFailure = appointmentIds.Count < request.PetIds.Count
             });
         }
@@ -916,6 +991,104 @@ public class HomeController : Controller
                 success = false,
                 message = $"Server error: {ex.InnerException?.Message ?? ex.Message}"
             });
+        }
+    }
+
+    // ✅ NEW HELPER: Check if a pet already has a conflicting appointment at the same time
+    private bool DoesPetHaveConflictingAppointment(string petId, DateTime appointmentDateTime, int durationMinutes)
+    {
+        var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+
+        // Check if pet has any appointments that overlap with this time slot
+        var hasConflict = _db.Appointments.Any(a =>
+            a.PetId == petId &&
+            a.Status != "Cancelled" &&  // Ignore cancelled appointments
+            a.AppointmentDateTime.HasValue &&
+            a.AppointmentDateTime < appointmentEndTime &&  // Appointment starts before this one ends
+            a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime  // Appointment ends after this one starts
+        );
+
+        return hasConflict;  // Return true if conflict found
+    }
+
+    // ✅ EXISTING HELPER: Check if groomer is available at the given time
+    private bool IsGroomerAvailable(string groomerId, DateTime appointmentDateTime, int durationMinutes)
+    {
+        var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+
+        // Check if groomer has any appointments that overlap with this time slot
+        var hasConflict = _db.Appointments.Any(a =>
+            a.StaffId == groomerId &&
+            a.Status != "Cancelled" &&  // Ignore cancelled appointments
+            a.AppointmentDateTime.HasValue &&
+            a.AppointmentDateTime < appointmentEndTime &&  // Appointment starts before this one ends
+            a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime  // Appointment ends after this one starts
+        );
+
+        return !hasConflict;  // Return true if NO conflict found
+    }
+
+    [HttpGet]
+    public IActionResult GetAppointmentSchedule()
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "User not logged in" });
+            }
+
+            // Get the current month and year
+            var now = DateTime.Now;
+            var currentMonth = now.Month;
+            var currentYear = now.Year;
+
+            // Get the first day of the current month
+            var startDate = new DateTime(currentYear, currentMonth, 1);
+
+            // Get the first day of the next month
+            var endDate = startDate.AddMonths(1);
+
+            // Get appointments for the current month
+            var appointments = _db.Appointments
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Where(a => a.CustomerId == userId &&
+                            a.AppointmentDateTime >= startDate &&
+                            a.AppointmentDateTime < endDate)
+                .OrderBy(a => a.AppointmentDateTime)
+                .ToList();
+
+            // Group appointments by date
+            var groupedAppointments = appointments
+                .GroupBy(a => a.AppointmentDateTime.Value.Date)
+                .Select(g => new
+                {
+                    date = g.Key.ToString("yyyy-MM-dd"),
+                    appointments = g.Select(a => new
+                    {
+                        a.AppointmentId,
+                        a.AppointmentDateTime,
+                        a.Status,
+                        petName = a.Pet.Name,
+                        serviceName = a.Service.Name,
+                        groomerName = a.Staff != null ? a.Staff.Name : "Not assigned"
+                    }).ToList()
+                })
+                .ToList();
+
+            return Json(new { success = true, appointments = groupedAppointments });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetAppointmentSchedule Error: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
         }
     }
 
@@ -1148,127 +1321,239 @@ public class HomeController : Controller
     {
         using (var memoryStream = new MemoryStream())
         {
-            var document = new Document(PageSize.A4,40,40,40,40);
+            var document = new Document(PageSize.A4, 25, 25, 25, 25);
             var writer = PdfWriter.GetInstance(document, memoryStream);
             document.Open();
 
-            // Set fonts
-            var titleFont = new Font(Font.FontFamily.HELVETICA,18, Font.BOLD);
-            var headerFont = new Font(Font.FontFamily.HELVETICA,11, Font.BOLD);
-            var normalFont = new Font(Font.FontFamily.HELVETICA,10);
-            var labelFont = new Font(Font.FontFamily.HELVETICA,9, Font.BOLD);
-            var smallFont = new Font(Font.FontFamily.HELVETICA,8);
+            // ✅ BRAND COLORS (Darker Orange & Brown Theme)
+            var brandOrange = new BaseColor(225, 123, 6);        // #E17B06 - Darker Orange (Amber-600)
+            var brandOrangeDark = new BaseColor(180, 83, 9);     // #b45309 - Even Darker Orange (Amber-800)
+            var brandOrangeLight = new BaseColor(245, 158, 11);  // #f59e0b - Amber-400 (lighter accent)
+            var brandBeige = new BaseColor(250, 247, 242);       // #faf7f2 - Beige Background
+            var darkText = new BaseColor(26, 32, 44);            // #1a202c - Dark Text
+            var accentBrown = new BaseColor(120, 53, 15);        // #783509 - Darker Brown
 
-            // Title
-            var title = new Paragraph("PET GROOMING APPOINTMENT RECEIPT", titleFont);
-            title.Alignment = Element.ALIGN_CENTER;
-            title.SpacingAfter =15;
-            document.Add(title);
+            // Set fonts with brand colors
+            var titleFont = new Font(Font.FontFamily.HELVETICA, 20, Font.BOLD, brandOrange);
+            var headerFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, brandOrangeDark);
+            var labelFont = new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD, accentBrown);
+            var normalFont = new Font(Font.FontFamily.HELVETICA, 10, Font.NORMAL);
+            var smallFont = new Font(Font.FontFamily.HELVETICA, 8, Font.NORMAL, new BaseColor(107, 114, 128));
 
-            // Receipt Info
-            var receiptTable = new PdfPTable(2);
-            receiptTable.SetWidths(new float[] {50,50 });
-            receiptTable.DefaultCell.Border =0;
-            receiptTable.DefaultCell.Padding =5;
+            // ✅ Add colored top bar with logo
+            var topTable = new PdfPTable(2);
+            topTable.SetWidths(new float[] { 15, 85 });
+            topTable.WidthPercentage = 100;
+            topTable.DefaultCell.Border = 0;
+            topTable.DefaultCell.Padding = 8;
+            topTable.SpacingAfter = 15;
 
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border =0 });
-            receiptTable.AddCell(new PdfPCell(new Phrase($"Date Printed: {DateTime.Now:MMM dd, yyyy hh:mm tt}", normalFont)) { Border =0, HorizontalAlignment = Element.ALIGN_RIGHT });
+            try
+            {
+                var logoPath = Path.Combine(_webHostEnvironment.WebRootPath, "Customer", "img", "logo.png");
+                if (System.IO.File.Exists(logoPath))
+                {
+                    var logoImage = Image.GetInstance(logoPath);
+                    logoImage.ScaleToFit(120, 120);
+                    topTable.AddCell(new PdfPCell(logoImage) { Border = 0, VerticalAlignment = Element.ALIGN_MIDDLE });
+                }
+            }
+            catch { }
 
-            document.Add(receiptTable);
+            var titleCell = new PdfPCell(new Phrase("PET GROOMING\nAPPOINTMENT RECEIPT", titleFont));
+            titleCell.Border = 0;
+            titleCell.HorizontalAlignment = Element.ALIGN_CENTER;
+            titleCell.VerticalAlignment = Element.ALIGN_MIDDLE;
+            titleCell.PaddingTop = 10;
+            topTable.AddCell(titleCell);
+
+            var topBgCell = topTable.DefaultCell;
+            topBgCell.BackgroundColor = brandBeige;
+            document.Add(topTable);
+
             document.Add(new Paragraph(" "));
 
-            // Divider line using Paragraph instead of LineSeparator
-            var dividerParagraph = new Paragraph(new string('─',50));
-            dividerParagraph.Alignment = Element.ALIGN_CENTER;
-            document.Add(dividerParagraph);
+            // ✅ Receipt ID and Date in single line with better spacing
+            var infoTable = new PdfPTable(2);
+            infoTable.SetWidths(new float[] { 50, 50 });
+            infoTable.WidthPercentage = 100;
+            infoTable.DefaultCell.Border = 0;
+            infoTable.DefaultCell.Padding = 8;
+            infoTable.SpacingAfter = 15;
+
+            infoTable.AddCell(new PdfPCell(new Phrase($"Receipt #: {appointment.AppointmentId}", normalFont)) { Border = 0 });
+            infoTable.AddCell(new PdfPCell(new Phrase($"Date: {DateTime.Now:MMM dd, yyyy | hh:mm tt}", normalFont)) 
+            { Border = 0, HorizontalAlignment = Element.ALIGN_RIGHT });
+
+            document.Add(infoTable);
+
+            // ✅ Customer Section with brand orange borders
+            var customerSection = new PdfPTable(1);
+            customerSection.WidthPercentage = 100;
+            customerSection.SpacingAfter = 15;
+
+            var customerHeaderCell = new PdfPCell(new Phrase("👤 CUSTOMER INFORMATION", headerFont));
+            customerHeaderCell.BackgroundColor = brandBeige;
+            customerHeaderCell.Padding = 12;
+            customerHeaderCell.BorderColor = brandOrange;
+            customerHeaderCell.BorderWidth = 0;
+            customerHeaderCell.BorderWidthBottom = 3;
+            customerHeaderCell.PaddingLeft = 15;
+            customerSection.AddCell(customerHeaderCell);
+
+            var customerDetailsTable = new PdfPTable(2);
+            customerDetailsTable.SetWidths(new float[] { 25, 75 });
+            customerDetailsTable.WidthPercentage = 100;
+            customerDetailsTable.DefaultCell.Border = 0;
+            customerDetailsTable.DefaultCell.Padding = 10;
+            customerDetailsTable.DefaultCell.BorderWidthBottom = 1f;
+            customerDetailsTable.DefaultCell.BorderColorBottom = brandOrangeLight;
+
+            // Add customer details with brand colors
+            var nameLabel = new PdfPCell(new Phrase("Name", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            customerDetailsTable.AddCell(nameLabel);
+            customerDetailsTable.AddCell(new PdfPCell(new Phrase(customer.Name ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 });
+
+            var emailLabel = new PdfPCell(new Phrase("Email", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 };
+            customerDetailsTable.AddCell(emailLabel);
+            customerDetailsTable.AddCell(new PdfPCell(new Phrase(customer.Email ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 });
+
+            var phoneLabel = new PdfPCell(new Phrase("Phone", labelFont)) { Border = 0, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            customerDetailsTable.AddCell(phoneLabel);
+            customerDetailsTable.AddCell(new PdfPCell(new Phrase(customer.Phone ?? "N/A", normalFont)) { Border = 0, Padding = 10 });
+
+            var customerDetailsCell = new PdfPCell(customerDetailsTable);
+            customerDetailsCell.Border = 0;
+            customerDetailsCell.Padding = 0;
+            customerDetailsCell.BorderColor = brandOrange;
+            customerDetailsCell.BorderWidth = 0;
+            customerDetailsCell.BorderWidthLeft = 3;
+            customerDetailsCell.BorderWidthRight = 3;
+            customerDetailsCell.BorderWidthBottom = 3;
+            customerSection.AddCell(customerDetailsCell);
+
+            document.Add(customerSection);
             document.Add(new Paragraph(" "));
 
-            // Customer Section
-            var customerHeader = new Paragraph("CUSTOMER INFORMATION", headerFont);
-            customerHeader.SpacingAfter =8;
-            document.Add(customerHeader);
+            // ✅ Appointment Section with brand orange borders
+            var appointmentSection = new PdfPTable(1);
+            appointmentSection.WidthPercentage = 100;
+            appointmentSection.SpacingAfter = 15;
 
-            var customerTable = new PdfPTable(2);
-            customerTable.SetWidths(new float[] {25,75 });
-            customerTable.DefaultCell.Border =0;
-            customerTable.DefaultCell.Padding =4;
+            var apptHeaderCell = new PdfPCell(new Phrase("📅 APPOINTMENT DETAILS", headerFont));
+            apptHeaderCell.BackgroundColor = brandBeige;
+            apptHeaderCell.Padding = 12;
+            apptHeaderCell.BorderColor = brandOrange;
+            apptHeaderCell.BorderWidth = 0;
+            apptHeaderCell.BorderWidthBottom = 3;
+            apptHeaderCell.PaddingLeft = 15;
+            appointmentSection.AddCell(apptHeaderCell);
 
-            customerTable.AddCell(new PdfPCell(new Phrase("Name:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Name, normalFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase("Email:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Email, normalFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase("Phone:", labelFont)) { Border =0 });
-            customerTable.AddCell(new PdfPCell(new Phrase(customer.Phone, normalFont)) { Border =0 });
+            var appointmentDetailsTable = new PdfPTable(2);
+            appointmentDetailsTable.SetWidths(new float[] { 25, 75 });
+            appointmentDetailsTable.WidthPercentage = 100;
+            appointmentDetailsTable.DefaultCell.Border = 0;
+            appointmentDetailsTable.DefaultCell.Padding = 10;
+            appointmentDetailsTable.DefaultCell.BorderWidthBottom = 1f;
+            appointmentDetailsTable.DefaultCell.BorderColorBottom = brandOrangeLight;
 
-            document.Add(customerTable);
-            document.Add(new Paragraph(" "));
+            // Add appointment details with brand colors
+            var dateLabel = new PdfPCell(new Phrase("Date", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            appointmentDetailsTable.AddCell(dateLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("dddd, MMMM dd, yyyy") ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 });
 
-            // Divider line
-            document.Add(dividerParagraph);
-            document.Add(new Paragraph(" "));
+            var timeLabel = new PdfPCell(new Phrase("Time", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 };
+            appointmentDetailsTable.AddCell(timeLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 });
 
-            // Appointment Section
-            var appointmentHeader = new Paragraph("APPOINTMENT DETAILS", headerFont);
-            appointmentHeader.SpacingAfter =8;
-            document.Add(appointmentHeader);
+            var petLabel = new PdfPCell(new Phrase("Pet", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            appointmentDetailsTable.AddCell(petLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 });
 
-            var appointmentTable = new PdfPTable(2);
-            appointmentTable.SetWidths(new float[] {25,75 });
-            appointmentTable.DefaultCell.Border =0;
-            appointmentTable.DefaultCell.Padding =4;
+            var serviceLabel = new PdfPCell(new Phrase("Service", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 };
+            appointmentDetailsTable.AddCell(serviceLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Date:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("MMM dd, yyyy") ?? "N/A", normalFont)) { Border =0 });
+            var groomerLabel = new PdfPCell(new Phrase("Groomer", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            appointmentDetailsTable.AddCell(groomerLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Time:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.AppointmentDateTime?.ToString("hh:mm tt") ?? "N/A", normalFont)) { Border =0 });
+            var durationLabel = new PdfPCell(new Phrase("Duration", labelFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, Padding = 10 };
+            appointmentDetailsTable.AddCell(durationLabel);
+            appointmentDetailsTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border = 0, BorderWidthBottom = 1f, BorderColorBottom = brandOrangeLight, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 });
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Pet(s):", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Pet?.Name ?? "N/A", normalFont)) { Border =0 });
+            var statusLabel = new PdfPCell(new Phrase("Status", labelFont)) { Border = 0, BackgroundColor = new BaseColor(255, 250, 245), Padding = 10 };
+            appointmentDetailsTable.AddCell(statusLabel);
+            var statusColor = appointment.Status?.ToLower() == "confirmed" ? brandOrange : new BaseColor(239, 68, 68);
+            var statusCell = new PdfPCell(new Phrase(appointment.Status ?? "N/A", new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD, statusColor))) { Border = 0, HorizontalAlignment = Element.ALIGN_CENTER, Padding = 10 };
+            appointmentDetailsTable.AddCell(statusCell);
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Groomer:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Staff?.Name ?? "Not assigned", normalFont)) { Border =0 });
+            var appointmentDetailsCell = new PdfPCell(appointmentDetailsTable);
+            appointmentDetailsCell.Border = 0;
+            appointmentDetailsCell.Padding = 0;
+            appointmentDetailsCell.BorderColor = brandOrange;
+            appointmentDetailsCell.BorderWidth = 0;
+            appointmentDetailsCell.BorderWidthLeft = 3;
+            appointmentDetailsCell.BorderWidthRight = 3;
+            appointmentDetailsCell.BorderWidthBottom = 3;
+            appointmentSection.AddCell(appointmentDetailsCell);
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Service:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Service?.Name ?? "N/A", normalFont)) { Border =0 });
+            document.Add(appointmentSection);
 
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Duration:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase($"{appointment.DurationTime} minutes", normalFont)) { Border =0 });
-
-            appointmentTable.AddCell(new PdfPCell(new Phrase("Status:", labelFont)) { Border =0 });
-            appointmentTable.AddCell(new PdfPCell(new Phrase(appointment.Status, normalFont)) { Border =0 });
-
-            document.Add(appointmentTable);
-
-            // Special Requests Section (if exists)
+            // ✅ Special Requests Section (if exists)
             if (!string.IsNullOrEmpty(appointment.SpecialRequest))
             {
-                document.Add(new Paragraph(" "));
-                document.Add(dividerParagraph);
-                document.Add(new Paragraph(" "));
+                var notesSection = new PdfPTable(1);
+                notesSection.WidthPercentage = 100;
+                notesSection.SpacingAfter = 15;
 
-                var notesHeader = new Paragraph("SPECIAL REQUESTS", headerFont);
-                notesHeader.SpacingAfter =8;
-                document.Add(notesHeader);
+                var notesHeaderCell = new PdfPCell(new Phrase("📝 SPECIAL REQUESTS", headerFont));
+                notesHeaderCell.BackgroundColor = brandBeige;
+                notesHeaderCell.Padding = 12;
+                notesHeaderCell.BorderColor = accentBrown;
+                notesHeaderCell.BorderWidth = 0;
+                notesHeaderCell.BorderWidthBottom = 3;
+                notesHeaderCell.PaddingLeft = 15;
+                notesSection.AddCell(notesHeaderCell);
 
-                var notes = new Paragraph(appointment.SpecialRequest, normalFont);
-                notes.Alignment = Element.ALIGN_JUSTIFIED;
-                document.Add(notes);
+                var notesCell = new PdfPCell(new Phrase(appointment.SpecialRequest, normalFont));
+                notesCell.Padding = 15;
+                notesCell.Border = 0;
+                notesCell.BorderColor = accentBrown;
+                notesCell.BorderWidth = 0;
+                notesCell.BorderWidthLeft = 3;
+                notesCell.BorderWidthRight = 3;
+                notesCell.BorderWidthBottom = 3;
+                notesCell.HorizontalAlignment = Element.ALIGN_JUSTIFIED;
+                notesSection.AddCell(notesCell);
+
+                document.Add(notesSection);
+                document.Add(new Paragraph(" "));
             }
 
-            // Footer
-            document.Add(new Paragraph(" "));
-            document.Add(dividerParagraph);
             document.Add(new Paragraph(" "));
 
-            var footer1 = new Paragraph("Thank you for choosing our service!", smallFont);
-            footer1.Alignment = Element.ALIGN_CENTER;
-            document.Add(footer1);
+            // ✅ Footer with brand styling
+            var footerTable = new PdfPTable(1);
+            footerTable.WidthPercentage = 100;
+            footerTable.DefaultCell.Border = 0;
+            footerTable.DefaultCell.Padding = 0;
+            footerTable.DefaultCell.BackgroundColor = brandBeige;
 
-            var footer = new Paragraph("Hope to see you next time ~ ^.^ ", smallFont);
-            footer.Alignment = Element.ALIGN_CENTER;
-            document.Add(footer);
+            var footer1 = new PdfPCell(new Phrase("Thank you for choosing our service!", 
+                new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD, brandOrange)));
+            footer1.Border = 0;
+            footer1.Padding = 12;
+            footer1.HorizontalAlignment = Element.ALIGN_CENTER;
+            footerTable.AddCell(footer1);
 
+            var footer2 = new PdfPCell(new Phrase("We look forward to seeing you and your furry friend again! 🐾", smallFont));
+            footer2.Border = 0;
+            footer2.Padding = 8;
+            footer2.HorizontalAlignment = Element.ALIGN_CENTER;
+            footerTable.AddCell(footer2);
+
+            document.Add(footerTable);
 
             document.Close();
             return memoryStream.ToArray();
@@ -1283,14 +1568,14 @@ public class HomeController : Controller
             .OrderByDescending(a => a.AppointmentId)
             .FirstOrDefault();
 
-        int nextNumber =1;
+        int nextNumber = 1;
 
         if (lastAppointment != null && lastAppointment.AppointmentId.StartsWith("AP"))
         {
             // Extract the number from the last ID (e.g., "AP001" -> 1)
             if (int.TryParse(lastAppointment.AppointmentId.Substring(2), out int lastNumber))
             {
-                nextNumber = lastNumber +1;
+                nextNumber = lastNumber + 1;
             }
         }
 
@@ -1449,9 +1734,9 @@ public class HomeController : Controller
             {
                 var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
 
-                if (timeUntilAppointment.TotalHours <24)
+                if (timeUntilAppointment.TotalHours < 24)
                 {
-                    var hoursRemaining = Math.Round(timeUntilAppointment.TotalHours,1);
+                    var hoursRemaining = Math.Round(timeUntilAppointment.TotalHours, 1);
                     return Json(new
                     {
                         canCancel = false,
@@ -1491,21 +1776,21 @@ public class HomeController : Controller
                 return NotFound(new { success = false, message = "Appointment not found" });
 
             // Check if already cancelled
-            if (appointment.Status == "cancelled")
+            if (appointment.Status == "Cancelled")
                 return BadRequest(new { success = false, message = "Appointment is already cancelled" });
 
             // Check 24-hour rule
             if (appointment.AppointmentDateTime.HasValue)
             {
                 var timeUntilAppointment = appointment.AppointmentDateTime.Value - DateTime.Now;
-                if (timeUntilAppointment.TotalHours <24)
+                if (timeUntilAppointment.TotalHours < 24)
                 {
                     return BadRequest(new { success = false, message = "Cannot cancel within 24 hours of appointment" });
                 }
             }
 
             // Update status to cancelled
-            appointment.Status = "cancelled";
+            appointment.Status = "Cancelled";
             _db.Appointments.Update(appointment);
             _db.SaveChanges();
 
@@ -1533,6 +1818,17 @@ public class HomeController : Controller
     public class CancelRequest
     {
         public required string AppointmentId { get; set; }
+    }
+
+    // Request model for appointment booking
+    public class AppointmentRequest
+    {
+        public string Date { get; set; }
+        public string Time { get; set; }
+        public string ServiceId { get; set; }
+        public List<string> PetIds { get; set; }
+        public Dictionary<string, string> PetGroomerMappings { get; set; }  // ✅ Add this
+        public string Notes { get; set; }
     }
 
     [HttpGet]
@@ -1609,20 +1905,314 @@ public class HomeController : Controller
             return BadRequest(ex.Message);
         }
     }
-}
 
-public class AppointmentRequest
-{
-    public required string Date { get; set; }
-    public required string Time { get; set; }
-    public required string ServiceId { get; set; }
-    public List<string> PetIds { get; set; } = new();
-    public string? Groomer { get; set; }
-    public string? Notes { get; set; }
-}
+    [HttpGet]
+    public IActionResult GetMonthAppointments(int year, int month)
+    {
+        try
+        {
+            var userId = HttpContext.Session.GetString("CustomerId");
+            Console.WriteLine($"GetMonthAppointments - userId from session: {userId}");
 
-public class RescheduleRequest
-{
-    public required string NewDate { get; set; }
-    public required string NewTime { get; set; }
+            if (string.IsNullOrEmpty(userId))
+            {
+                Console.WriteLine("GetMonthAppointments - UserId is empty");
+                return Json(new { success = false, appointments = new object[] { } });
+            }
+
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            Console.WriteLine($"GetMonthAppointments - Querying: userId={userId}, range={startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}");
+
+            var appointments = _db.Appointments
+                .Where(a => a.CustomerId == userId &&
+                            a.AppointmentDateTime.HasValue &&
+                            a.AppointmentDateTime.Value.Year == year &&
+                            a.AppointmentDateTime.Value.Month == month)
+                .AsEnumerable()
+                .Select(a => new
+                {
+                    date = a.AppointmentDateTime.Value.ToString("yyyy-MM-dd"),
+                    status = a.Status?.ToLower() ?? "unknown"
+                })
+                .ToList();
+
+            Console.WriteLine($"GetMonthAppointments - Found {appointments.Count} appointments");
+            foreach (var apt in appointments)
+            {
+                Console.WriteLine($"  {apt.date}: {apt.status}");
+            }
+
+            return Json(new { success = true, appointments = appointments });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetMonthAppointments Exception: {ex.GetType().Name} - {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            return Json(new { success = false, error = ex.Message, appointments = new object[] { } });
+        }
+    }
+
+    // 添加这个新方法来获取特定日期的预约
+    [HttpGet]
+    public async Task<IActionResult> GetAppointmentsByDate(string date)
+    {
+        try
+        {
+            var customerId = GetCurrentCustomerId();
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return Json(new { success = false, message = "Please login first" });
+            }
+
+            // ✅ FIX: Parse the date parameter to DateTime for database comparison
+            if (!DateTime.TryParse(date, out var parsedDate))
+            {
+                return Json(new { success = false, message = "Invalid date format" });
+            }
+
+            // ✅ FIX: Use DateTime comparison instead of ToString()
+            var appointments = await _db.Appointments
+                .Where(a => a.CustomerId == customerId &&
+                            a.AppointmentDateTime.HasValue &&
+                            a.AppointmentDateTime.Value.Year == parsedDate.Year &&
+                            a.AppointmentDateTime.Value.Month == parsedDate.Month &&
+                            a.AppointmentDateTime.Value.Day == parsedDate.Day)
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Include(a => a.Staff)
+                .OrderBy(a => a.AppointmentDateTime)
+                .ToListAsync();
+
+            // ✅ FIX: Do the string formatting in memory, not in the database query
+            // ✅ UPDATED: Add petType to the response
+            var result = appointments.Select(a => new
+            {
+                id = a.AppointmentId,
+                time = a.AppointmentDateTime?.ToString("HH:mm"),
+                petName = a.Pet?.Name,
+                petType = a.Pet?.Type?.ToLower(), // ✅ NEW: Include pet type (dog/cat)
+                serviceName = a.Service?.Name,
+                groomerName = a.Staff?.Name,
+                status = a.Status,
+                specialRequest = a.SpecialRequest
+            }).ToList();
+
+            return Json(new { success = true, appointments = result });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetAppointmentsByDate Error: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // =================================================================
+
+    // 👇 NEW: Helper method to get current customer ID from both Claims and Session
+    private string GetCurrentCustomerId()
+    {
+        // First, try to get from Claims (for token-based auth)
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // If not found in claims, try Session
+        if (string.IsNullOrEmpty(userId))
+        {
+            userId = HttpContext.Session.GetString("CustomerId");
+        }
+
+        return userId;
+    }
+
+    // =================================================================
+
+    // ✅ NEW: Check groomer availability for specific date and time
+    [HttpGet]
+    public IActionResult CheckGroomerAvailability(string date, string time, int durationMinutes)
+    {
+        try
+        {
+            Console.WriteLine($"🔍 CheckGroomerAvailability called: date='{date}', time='{time}', duration={durationMinutes}");
+
+            // ✅ FIXED: Handle multiple date formats
+            DateTime appointmentDateTime;
+            
+            // Try parsing as ISO format first (yyyy-MM-dd)
+            if (!DateTime.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                // Fallback to general parse
+                if (!DateTime.TryParse(date, out parsedDate))
+                {
+                    Console.WriteLine($"❌ Failed to parse date: {date}");
+                    return BadRequest(new { success = false, message = "Invalid date format" });
+                }
+            }
+
+            // Parse time
+            if (!DateTime.TryParseExact(time, "HH:mm", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedTime))
+            {
+                // Fallback to general parse
+                if (!DateTime.TryParse(time, out parsedTime))
+                {
+                    Console.WriteLine($"❌ Failed to parse time: {time}");
+                    return BadRequest(new { success = false, message = "Invalid time format" });
+                }
+            }
+
+            // Combine date and time
+            appointmentDateTime = parsedDate.Date.Add(parsedTime.TimeOfDay);
+            
+            Console.WriteLine($"✅ Parsed appointmentDateTime: {appointmentDateTime:yyyy-MM-dd HH:mm}");
+
+            var appointmentEndTime = appointmentDateTime.AddMinutes(durationMinutes);
+            Console.WriteLine($"⏱️ Time range: {appointmentDateTime:HH:mm} - {appointmentEndTime:HH:mm}");
+
+            // Get all groomer IDs
+            var allGroomerIds = _db.Staffs
+                .Where(s => s.Role == "staff")
+                .Select(s => s.UserId)
+                .ToList();
+
+            Console.WriteLine($"Total groomers: {allGroomerIds.Count}");
+
+            // Filter out groomers with conflicts
+            var availableGroomerIds = new List<string>();
+
+            foreach (var groomerId in allGroomerIds)
+            {
+                // Check for conflicts on the SAME DATE
+                var hasConflict = _db.Appointments.Any(a =>
+                    a.StaffId == groomerId &&
+                    a.Status != "Cancelled" &&
+                    a.AppointmentDateTime.HasValue &&
+                    // ✅ CRITICAL: Only check SAME DATE
+                    a.AppointmentDateTime.Value.Date == appointmentDateTime.Date &&
+                    // ✅ Check time overlap
+                    a.AppointmentDateTime < appointmentEndTime &&
+                    a.AppointmentDateTime.Value.AddMinutes(a.DurationTime ?? 0) > appointmentDateTime
+                );
+
+                if (!hasConflict)
+                {
+                    availableGroomerIds.Add(groomerId);
+                    Console.WriteLine($"✅ Groomer {groomerId} is AVAILABLE on {appointmentDateTime:yyyy-MM-dd}");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Groomer {groomerId} has conflict on {appointmentDateTime:yyyy-MM-dd}");
+                }
+            }
+
+            Console.WriteLine($"📊 Available groomers: {availableGroomerIds.Count} out of {allGroomerIds.Count}");
+
+            return Json(new { success = true, availableGroomerIds = availableGroomerIds });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ CheckGroomerAvailability Error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // ✅ NEW: Validate reschedule time is within 9 AM - 4:30 PM
+    private bool IsValidRescheduleTime(DateTime newDateTime)
+    {
+        var timeOfDay = newDateTime.TimeOfDay;
+        var minTime = new TimeSpan(9, 0, 0);      // 9:00 AM
+        var maxTime = new TimeSpan(16, 30, 0);    // 4:30 PM
+
+        return timeOfDay >= minTime && timeOfDay <= maxTime;
+    }
+
+    // ✅ NEW: Reschedule Appointment endpoint
+    [HttpPost]
+    public IActionResult RescheduleAppointment([FromBody] RescheduleRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = HttpContext.Session.GetString("CustomerId");
+            }
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "User not logged in" });
+
+            var appointment = _db.Appointments
+                .FirstOrDefault(a => a.AppointmentId == request.AppointmentId && a.CustomerId == userId);
+
+            if (appointment == null)
+                return NotFound(new { success = false, message = "Appointment not found" });
+
+            // Check if already cancelled or completed
+            if (appointment.Status?.ToLower() == "cancelled" || appointment.Status?.ToLower() == "completed")
+                return BadRequest(new { success = false, message = $"Cannot reschedule a {appointment.Status} appointment" });
+
+            // Parse new date and time
+            if (!DateTime.TryParse($"{request.NewDate} {request.NewTime}", out var newDateTime))
+                return BadRequest(new { success = false, message = "Invalid date or time format" });
+
+            // ✅ Validate time is within 9 AM - 4:30 PM
+            if (!IsValidRescheduleTime(newDateTime))
+                return BadRequest(new { success = false, message = "Appointment time must be between 9:00 AM and 4:30 PM" });
+
+            // Verify new appointment is in the future
+            if (newDateTime <= DateTime.Now)
+                return BadRequest(new { success = false, message = "Appointment date must be in the future" });
+
+            // ✅ Check if pet has conflicting appointment at new time
+            if (DoesPetHaveConflictingAppointment(appointment.PetId, newDateTime, appointment.DurationTime ?? 0))
+                return BadRequest(new { success = false, message = $"Pet already has an appointment at the new time. Please select a different time." });
+
+            // ✅ Check if assigned groomer is available at new time
+            if (!string.IsNullOrEmpty(appointment.StaffId) && 
+                !IsGroomerAvailable(appointment.StaffId, newDateTime, appointment.DurationTime ?? 0))
+            {
+                return BadRequest(new { success = false, message = "Assigned groomer is not available at the new time. Please select a different time." });
+            }
+
+            // Update appointment
+            appointment.AppointmentDateTime = newDateTime;
+            _db.Appointments.Update(appointment);
+            _db.SaveChanges();
+
+            return Ok(new { success = true, message = "Appointment rescheduled successfully!" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"RescheduleAppointment Error: {ex.Message}");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    // Request model for rescheduling
+    public class RescheduleRequest
+    {
+        public string AppointmentId { get; set; }
+        public string NewDate { get; set; }
+        public string NewTime { get; set; }
+    }
+
+    // ✅ NEW: Validate appointment is within business hours (9 AM - 4:30 PM)
+    private bool IsWithinBusinessHours(DateTime appointmentDateTime, int durationMinutes)
+    {
+        var timeOfDay = appointmentDateTime.TimeOfDay;
+        var endTimeOfDay = appointmentDateTime.AddMinutes(durationMinutes).TimeOfDay;
+        
+        var businessStart = new TimeSpan(9, 0, 0);      // 9:00 AM
+        var businessEnd = new TimeSpan(16, 30, 0);      // 4:30 PM
+
+        // 检查预约开始时间在营业时间内
+        if (timeOfDay < businessStart)
+            return false;
+        
+        // 检查预约结束时间不超过营业时间
+        if (endTimeOfDay > businessEnd)
+            return false;
+
+        return true;
+    }
 }

@@ -2,8 +2,8 @@
 
 @{
     ViewData["Title"] = "Home";
-}
 
+}
 <!-- Login Required Modal with Better Styling -->
 <div class="modal fade" id="loginRequiredModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true" style="z-index: 9999;">
     <div class="modal-dialog modal-dialog-centered" role="document" style="z-index: 10000;">
@@ -76,7 +76,7 @@
 </div>
 <!-- slider_area_end -->
 <!-- services_price_area_start -->
-<section class="services_price_area py-5">
+<section class="services_price_area py-5" id="services">
     <div class="container">
         <div class="row justify-content-center ">
             <div class="col-lg-6 col-md-10">
@@ -267,6 +267,8 @@
         </div>
     </div>
 </section>
+
+<div id="loyaltyContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 <!-- contact_anipat_end -->
 @section Scripts {
     <script>
@@ -546,6 +548,54 @@
             e.preventDefault();
             e.stopPropagation();
             closeRedeemPopup();
+        });
+
+
+
+        let userPoints = @Model.CustomerLoyaltyPoints;
+        const redeemButtons = document.querySelectorAll('.redeem-btn');
+        const container = document.getElementById('loyaltyContainer');
+
+        const shownGiftIds = new Set(); // ✅ KEY FIX
+
+        redeemButtons.forEach(btn => {
+            const giftId = btn.dataset.giftId;
+            const cost = parseInt(btn.dataset.cost);
+
+            // ❌ Skip owl-carousel clones & duplicates
+            if (shownGiftIds.has(giftId)) return;
+
+            if (!isNaN(cost) && userPoints >= cost) {
+                shownGiftIds.add(giftId); // ✅ mark as shown
+
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    background-color: #ff9800;
+                    color: white;
+                    padding: 10px 18px;
+                    border-radius: 6px;
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+                    font-size: 14px;
+                    margin-top: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    animation: slideInRight 0.3s ease-out;
+                `;
+
+                toast.innerHTML = `
+                    <span style="font-size:1.1rem;">🎁</span>
+                    You can redeem: "${btn.dataset.giftName}"
+                `;
+
+                toast.onclick = () => btn.click();
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 5000);
+            }
         });
     </script>
 }
