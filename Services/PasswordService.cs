@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
 namespace PetGroomingAppointmentSystem.Services;
 
@@ -63,13 +63,52 @@ public class PasswordService : IPasswordService
     }
 
     /// <summary>
-    /// Verify password against PBKDF2 hash
+    /// Verify password against PBKDF2 hash or plaintext (for legacy support)
     /// </summary>
-    public bool VerifyPassword(string password, string hash)
+    public bool VerifyPassword(string password, string storedPassword)
     {
-        if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
+        if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(storedPassword))
             return false;
 
+        // ✅ 先检查是否是哈希密码（Base64 编码，长度为 64 字符 = 48 bytes）
+        if (IsHashedPassword(storedPassword))
+        {
+            // 验证 PBKDF2 哈希
+            return VerifyHashedPassword(password, storedPassword);
+        }
+        else
+        {
+            // ✅ 旧的明文密码：直接比较
+            return password == storedPassword;
+        }
+    }
+
+    /// <summary>
+    /// 检查密码是否是哈希格式
+    /// </summary>
+    private bool IsHashedPassword(string storedPassword)
+    {
+        // PBKDF2 哈希是 48 bytes = 64 字符的 Base64
+        if (storedPassword.Length != 64)
+            return false;
+
+        try
+        {
+            // 尝试解码 Base64
+            byte[] decoded = Convert.FromBase64String(storedPassword);
+            return decoded.Length == 48;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 验证 PBKDF2 哈希密码
+    /// </summary>
+    private bool VerifyHashedPassword(string password, string hash)
+    {
         try
         {
             // Decode the hash from Base64

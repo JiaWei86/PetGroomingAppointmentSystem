@@ -47,7 +47,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             var recaptchaSiteKey = HttpContext.RequestServices
                 .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
             ViewData["RecaptchaSiteKey"] = recaptchaSiteKey;
-            ViewData["RequireRecaptcha"] = true;  // 👈 改成 true
+            ViewData["RequireRecaptcha"] = !IsMobileDevice();  // 移动端不需要 reCAPTCHA
             
             var model = new LoginViewModel();
             
@@ -78,24 +78,36 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // ✅ 检查 reCAPTCHA
-            if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
+            // ✅ 只在非移动设备上检查 reCAPTCHA
+            if (!IsMobileDevice())
             {
-                recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
-            }
+                // 检查 reCAPTCHA（使用 g-recaptcha-response）
+                if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
+                {
+                    recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
+                }
 
-            if (string.IsNullOrWhiteSpace(recaptchaToken))
-            {
-                ModelState.AddModelError("", "Please complete the reCAPTCHA verification");
-                return View(model);
-            }
+                if (string.IsNullOrWhiteSpace(recaptchaToken))
+                {
+                    ModelState.AddModelError("", "Please complete the reCAPTCHA verification");
+                    ViewData["RequireRecaptcha"] = true;
+                    var siteKey = HttpContext.RequestServices
+                        .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
+                    ViewData["RecaptchaSiteKey"] = siteKey;
+                    return View(model);
+                }
 
-            // 验证 reCAPTCHA token
-            bool recaptchaValid = await _recaptchaService.VerifyTokenAsync(recaptchaToken);
-            if (!recaptchaValid)
-            {
-                ModelState.AddModelError("", "reCAPTCHA verification failed. Please try again.");
-                return View(model);
+                // 验证 reCAPTCHA token
+                bool recaptchaValid = await _recaptchaService.VerifyTokenAsync(recaptchaToken);
+                if (!recaptchaValid)
+                {
+                    ModelState.AddModelError("", "reCAPTCHA verification failed. Please try again.");
+                    ViewData["RequireRecaptcha"] = true;
+                    var siteKey = HttpContext.RequestServices
+                        .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
+                    ViewData["RecaptchaSiteKey"] = siteKey;
+                    return View(model);
+                }
             }
 
             // ✅ 关键：先清除过期的 lockout
@@ -742,7 +754,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             HttpContext.Session.Remove("ResetEmail");
             HttpContext.Session.Remove("ResetPhone");
 
-            return RedirectToAction("Index", "Home", new { area = "Customer" });
             // 清除 session
             HttpContext.Session.Clear();
 
@@ -754,8 +765,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             //     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
             // });
 
-            // Redirect to Login page (instead of Home)
-            return RedirectToAction("Login", "Auth", new { area = "Customer" });
+            return RedirectToAction("Index", "Home", new { area = "Customer" });
         }
 
         /// <summary>
@@ -1179,6 +1189,21 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             {
                 return Json(new { isRegistered = false, message = $"Validation error: {ex.Message}" });
             }
+        }
+
+        /// <summary>
+        /// 检测是否为移动设备
+        /// </summary>
+        private bool IsMobileDevice()
+        {
+            var userAgent = Request.Headers["User-Agent"].ToString().ToLower();
+            return userAgent.Contains("android") ||
+                   userAgent.Contains("iphone") ||
+                   userAgent.Contains("ipad") ||
+                   userAgent.Contains("ipod") ||
+                   userAgent.Contains("mobile") ||
+                   userAgent.Contains("webos") ||
+                   userAgent.Contains("blackberry");
         }
     }
 }

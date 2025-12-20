@@ -28,38 +28,21 @@
                                             Services
                                         </a>
                                     </li>
-                                    <li>
-                                        @if (!string.IsNullOrEmpty(customerName))
-                                        {
-                                            <div class="nav-user-dropdown" style="display: inline-block; position: relative;">
-                                                <a href="#" id="userNavLink" style="display: inline-flex; align-items: center; gap: 6px; color: #102955; font-size: 16px; text-decoration: none; font-weight: 500; padding: 37px 0; position: relative;">
-                                                    <span id="navCustomerName">@customerName</span>
-                                                    <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
-                                                </a>
-                                                <ul id="userDropdownMenu" style="position: absolute; top: 100%; right: 0; background: white; width: 200px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); list-style: none; padding: 16px 0; margin: 0; display: none; z-index: 1000;">
-                                                    <li style="display: flex; align-items: center; border-bottom: 1px solid #e0e0e0;">
-                                                        <a asp-area="Customer" asp-controller="Home" asp-action="Profile" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; font-weight: 500; font-size: 15px; transition: all 0.3s ease; margin-left: auto;">
-                                                            Profile
-                                                        </a>
-                                                    </li>
-                                                    <li style="display: flex; align-items: center; border-bottom: 1px solid #e0e0e0;">
-                                                        <a asp-area="Customer" asp-controller="Home" asp-action="History" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; font-weight: 500; font-size: 15px; transition: all 0.3s ease; margin-right: auto;">
-                                                            History
-                                                        </a>
-                                                    </li>
-                                                    <li style="display: flex; align-items: center;">
-                                                        <a href="#" id="logoutLink" style="display: block; padding: 12px 16px; color: #dc3545; text-decoration: none; font-weight: 500; font-size: 15px; transition: all 0.3s ease; margin-left: auto;">
-                                                            Logout
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <a asp-area="Customer" asp-controller="Auth" asp-action="Login">Login</a>
-                                        }
-                                    </li>
+                                    @if (!string.IsNullOrEmpty(customerName))
+                                    {
+                                        <li class="user-menu-item">
+                                            <a href="#">@customerName <i class="fa fa-angle-down"></i></a>
+                                            <ul class="submenu">
+                                                <li><a asp-area="Customer" asp-controller="Home" asp-action="Profile"><i class="fa fa-user"></i> Profile</a></li>
+                                                <li><a asp-area="Customer" asp-controller="Home" asp-action="History"><i class="fa fa-history"></i> History</a></li>
+                                                <li><a href="#" id="logoutLink" class="logout-link"><i class="fa fa-sign-out"></i> Logout</a></li>
+                                            </ul>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li><a asp-area="Customer" asp-controller="Auth" asp-action="Login">Login</a></li>
+                                    }
                                 </ul>
                             </nav>
                         </div>
@@ -74,82 +57,345 @@
 </header>
 
 <!-- Logout Toast Notification -->
-<div id="logoutToast" style="position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 16px 24px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; display: none; animation: slideInRight 0.3s ease-out;">
+<div id="logoutToast" style="position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; display: none;">
     <div style="display: flex; align-items: center; gap: 12px;">
-        <i class="bi bi-check-circle-fill" style="font-size: 1.2rem;"></i>
+        <i class="fa fa-check-circle" style="font-size: 1.2rem;"></i>
         <span id="logoutToastMessage">Logout successfully</span>
     </div>
 </div>
 
 <style>
-    /* Ensure user dropdown aligns with other menu items */
-    .nav-user-dropdown a {
-        color: #102955 !important;
-        font-size: 16px !important;
-        font-weight: 500 !important;
-        display: inline-flex !important;
+    /* ============================================
+       DESKTOP ONLY: User Dropdown Menu (不变)
+       ============================================ */
+    .main-menu ul#navigation > li.user-menu-item {
+        position: relative;
     }
 
-    .nav-user-dropdown a::before {
+    .main-menu ul#navigation > li.user-menu-item > a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .main-menu ul#navigation > li.user-menu-item > a i {
+        font-size: 12px;
+        transition: transform 0.3s;
+    }
+
+    .main-menu ul#navigation > li.user-menu-item:hover > a i {
+        transform: rotate(180deg);
+    }
+
+    .main-menu ul#navigation > li .submenu {
         position: absolute;
-        content: "";
-        background: #fff;
-        width: 100%;
-        height: 2px;
-        bottom: 0;
         left: 0;
+        top: 100%;
+        background: #fff;
+        min-width: 180px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         opacity: 0;
-        transform: scaleX(0);
-        transition: .3s;
-    }
-
-    .nav-user-dropdown a:hover::before {
-        opacity: 1;
-        transform: scaleX(1);
-    }
-
-    /* 下拉菜单样式 */
-    #userDropdownMenu {
-        background: #ffffff !important;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        border-radius: 8px !important;
-        overflow: hidden;
-    }
-
-    #userDropdownMenu li {
-        margin: 0;
-        border: none;
-    }
-
-    #userDropdownMenu li a {
-        padding: 12px 16px !important;
-        font-size: 15px;
-        color: #333 !important;
+        visibility: hidden;
         transition: all 0.3s ease;
-        white-space: nowrap;
+        z-index: 1000;
+        padding: 8px 0;
     }
 
-    /* Profile and History hover - orange text like Services */
-    #userDropdownMenu li:nth-child(1):hover a,
-    #userDropdownMenu li:nth-child(2):hover a {
+    .main-menu ul#navigation > li:hover .submenu {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .main-menu ul#navigation > li .submenu li {
+        display: block;
+        margin: 0;
+    }
+
+    .main-menu ul#navigation > li .submenu li a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px !important;
+        color: #333 !important;
+        font-size: 15px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .main-menu ul#navigation > li .submenu li a i {
+        width: 18px;
+        color: #888;
+    }
+
+    .main-menu ul#navigation > li .submenu li a:hover {
+        background: #f8f8f8;
         color: #ff7a18 !important;
     }
 
-    /* Logout hover - light red background */
-    #userDropdownMenu li:last-child:hover a {
-        background-color: #fff5f5;
+    .main-menu ul#navigation > li .submenu li a:hover i {
+        color: #ff7a18;
+    }
+
+    .main-menu ul#navigation > li .submenu li a.logout-link {
+        color: #dc3545 !important;
+    }
+
+    .main-menu ul#navigation > li .submenu li a.logout-link i {
+        color: #dc3545;
+    }
+
+    .main-menu ul#navigation > li .submenu li a.logout-link:hover {
+        background: #fff5f5;
         color: #c82333 !important;
     }
 
-    #userDropdownMenu li:last-child:hover a {
-        color: #c82333 !important;
+    /* ============================================
+       MOBILE ONLY: SlickNav Menu 美化
+       只在 991px 以下生效
+       ============================================ */
+    @@media (max-width: 991px) {
+        /* ✅ 整个移动菜单区域 */
+        .mobile_menu {
+            position: relative !important;
+        }
+
+        /* 菜单容器 */
+        .slicknav_menu {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        /* ✅ 汉堡按钮 - 和 logo 同一行，靠右 */
+        .slicknav_btn {
+            background: linear-gradient(135deg, #ff7a18 0%, #ff9a4d 100%) !important;
+            border-radius: 10px !important;
+            padding: 10px 12px !important;
+            margin: 0 !important;
+            box-shadow: 0 4px 15px rgba(255, 122, 24, 0.4) !important;
+            border: none !important;
+            float: right !important;
+            position: relative !important;
+            top: auto !important;
+            right: auto !important;
+        }
+
+        .slicknav_icon-bar {
+            background-color: #fff !important;
+            border-radius: 2px !important;
+            height: 3px !important;
+            width: 22px !important;
+            display: block !important;
+            margin: 4px 0 !important;
+        }
+
+        /* 下拉菜单主容器 */
+        .slicknav_nav {
+            background: #fff !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12) !important;
+            margin-top: 15px !important;
+            padding: 8px !important;
+            border: 1px solid #f0f0f0 !important;
+            overflow: hidden !important;
+            clear: both !important;
+        }
+
+        /* ========== 普通菜单项 (Home, About Us, Services) ========== */
+        .slicknav_nav > li {
+            margin: 4px 0 !important;
+            border-radius: 12px !important;
+            border-bottom: none !important;
+            overflow: hidden !important;
+        }
+
+        .slicknav_nav > li > a {
+            padding: 14px 18px !important;
+            font-size: 15px !important;
+            color: #333 !important;
+            font-weight: 600 !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.25s ease !important;
+            background: #f8f9fa !important;
+            border-left: 3px solid transparent !important;
+            position: relative !important;
+            padding-right: 55px !important;
+        }
+
+        .slicknav_nav > li > a:hover {
+            background: linear-gradient(90deg, #fff5eb 0%, #fff 100%) !important;
+            color: #ff7a18 !important;
+            border-left: 3px solid #ff7a18 !important;
+        }
+
+        /* ========== 用户菜单卡片 (Hachimi) ========== */
+        .slicknav_nav > li.user-menu-item {
+            background: linear-gradient(135deg, #ff7a18 0%, #ff9a4d 100%) !important;
+            margin: 12px 0 8px 0 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 6px 20px rgba(255, 122, 24, 0.35) !important;
+            overflow: hidden !important;
+        }
+
+        /* ✅ 用户名样式 - 始终白色 */
+        .slicknav_nav > li.user-menu-item > a,
+        .slicknav_nav > li.user-menu-item > a:hover,
+        .slicknav_nav > li.user-menu-item.slicknav_open > a,
+        .slicknav_nav > li.user-menu-item.slicknav_collapsed > a {
+            color: #fff !important;
+            font-weight: 700 !important;
+            font-size: 16px !important;
+            padding: 16px 18px !important;
+            padding-right: 65px !important;
+            background: transparent !important;
+            border-left: none !important;
+        }
+
+        /* ✅ 用户菜单的展开箭头 */
+        .slicknav_nav > li.user-menu-item > a .slicknav_arrow {
+            position: absolute !important;
+            right: 14px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            color: #fff !important;
+            background: rgba(255,255,255,0.25) !important;
+            border-radius: 8px !important;
+            padding: 6px 14px !important;
+            font-weight: bold !important;
+            font-size: 14px !important;
+            margin: 0 !important;
+            line-height: 1 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item.slicknav_open > a .slicknav_arrow {
+            background: rgba(255,255,255,0.4) !important;
+        }
+
+        /* 用户子菜单容器 */
+        .slicknav_nav > li.user-menu-item > ul {
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 10px !important;
+            border-radius: 0 0 14px 14px !important;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.03) !important;
+        }
+
+        /* 用户子菜单项 (Profile, History, Logout) */
+        .slicknav_nav > li.user-menu-item ul li {
+            margin: 6px 0 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            border-bottom: none !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a {
+            padding: 14px 16px !important;
+            font-size: 14px !important;
+            color: #444 !important;
+            border-radius: 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            transition: all 0.2s ease !important;
+            background: #f5f5f5 !important;
+            font-weight: 500 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a i {
+            width: 28px !important;
+            height: 28px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #fff !important;
+            border-radius: 8px !important;
+            color: #888 !important;
+            font-size: 13px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a:hover {
+            background: #fff0e6 !important;
+            color: #ff7a18 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a:hover i {
+            background: #ff7a18 !important;
+            color: #fff !important;
+        }
+
+        /* Logout 特殊红色样式 */
+        .slicknav_nav > li.user-menu-item ul li a.logout-link {
+            background: #fef2f2 !important;
+            color: #dc3545 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a.logout-link i {
+            background: #fee2e2 !important;
+            color: #dc3545 !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a.logout-link:hover {
+            background: #fee2e2 !important;
+            color: #b91c1c !important;
+        }
+
+        .slicknav_nav > li.user-menu-item ul li a.logout-link:hover i {
+            background: #dc3545 !important;
+            color: #fff !important;
+        }
+
+        /* ✅ 普通展开箭头 */
+        .slicknav_arrow {
+            position: absolute !important;
+            right: 14px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            font-size: 14px !important;
+            padding: 6px 14px !important;
+            border-radius: 8px !important;
+            background: #e0e0e0 !important;
+            font-weight: bold !important;
+            color: #555 !important;
+            margin: 0 !important;
+            line-height: 1 !important;
+        }
+
+        .slicknav_open > a .slicknav_arrow {
+            background: #ff7a18 !important;
+            color: #fff !important;
+        }
+
+        /* 普通子菜单 */
+        .slicknav_nav ul:not(.user-menu-item ul) {
+            background: #fafafa !important;
+            margin: 4px 0 !important;
+            padding: 6px !important;
+            border-radius: 10px !important;
+        }
+
+        .slicknav_nav ul:not(.user-menu-item ul) li a {
+            padding: 12px 16px !important;
+            font-size: 14px !important;
+            color: #555 !important;
+            border-radius: 8px !important;
+        }
+
+        .slicknav_nav ul:not(.user-menu-item ul) li a:hover {
+            background: #fff0e6 !important;
+            color: #ff7a18 !important;
+        }
     }
 
+    /* ============================================
+       Toast Animation
+       ============================================ */
     @@keyframes slideInRight {
         from {
             opacity: 0;
-            transform: translateX(400px);
+            transform: translateX(100px);
         }
         to {
             opacity: 1;
@@ -164,62 +410,33 @@
         }
         to {
             opacity: 0;
-            transform: translateX(400px);
+            transform: translateX(100px);
         }
+    }
+
+    #logoutToast {
+        animation: slideInRight 0.3s ease-out;
     }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const userNavLink = document.getElementById('userNavLink');
-        const userDropdownMenu = document.getElementById('userDropdownMenu');
-        const logoutLink = document.getElementById('logoutLink');
         const logoutToast = document.getElementById('logoutToast');
         
-        if (userNavLink && userDropdownMenu) {
-            // Toggle main dropdown on click
-            userNavLink.addEventListener('click', function(e) {
+        // Handle logout (for both desktop and mobile)
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('#logoutLink, .logout-link') || e.target.closest('#logoutLink, .logout-link')) {
                 e.preventDefault();
-                userDropdownMenu.style.display = userDropdownMenu.style.display === 'none' ? 'block' : 'none';
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                const dropdown = document.querySelector('.nav-user-dropdown');
-                if (dropdown && !dropdown.contains(e.target)) {
-                    userDropdownMenu.style.display = 'none';
-                }
-            });
-
-            // Close dropdown when a menu item is clicked (except logout)
-            const dropdownLinks = userDropdownMenu.querySelectorAll('a:not(#logoutLink)');
-            dropdownLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    userDropdownMenu.style.display = 'none';
-                });
-            });
-        }
-
-        // Handle logout with confirmation message
-        if (logoutLink) {
-            logoutLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Show logout toast
                 showLogoutToast();
-                
-                // Redirect to logout after showing the message
                 setTimeout(function() {
                     window.location.href = '@Url.Action("Logout", "Auth", new { area = "Customer" })';
                 }, 1500);
-            });
-        }
+            }
+        });
 
         function showLogoutToast() {
             logoutToast.style.display = 'flex';
             logoutToast.style.animation = 'slideInRight 0.3s ease-out';
-            
-            // Auto-hide after 3 seconds
             setTimeout(function() {
                 logoutToast.style.animation = 'slideOutRight 0.3s ease-out';
                 setTimeout(function() {

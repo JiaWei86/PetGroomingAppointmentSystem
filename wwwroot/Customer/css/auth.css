@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -194,9 +194,20 @@ form .btn-submit {
     border-left-color: #2e7d32;
 }
 
+/* ============================================
+   TABLET STYLES - 768px and below
+   ============================================ */
 @media (max-width: 768px) {
+    .auth-container {
+        padding: 15px;
+        align-items: flex-start;
+        padding-top: 30px;
+    }
+
     .auth-box {
-        padding: 40px 30px;
+        padding: 35px 25px;
+        border-radius: 12px;
+        max-width: 100%;
     }
 
     form {
@@ -204,8 +215,12 @@ form .btn-submit {
         gap: 18px;
     }
 
+    .auth-header {
+        margin-bottom: 25px;
+    }
+
     .auth-header h1 {
-        font-size: 28px;
+        font-size: 26px;
     }
 
     .auth-header p {
@@ -216,18 +231,188 @@ form .btn-submit {
         padding: 12px 14px;
         font-size: 14px;
     }
+
+    .form-group label {
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
 }
 
-@media (max-width: 480px) {
+/* ============================================
+   MOBILE STYLES - 576px and below
+   ============================================ */
+@media (max-width: 576px) {
+    html, body {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .auth-container {
+        padding: 10px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        height: auto;
+        min-height: 100vh;
+        align-items: flex-start;
+    }
+
     .auth-box {
-        padding: 30px 20px;
+        padding: 25px 18px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin: 0;
+    }
+
+    .auth-header {
+        margin-bottom: 20px;
     }
 
     .auth-header h1 {
         font-size: 24px;
+        margin-bottom: 8px;
+    }
+
+    .auth-header p {
+        font-size: 13px;
     }
 
     form {
-        gap: 16px;
+        gap: 15px;
+    }
+
+    .form-group {
+        margin-bottom: 5px;
+    }
+
+    .form-group label {
+        font-size: 12px;
+        margin-bottom: 6px;
+        letter-spacing: 0.3px;
+    }
+
+    .form-group input {
+        padding: 12px;
+        font-size: 16px; /* 防止 iOS 自动缩放 */
+        border-radius: 6px;
+    }
+
+    .form-hint {
+        font-size: 11px !important;
+        margin-top: 4px;
+    }
+
+    /* ⭐ 移动设备隐藏 reCAPTCHA */
+    .g-recaptcha,
+    .form-group:has(.g-recaptcha) {
+        display: none !important;
+    }
+
+    .checkbox-group {
+        margin-bottom: 15px;
+    }
+
+    .checkbox-group label {
+        font-size: 13px;
+    }
+
+    .btn-submit {
+        padding: 14px;
+        font-size: 15px;
+        margin-top: 10px;
+        border-radius: 6px;
+    }
+
+    .links-container {
+        margin-top: 20px;
+        font-size: 13px;
+        gap: 12px;
+    }
+
+    .alert {
+        padding: 12px;
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+
+    /* Password toggle 位置调整 */
+    .password-toggle {
+        top: 36px;
+        right: 10px;
+    }
+}
+
+/* ============================================
+   EXTRA SMALL MOBILE - 375px and below
+   ============================================ */
+@media (max-width: 375px) {
+    .auth-container {
+        padding: 8px;
+    }
+
+    .auth-box {
+        padding: 20px 15px;
+    }
+
+    .auth-header h1 {
+        font-size: 22px;
+    }
+
+    .auth-header p {
+        font-size: 12px;
+    }
+
+    .form-group input {
+        padding: 10px;
+    }
+
+    /* reCAPTCHA 更小屏幕适配 */
+    .g-recaptcha {
+        transform: scale(0.77);
+        transform-origin: left center;
+    }
+
+    .form-group:has(.g-recaptcha) {
+        padding: 8px !important;
+        overflow: hidden;
+    }
+
+    .btn-submit {
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .links-container {
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   LANDSCAPE MOBILE (height < 500px)
+   ============================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+    .auth-container {
+        height: auto;
+        min-height: 100vh;
+        padding: 10px;
+    }
+
+    .auth-box {
+        padding: 20px;
+    }
+
+    .auth-header {
+        margin-bottom: 15px;
+    }
+
+    .auth-header h1 {
+        font-size: 22px;
+    }
+
+    form {
+        gap: 12px;
+    }
+
+    .form-group input {
+        padding: 10px;
     }
 }
