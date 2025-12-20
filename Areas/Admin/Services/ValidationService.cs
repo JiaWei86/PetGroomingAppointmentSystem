@@ -23,7 +23,7 @@ public class ValidationService : IValidationService
     /// <summary>
     /// Validate Malaysian IC format: xxxxxx-xx-xxxx
     /// First 6 digits must be a valid date (YYMMDD)
-    /// Must be 18-60 years old
+    /// Must be at least 18 years old and the date must not be in the future
     /// </summary>
     public bool ValidateICFormat(string ic)
     {
@@ -82,7 +82,7 @@ public class ValidationService : IValidationService
         if (fullYear == currentFullYear && month == currentMonth && day > currentDay)
             return false;
 
-        // ========== Validate age (must be 18-60 years old) ==========
+                // ========== Validate age (must be at least 18 years old) ==========
  DateTime birthDate = new DateTime(fullYear, month, day);
     DateTime today = DateTime.Now;
         
@@ -96,9 +96,9 @@ public class ValidationService : IValidationService
     age--;
     }
         
-      // Must be between 18 and 60 (inclusive)
-        if (age < 18 || age > 60)
-     return false;
+        // Must be at least 18 (no upper bound)
+        if (age < 18)
+            return false;
 
  return true;
     }

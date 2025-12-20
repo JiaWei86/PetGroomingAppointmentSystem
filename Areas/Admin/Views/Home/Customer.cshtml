@@ -133,10 +133,63 @@
         color: #28a745; /* Green for valid messages */
     }
 
+    /* Selected files text list */
+    .photo-preview-list {
+        display: block;
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--text-color);
+    }
+
+    .photo-selected-item {
+        display: block;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: #ffffff;
+        border: 1px solid rgba(0,0,0,0.04);
+        margin-bottom: 6px;
+    }
+
+    .photo-selected-item .meta {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .file-upload-wrapper { display: flex; flex-direction: column; gap: 6px; }
+    .photo-selected-item { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .photo-selected-item button.remove-photo { background: transparent; border: 1px solid rgba(0,0,0,0.06); padding:4px 8px; border-radius:6px; cursor:pointer; color:#ef4444; }
+    .file-name-display { display:block; }
+
 
 
 </style>
 }
+<style>
+        /* Groomer-style alerts & confirm modal (copied to match Groomer page) */
+        @@keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        #alertMessage { position: fixed; top: 85px; left: calc(var(--sidebar-width) + 35px); right: 35px; animation: slideDown 0.5s ease; box-shadow: 0 8px 20px rgba(0,0,0,0.25); padding: 24px 32px !important; font-size: 18px !important; font-weight: 600 !important; border-radius: 12px !important; border-width: 3px !important; }
+        #alertMessage.alert-success { background: linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%) !important; color:#065f46 !important; border-left:6px solid #10b981 !important; }
+        #alertMessage.alert-danger { background: linear-gradient(135deg,#fee2e2 0%,#fecaca 100%) !important; color:#991b1b !important; border-left:6px solid #ef4444 !important; }
+        #alertMessage.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
+
+        .alert { position: fixed; top: 85px; left: calc(var(--sidebar-width) + 35px); right: 35px; z-index: 9999; padding: 24px 32px !important; font-size: 18px !important; font-weight: 600 !important; border-radius: 12px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important; animation: slideDown 0.5s ease !important; }
+        .alert.alert-success { background: linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%) !important; color: #065f46 !important; border-left: 6px solid #10b981 !important; }
+        .alert.alert-danger { background: linear-gradient(135deg,#fee2e2 0%,#fecaca 100%) !important; color:#991b1b !important; border-left:6px solid #ef4444 !important; }
+        .alert.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
+
+        /* Modal Styles */
+        .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+        .modal-backdrop.show { display:flex; }
+        /* Only style the confirm modal content so page modals (like Add Customer) keep their existing layout */
+        #confirmModal .modal-content, .modal-backdrop .modal-content { background-color:white; padding:20px; border-radius:8px; max-width:500px; width:90%; position:relative; }
+        #confirmModal .close-btn { position:absolute; top:10px; right:10px; font-size:24px; cursor:pointer; color:#666; }
+        #confirmModal .close-btn:hover { color:#000; }
+</style>
 
 @Html.AntiForgeryToken()
 
@@ -278,6 +331,9 @@
                         The customer will be required to set a new password on first login.
                     </div>
 
+                    <!-- Inline modal-level error banner (for surfaced server errors) -->
+                    <div id="customerModalErrorBanner" class="alert alert-danger" style="display:none; margin-bottom:12px;"></div>
+
                     <!-- Tabs -->
                     <div class="modal-tabs">
                         <button type="button" class="modal-tab-btn active" onclick="switchModalTab('customer')">
@@ -324,8 +380,14 @@
                             <div class="modal-form-group">
                                 <label>Profile Photo</label>
                                 <div class="file-upload-wrapper">
-                                    <input type="file" id="customerPhoto" name="PhotoUploads" class="modal-form-input" accept="image/*" multiple />
+                                    <div style="display:flex;gap:8px;align-items:center">
+                                        <input type="file" id="customerPhoto" name="Photos" class="modal-form-input" accept=".jpg,.jpeg,.png,.gif,.webp" multiple style="flex:0 0 auto" />
+                                        <button type="button" id="addCustomerPhotoBtn" class="btn btn-sm">Add files</button>
+                                        <button type="button" id="clearCustomerPhotosBtn" class="btn btn-sm btn-secondary">Clear</button>
+                                    </div>
                                     <span id="photoFileName" class="file-name-display">No files chosen</span>
+                                    <div id="photoPreviewList" class="photo-preview-list" aria-live="polite"></div>
+                                    <small id="photoValidationMessage" class="error-message" aria-live="polite"></small>
                                 </div>
                                 <small class="form-help-text">Max 5MB, PNG/JPG recommended</small>
                             </div>
@@ -340,7 +402,7 @@
 
                         <div class="pet-toggle-wrapper">
                             <label class="toggle-label">
-                                <input type="checkbox" id="addPetCheckbox" onchange="togglePetFields()" />
+                                <input type="checkbox" id="addPetCheckbox" name="AddPet" value="true" onchange="togglePetFields()" />
                                 <span>Add a pet for this customer</span>
                             </label>
                         </div>
@@ -351,7 +413,7 @@
                             <div class="modal-form-row">
                                 <div class="modal-form-group">
                                     <label>Pet Name <span class="required">*</span></label>
-                                    <input type="text" id="petName" name="PetName" class="modal-form-input" placeholder="Buddy" />
+                                    <input type="text" id="petName" name="PetName" class="modal-form-input" placeholder="Buddy" maxlength="200" />
                                 </div>
                                 <div class="modal-form-group">
                                     <label>Pet Type <span class="required">*</span></label>
@@ -367,18 +429,19 @@
                             <div class="modal-form-row">
                                 <div class="modal-form-group">
                                     <label>Breed</label>
-                                    <input type="text" id="petBreed" name="PetBreed" class="modal-form-input" placeholder="Golden Retriever" />
+                                    <input type="text" id="petBreed" name="PetBreed" class="modal-form-input" placeholder="Golden Retriever" maxlength="100" />
                                 </div>
                                 <div class="modal-form-group">
                                     <label>Age (Years)</label>
-                                    <input type="number" id="petAge" name="PetAge" class="modal-form-input" min="0" max="50" placeholder="3" />
+                                    <input type="number" id="petAge" name="PetAge" class="modal-form-input" min="0" max="30" placeholder="3" />
+                                    <small class="error-message" id="error-PetAge"></small>
                                 </div>
                             </div>
 
                             <div class="modal-form-row">
                                 <div class="modal-form-group full-width">
                                     <label>Special Notes/Remarks</label>
-                                    <textarea id="petRemark" name="PetRemark" class="modal-form-textarea" placeholder="Any special care requirements, allergies, or behaviors..." rows="3"></textarea>
+                                    <textarea id="petRemark" name="PetRemark" class="modal-form-textarea" placeholder="Any special care requirements, allergies, or behaviors..." rows="3" maxlength="500"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -386,10 +449,28 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="saveCustomerBtn">💾 Save Customer</button>
+                                        <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">Cancel</button>
+                                        <button type="button" class="btn btn-primary" id="saveCustomerBtn" onclick="openConfirmAdd()">💾 Save Customer</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal (page-local, reused from Groomer) -->
+<div id="confirmModal" class="modal-backdrop">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+        <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
+                <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
+            </div>
+            <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
+            <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">Cancel</button>
+                <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
@@ -414,7 +495,20 @@
             if (generalErrorContainer) generalErrorContainer.style.display = 'none';
 
 
+            // Build FormData but only include selected photos
             const formData = new FormData(form);
+            // Remove any files added automatically by FormData for 'Photos'
+            try { formData.delete('Photos'); } catch (e) {}
+
+            // Handle empty PetAge to prevent validation errors if backend expects int
+            if (formData.has('PetAge') && formData.get('PetAge') === '') {
+                formData.delete('PetAge');
+            }
+
+            // Append only checked files
+            selectedCustomerPhotos.forEach(item => {
+                if (item.selected) formData.append('Photos', item.file);
+            });
 
             fetch('@Url.Action("CreateCustomer", "Home")', {
                 method: 'POST',
@@ -423,33 +517,120 @@
                     'RequestVerificationToken': getAntiForgeryToken()
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Success
+            .then(async response => {
+                // Read raw response first (clone) so we can handle JSON or HTML gracefully
+                const raw = await response.clone().text();
+                let data = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch (err) {
+                    data = null;
+                }
+
+                // Helper to get the Name value from the form for personalized messages
+                const nameInput = form ? form.querySelector('[name="Name"]') : null;
+                const addedName = nameInput ? (nameInput.value || '') : '';
+
+                if (data && data.success) {
+                    // Success via JSON
                     closeCustomerModal();
                     if (data.warning) {
-                        // Show a warning if email failed
-                        showDynamicAlert(`Warning: ${data.message} Manual password: ${data.tempPass}`, 'warning');
+                        const msg = addedName ? `${addedName} added with warnings: ${data.message}` : `${data.message} Manual password: ${data.tempPass}`;
+                        showDynamicAlert(msg, 'warning');
                     } else {
-                        showDynamicAlert(data.message, 'success');
+                        const msg = addedName ? `${addedName} has been added successfully.` : (data.message || 'Customer added successfully.');
+                        showDynamicAlert(msg, 'success');
                     }
-                    // Reload the page after a short delay to show the new customer
                     setTimeout(() => window.location.reload(), 5000);
-                } else {
+                    return;
+                }
+
+                // If no JSON, inspect raw/html response to decide
+                if (!data) {
+                    // If server redirected (common after successful POST), treat as success
+                    if (response.redirected || (response.status >= 300 && response.status < 400)) {
+                        closeCustomerModal();
+                        const msg = addedName ? `${addedName} has been added successfully.` : 'Customer added successfully.';
+                        showDynamicAlert(msg, 'success');
+                        setTimeout(() => window.location.reload(), 5000);
+                        return;
+                    }
+
+                    // If HTML contains known validation markers, surface a banner and log raw HTML to console for debugging
+                    const lc = (raw || '').toLowerCase();
+                    if (lc.includes('validation-summary') || lc.includes('field-validation') || lc.includes('error-message') || lc.includes('modelstate') || lc.includes('asp-validation-for')) {
+                        console.warn('Server returned HTML validation response for CreateCustomer:', raw);
+                        try { showDynamicAlert('Failed to add customer — check the form for errors.', 'danger'); } catch(e) { alert('Failed to add customer — check the form for errors.'); }
+                        // also keep modal open so inline errors (if any) remain visible
+                        return;
+                    }
+
+                    // Otherwise fallback: log raw and show generic success (server may have redirected without JSON)
+                    console.warn('CreateCustomer: unexpected non-JSON response:', raw);
+                    try { showDynamicAlert(addedName ? `${addedName} has been added.` : 'Customer added successfully.', 'success'); } catch(e) {}
+                    closeCustomerModal();
+                    setTimeout(() => window.location.reload(), 5000);
+                    return;
+                }
+
+                // If we reach here, data exists but data.success is falsy — fall through to error handling below
+                if (!(data && data.success)) {
                     // Handle validation errors
-                    if (data.errors) {
+                    if (data && data.errors) {
+                        // Helper: try multiple id/name variants to find the right error element
+                        const findErrorElement = (key) => {
+                            if (!key) return null;
+                            const candidates = [];
+                            candidates.push(`error-${key}`);
+                            // strip model prefix like "Pet." or "Customer."
+                            candidates.push(`error-${key.replace(/\./g,'-')}`);
+                            const simple = key.split('.').pop();
+                            candidates.push(`error-${simple}`);
+                            // PascalCase version
+                            const pascal = simple.charAt(0).toUpperCase() + simple.slice(1);
+                            candidates.push(`error-${pascal}`);
+                            // also try lowercase
+                            candidates.push(`error-${simple.toLowerCase()}`);
+
+                            for (const id of candidates) {
+                                const el = document.getElementById(id);
+                                if (el) return el;
+                            }
+                            return null;
+                        };
+
+                        const modalBanner = document.getElementById('customerModalErrorBanner');
+                        const fallbackMessages = [];
                         for (const fieldName in data.errors) {
-                            const errorElement = document.getElementById(`error-${fieldName}`);
+                            const msg = data.errors[fieldName];
+                            const errorElement = findErrorElement(fieldName);
                             if (errorElement) {
-                                errorElement.textContent = data.errors[fieldName];
-                                const inputElement = document.getElementById(`customer${fieldName}`);
-                                if(inputElement) inputElement.classList.add('is-invalid');
+                                errorElement.textContent = msg;
+                                errorElement.classList.remove('valid');
+                                // Try to highlight related input if present
+                                const simple = fieldName.split('.').pop();
+                                const inputByName = form.querySelector(`[name="${simple}"]`) || form.querySelector(`#${simple}`) || form.querySelector(`#customer${simple}`);
+                                if (inputByName) inputByName.classList.add('is-invalid');
                             } else {
-                                // Show general errors if a specific field isn't found
-                                alert(`Error: ${data.errors[fieldName]}`);
+                                // Collect fallback message and log for debugging
+                                fallbackMessages.push(msg || 'Validation error');
+                                console.warn('Unmapped validation key:', fieldName, 'message:', data.errors[fieldName], 'full response:', data);
                             }
                         }
+
+                        if (fallbackMessages.length > 0) {
+                            const text = fallbackMessages.join('\n');
+                            if (modalBanner) {
+                                modalBanner.textContent = text;
+                                modalBanner.style.display = 'block';
+                            } else {
+                                try { showDynamicAlert(text, 'danger'); } catch(e) { alert(text); }
+                            }
+                        }
+                    } else {
+                        // Unknown response — reload to be safe (give user time to see any message)
+                        closeCustomerModal();
+                        setTimeout(() => window.location.reload(), 5000);
                     }
                 }
             })
@@ -496,8 +677,10 @@
             try {
                 const response = await fetch('@Url.Action("ValidateCustomerField", "Home")', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'RequestVerificationToken': getAntiForgeryToken()
                     },
                     body: JSON.stringify({ CustomerId: null, FieldName: fieldName, FieldValue: fieldValue })
@@ -523,6 +706,104 @@
             }
         }
 
+        // Pet age validation for Add Customer modal (client-side)
+        function validatePetAge() {
+            const petAgeInput = document.getElementById('petAge');
+            const addPetCheckbox = document.getElementById('addPetCheckbox');
+            const errorEl = document.getElementById('error-PetAge');
+            const saveBtn = document.getElementById('saveCustomerBtn');
+            if (!petAgeInput || !errorEl) return true;
+
+            // If pet not being added, clear errors
+            if (addPetCheckbox && !addPetCheckbox.checked) {
+                errorEl.textContent = '';
+                petAgeInput.classList.remove('is-invalid');
+                petAgeInput.setCustomValidity('');
+                if (saveBtn) saveBtn.disabled = false;
+                return true;
+            }
+
+            const raw = petAgeInput.value;
+            if (raw === null || raw === undefined || raw === '') {
+                // empty allowed (user may not fill), but HTML required will catch if necessary
+                errorEl.textContent = '';
+                errorEl.classList.remove('valid');
+                petAgeInput.classList.remove('is-invalid');
+                petAgeInput.setCustomValidity('');
+                if (saveBtn) saveBtn.disabled = false;
+                return true;
+            }
+
+            const age = Number(raw);
+            if (Number.isNaN(age) || !isFinite(age)) {
+                errorEl.textContent = 'Age must be a number.';
+                errorEl.classList.remove('valid');
+                petAgeInput.classList.add('is-invalid');
+                petAgeInput.setCustomValidity('Invalid age');
+                if (saveBtn) saveBtn.disabled = true;
+                return false;
+            }
+
+            if (age < 0) {
+                errorEl.textContent = 'Age cannot be negative.';
+                errorEl.classList.remove('valid');
+                petAgeInput.classList.add('is-invalid');
+                petAgeInput.setCustomValidity('Age cannot be negative');
+                if (saveBtn) saveBtn.disabled = true;
+                return false;
+            }
+
+            if (age > 30) {
+                errorEl.textContent = 'Age cannot be greater than 30.';
+                errorEl.classList.remove('valid');
+                petAgeInput.classList.add('is-invalid');
+                petAgeInput.setCustomValidity('Age too large');
+                if (saveBtn) saveBtn.disabled = true;
+                return false;
+            }
+
+            // Valid
+            errorEl.textContent = '✓ Valid';
+            errorEl.classList.add('valid');
+            petAgeInput.classList.remove('is-invalid');
+            petAgeInput.setCustomValidity('');
+            if (saveBtn) saveBtn.disabled = false;
+            return true;
+        }
+
+        // Attach pet age validation handlers
+        (function attachPetAgeValidation() {
+            const petAgeInput = document.getElementById('petAge');
+            const addPetCheckbox = document.getElementById('addPetCheckbox');
+            if (petAgeInput) {
+                petAgeInput.addEventListener('input', validatePetAge);
+                petAgeInput.addEventListener('blur', validatePetAge);
+            }
+            if (addPetCheckbox) {
+                addPetCheckbox.addEventListener('change', function() {
+                    // Re-validate when toggling pet fields
+                    setTimeout(validatePetAge, 0);
+                });
+            }
+        })();
+        // Attach Enter-key handler so pressing Enter validates the field immediately
+        (function attachEnterValidation() {
+            const form = document.getElementById('customerForm');
+            if (!form) return;
+            const names = ['Name', 'Email', 'PhoneNumber', 'IC'];
+            names.forEach(n => {
+                const input = form.querySelector(`[name="${n}"]`);
+                if (!input) return;
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                        validateCustomerField(this);
+                    }
+                });
+            });
+        })();
+
         // Modal Management
         function openAddCustomerModal() {
             document.getElementById('customerModalOverlay').classList.add('show');
@@ -541,6 +822,13 @@
             document.getElementById('newCustomerNotice').style.display = 'block';
             switchModalTab('customer');
             resetPetFields();
+            // Clear selected photo preview state and clear file input
+            try {
+                selectedCustomerPhotos.length = 0;
+                const photoInput = document.getElementById('customerPhoto');
+                if (photoInput) photoInput.value = '';
+                renderPhotoPreviewList();
+            } catch (e) {}
         }
 
         function closeCustomerModal() {
@@ -569,11 +857,14 @@
         function togglePetFields() {
             const checkbox = document.getElementById('addPetCheckbox');
             const petFields = document.getElementById('petFields');
+            const petName = document.getElementById('petName');
+            const petType = document.getElementById('petType');
 
             if (checkbox.checked) {
                 petFields.style.display = 'block';
+                if (petName) petName.required = true;
+                if (petType) petType.required = true;
             } else {
-                petFields.style.display = 'none';
                 resetPetFields();
             }
         }
@@ -582,26 +873,166 @@
             document.getElementById('addPetCheckbox').checked = false;
             document.getElementById('petFields').style.display = 'none';
             const form = document.getElementById('customerForm');
-            if (form.querySelector('#petName')) form.querySelector('#petName').value = '';
-            if (form.querySelector('#petType')) form.querySelector('#petType').value = '';
+            
+            const pName = form.querySelector('#petName');
+            if (pName) { pName.value = ''; pName.required = false; }
+            
+            const pType = form.querySelector('#petType');
+            if (pType) { pType.value = ''; pType.required = false; }
+            
             if (form.querySelector('#petBreed')) form.querySelector('#petBreed').value = '';
             if (form.querySelector('#petAge')) form.querySelector('#petAge').value = '';
             if (form.querySelector('#petRemark')) form.querySelector('#petRemark').value = '';
         }
 
-        // File Upload Display
-        document.getElementById('customerPhoto')?.addEventListener('change', function() {
-            const files = Array.from(this.files || []);
+        // File Upload Display + selectable preview list
+        const selectedCustomerPhotos = []; // { id, file, selected }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Render selectable preview list and validate selected files
+        function renderPhotoPreviewList() {
+            const container = document.getElementById('photoPreviewList');
             const display = document.getElementById('photoFileName');
-            if (!display) return;
-            if (files.length ===0) {
+            const statusEl = document.getElementById('photoValidationMessage');
+            const saveBtn = document.getElementById('saveCustomerBtn');
+            if (!container || !display || !statusEl) return;
+            container.innerHTML = '';
+            if (!selectedCustomerPhotos || selectedCustomerPhotos.length === 0) {
                 display.textContent = 'No files chosen';
-            } else if (files.length ===1) {
-                display.textContent = files[0].name;
-            } else {
-                display.textContent = `${files.length} files selected`;
+                statusEl.textContent = '';
+                statusEl.classList.remove('valid');
+                if (saveBtn) saveBtn.disabled = false;
+                return;
             }
-        });
+
+            display.textContent = ` ${selectedCustomerPhotos.length} files`;
+
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            const invalidMessages = [];
+            const validNames = [];
+
+            // Build checkbox list so user can deselect any file after picking
+            selectedCustomerPhotos.forEach((item, idx) => {
+                const f = item.file;
+                const row = document.createElement('div');
+                row.className = 'photo-selected-item';
+
+                const left = document.createElement('div');
+                left.style.display = 'flex';
+                left.style.alignItems = 'center';
+
+                // Thumbnail
+                const img = document.createElement('img');
+                img.src = item.previewUrl || (f && URL.createObjectURL ? URL.createObjectURL(f) : '');
+                img.style.width = '48px';
+                img.style.height = '48px';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '6px';
+                img.style.marginRight = '8px';
+                left.appendChild(img);
+
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.checked = (item.selected !== false);
+                chk.style.marginRight = '8px';
+                chk.addEventListener('change', function () {
+                    selectedCustomerPhotos[idx].selected = this.checked;
+                    renderPhotoPreviewList();
+                });
+
+                const label = document.createElement('label');
+                label.style.cursor = 'pointer';
+                label.appendChild(document.createTextNode(`${f.name} (${formatBytes(f.size)}) `));
+
+                left.appendChild(chk);
+                left.appendChild(label);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-photo';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', function () {
+                    const url = selectedCustomerPhotos[idx] && selectedCustomerPhotos[idx].previewUrl;
+                    selectedCustomerPhotos.splice(idx, 1);
+                    try { if (url) URL.revokeObjectURL(url); } catch (e) {}
+                    renderPhotoPreviewList();
+                });
+
+                row.appendChild(left);
+                row.appendChild(removeBtn);
+                container.appendChild(row);
+
+                // Validation per-file (only consider checkbox-selected files)
+                if (!chk.checked) return;
+                if (allowedTypes.indexOf(f.type) === -1) {
+                    invalidMessages.push(`${f.name}: invalid file type`);
+                } else if (f.size > maxSize) {
+                    invalidMessages.push(`${f.name}: file too large (${formatBytes(f.size)})`);
+                } else {
+                    validNames.push(f.name);
+                }
+            });
+
+            if (invalidMessages.length > 0) {
+                statusEl.textContent = invalidMessages.join(', ');
+                statusEl.classList.remove('valid');
+                if (saveBtn) saveBtn.disabled = true;
+            } else {
+                const namesText = validNames.join(', ');
+                statusEl.textContent = namesText ? `✓ Selected: ${namesText}` : '';
+                if (namesText) statusEl.classList.add('valid'); else statusEl.classList.remove('valid');
+                if (saveBtn) saveBtn.disabled = false;
+            }
+        }
+
+        // Initialize photo input handlers (robustly query elements at runtime)
+        (function initCustomerPhotoHandlers() {
+            const customerPhotoInput = document.getElementById('customerPhoto');
+            const addBtn = document.getElementById('addCustomerPhotoBtn');
+            const clearBtn = document.getElementById('clearCustomerPhotosBtn');
+
+            if (addBtn) {
+                addBtn.addEventListener('click', function() {
+                    if (customerPhotoInput) customerPhotoInput.click();
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    selectedCustomerPhotos.forEach(it => { try { if (it.previewUrl) URL.revokeObjectURL(it.previewUrl); } catch(e){} });
+                    selectedCustomerPhotos.length = 0;
+                    if (customerPhotoInput) customerPhotoInput.value = '';
+                    renderPhotoPreviewList();
+                });
+            }
+
+            if (customerPhotoInput) {
+                customerPhotoInput.addEventListener('change', function() {
+                    const files = Array.from(this.files || []);
+                    if (!files.length) return;
+
+                    files.forEach(f => {
+                        const exists = selectedCustomerPhotos.some(it => it.file && it.file.name === f.name && it.file.size === f.size);
+                        if (!exists) {
+                            const previewUrl = (window.URL && URL.createObjectURL) ? URL.createObjectURL(f) : null;
+                            selectedCustomerPhotos.push({ id: Date.now() + Math.random(), file: f, selected: true, previewUrl });
+                        }
+                    });
+
+                    renderPhotoPreviewList();
+                    try { this.value = ''; } catch (e) {}
+                });
+            }
+        })();
 
         // Auto-format phone input (attach to correct element id)
         document.getElementById('customerPhoneNumber')?.addEventListener('input', function(e) {
@@ -615,7 +1046,7 @@
         }
 
         function deleteCustomer(customerId, customerName) {
-            if (confirm(`Are you sure you want to delete ${customerName}? This action cannot be undone.`)) {
+            const performDelete = function() {
                 fetch(`/Admin/Home/DeleteCustomer`, {
                     method: 'POST',
                     headers: {
@@ -625,17 +1056,26 @@
                     body: `customerId=${encodeURIComponent(customerId)}`
                 })
                 .then(response => {
-                    if (response.ok || response.redirected) {
-                        alert(`${customerName} has been deleted successfully.`);
-                        location.reload();
-                    } else {
-                        alert('Failed to delete customer. Please try again.');
+                        if (response.ok || response.redirected) {
+                            showDynamicAlert(`${customerName} has been deleted successfully.`, 'success');
+                            // Give users 5 seconds to read the success message before reload
+                            setTimeout(() => location.reload(), 5000);
+                        } else {
+                        showDynamicAlert('Failed to delete customer. Please try again.', 'danger');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the customer.');
+                    showDynamicAlert('An error occurred while deleting the customer.', 'danger');
                 });
+            };
+
+            if (typeof window.openConfirmModal === 'function') {
+                window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${customerName}"? This action cannot be undone.`, performDelete);
+            } else {
+                if (confirm(`Are you sure you want to delete "${customerName}"? This action cannot be undone.`)) {
+                    performDelete();
+                }
             }
         }
 
@@ -710,6 +1150,92 @@
         }, 5000);
     })();
 
+    // Filter reset: submit the filter form after native reset so the listing updates
+    (function attachFilterReset() {
+        const filterForm = document.querySelector('.filter-form');
+        if (!filterForm) return;
+        filterForm.addEventListener('reset', function (e) {
+            // native reset happens first; use setTimeout to wait for it to complete
+            setTimeout(() => {
+                try { filterForm.submit(); } catch (err) { console.error('Filter reset submit failed', err); }
+            }, 0);
+        });
+    })();
+
+// Page-local confirm modal and helpers (Groomer style). Uses requestSubmit where possible so
+// the form's onsubmit/AJAX handlers are triggered instead of bypassing them.
+    window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
+        try { ensureConfirmModal(); } catch (e) {}
+        const modal = document.getElementById('confirmModal');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const confirmIcon = document.getElementById('confirmIcon');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+        if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+            if (confirm(message)) { confirmCallback && confirmCallback(); }
+            return;
+        }
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmIcon.textContent = icon || 'help_outline';
+        confirmIcon.style.color = iconColor || '#000';
+        modal.classList.add('show');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        newConfirmBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (typeof confirmCallback === 'function') confirmCallback();
+            modal.classList.remove('show');
+        });
+    };
+
+    window.closeConfirmModal = function() { const modal = document.getElementById('confirmModal'); if (modal) modal.classList.remove('show'); };
+
+    window.openConfirmModal = function(title, message, callback) { window.showConfirmModal(title, message, 'delete', '#ef4444', callback); };
+
+    window.confirmDelete = function(event, name) {
+        if (event && event.preventDefault) event.preventDefault();
+        const form = event && event.target ? event.target : null;
+        window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${name}"?`, function() {
+            if (form) {
+                if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.submit();
+            }
+        });
+        return false;
+    };
+
+
+
+    // Ensure openConfirmAdd is defined globally (outside the fallback block)
+    // because it is specific to this page's form logic
+    window.openConfirmAdd = function() {
+        const form = document.getElementById('customerForm');
+        
+        // Validate form before confirming
+        if (form && typeof form.checkValidity === 'function' && !form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const nameInput = form ? form.querySelector('[name="Name"]') : null;
+        const name = nameInput ? (nameInput.value || 'customer') : 'customer';
+        
+        // Use showConfirmModal if available (green for add), else native confirm
+        if (typeof window.showConfirmModal === 'function') {
+             window.showConfirmModal('Confirm Add', `Are you sure you want to add "${name}"?`, 'save', '#10b981', function() {
+                if (form) {
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.submit();
+                }
+            });
+        } else {
+            if (confirm(`Are you sure you want to add "${name}"?`)) {
+                if (form) {
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.submit();
+                }
+            }
+        }
+    };
+
     function showDynamicAlert(message, type) {
         try {
             // Remove existing dynamic alert if present
@@ -721,16 +1247,18 @@
             const bsClass = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
             alertDiv.className = `alert ${bsClass}`;
             alertDiv.setAttribute('role', 'alert');
+            // Position the alert as a long banner from the sidebar to the right edge (Groomer-style)
             alertDiv.style.position = 'fixed';
-            alertDiv.style.top = '20px';
-            alertDiv.style.left = '50%';
-            alertDiv.style.transform = 'translateX(-50%)';
+            alertDiv.style.top = '85px';
+            alertDiv.style.left = 'calc(var(--sidebar-width) + 35px)';
+            alertDiv.style.right = '35px';
             alertDiv.style.zIndex = '22000';
-            alertDiv.style.minWidth = '300px';
-            alertDiv.style.boxShadow = '06px20px rgba(0,0,0,0.12)';
-            alertDiv.style.borderRadius = '8px';
-            alertDiv.style.padding = '12px18px';
-            alertDiv.innerHTML = `<strong>${type === 'success' ? '✔️ Success' : (type === 'warning' ? '⚠️ Warning' : '❌ Error')}:</strong> ${message}`;
+            alertDiv.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)';
+            alertDiv.style.borderRadius = '12px';
+            alertDiv.style.padding = '20px 32px';
+            alertDiv.style.fontSize = '18px';
+            alertDiv.style.fontWeight = '600';
+            alertDiv.innerHTML = `<span style="margin-right:12px; font-size:22px;">${type === 'success' ? '✔️' : (type === 'warning' ? '⚠️' : '❌')}</span><strong style="margin-right:8px;">${type === 'success' ? 'Success:' : (type === 'warning' ? 'Warning:' : 'Error:')}</strong> ${message}`;
 
             document.body.appendChild(alertDiv);
 
@@ -738,12 +1266,12 @@
             setTimeout(() => {
                 if (alertDiv) {
                     alertDiv.classList.add('fade-out');
-                    alertDiv.style.transition = 'opacity0.4s ease, transform0.4s ease';
+                    alertDiv.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
                     alertDiv.style.opacity = '0';
-                    alertDiv.style.transform = 'translateX(-50%) translateY(-10px)';
-                    setTimeout(() => { alertDiv.remove(); },450);
+                    alertDiv.style.transform = 'translateY(-10px)';
+                    setTimeout(() => { alertDiv.remove(); }, 450);
                 }
-            },5000);
+            }, 5000);
         } catch (e) {
             console.error('showDynamicAlert error:', e);
         }

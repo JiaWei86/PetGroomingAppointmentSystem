@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -336,6 +337,8 @@ public class HomeController : Controller
         }
     }
 
+    // (CustomerFieldValidationRequest and ValidateCustomerField moved earlier so they are inside the class)
+
 
     // ========== GROOMER
     // GET: List all groomers
@@ -661,7 +664,15 @@ public class HomeController : Controller
     // POST: Create Customer
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateCustomer(RegisterViewModel model, IFormFile PhotoUpload)
+    public async Task<IActionResult> CreateCustomer(
+        RegisterViewModel model, 
+        IEnumerable<IFormFile> Photos,
+        bool AddPet,
+        string PetName,
+        string PetType,
+        string PetBreed,
+        int? PetAge,
+        string? PetRemark)
     {
         // Remove Password validation for admin-created customers (password is auto-generated)
         ModelState.Remove("Password");
@@ -751,26 +762,40 @@ public class HomeController : Controller
             Photo = "/uploads/placeholder.png"
         };
 
-        // ✅ Upload photo to S3 instead of local storage
-        if (PhotoUpload != null && PhotoUpload.Length > 0)
+        // ✅ Upload one or more photos to S3 instead of local storage
+        if (Photos != null)
         {
-            try
+            var uploadedUrls = new List<string>();
+            foreach (var file in Photos)
             {
-                using var memoryStream = new MemoryStream();
-                await PhotoUpload.CopyToAsync(memoryStream);
-                var base64String = Convert.ToBase64String(memoryStream.ToArray());
-                var contentType = PhotoUpload.ContentType ?? "image/jpeg";
-                var base64Image = $"data:{contentType};base64,{base64String}";
+                if (file == null || file.Length == 0) continue;
+                try
+                {
+                    using var memoryStream = new MemoryStream();
+                    await file.CopyToAsync(memoryStream);
+                    var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                    var contentType = file.ContentType ?? "image/jpeg";
+                    var base64Image = $"data:{contentType};base64,{base64String}";
 
-                var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
-                    base64Image,
-                    $"customers/{newCustomerId}"
-                );
-                customer.Photo = cloudFrontUrl;
+                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                        base64Image,
+                        $"customers/{newCustomerId}"
+                    );
+                    if (!string.IsNullOrEmpty(cloudFrontUrl)) uploadedUrls.Add(cloudFrontUrl);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            if (uploadedUrls.Any())
             {
-                Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
+                // store comma-separated list of URLs
+                customer.Photo = string.Join(',', uploadedUrls);
+            }
+            else
+            {
                 customer.Photo = "/uploads/placeholder.png";
             }
         }
@@ -780,6 +805,67 @@ public class HomeController : Controller
         {
             _db.Customers.Add(customer);
             await _db.SaveChangesAsync();
+
+            // If "Add Pet" was checked, create and save the pet
+            if (AddPet)
+            {
+                // Basic validation for pet
+                if (string.IsNullOrWhiteSpace(PetName) || string.IsNullOrWhiteSpace(PetType) || string.IsNullOrWhiteSpace(PetBreed) || PetAge == null)
+                {
+                    // Note: Customer is already created. This is not ideal.
+                    // A transaction would be better, but for now, we proceed and show an error for the pet part.
+                    TempData["WarningMessage"] = $"Customer '{customer.Name}' was created, but the pet was not added because Pet Name, Type, Breed and Age are required.";
+                    return RedirectToAction(nameof(Customer));
+                }
+
+                // Smart ID Generation for Pet
+                var allPetIds = await _db.Pets
+                    .Select(p => p.PetId)
+                    .Where(id => id != null && id.StartsWith("P"))
+                    .ToListAsync();
+
+                var usedPetNumbers = allPetIds
+                    .Select(id => int.TryParse(id.Substring(1), out var n) ? n : 0)
+                    .Where(n => n > 0)
+                    .OrderBy(n => n)
+                    .ToList();
+
+                int nextPetNumber = 1;
+                if (usedPetNumbers.Any())
+                {
+                    bool foundGap = false;
+                    foreach (var num in usedPetNumbers)
+                    {
+                        if (num != nextPetNumber)
+                        {
+                            foundGap = true;
+                            break;
+                        }
+                        nextPetNumber++;
+                    }
+                    if (!foundGap)
+                    {
+                        nextPetNumber = usedPetNumbers.Max() + 1;
+                    }
+                }
+                string newPetId = "P" + nextPetNumber.ToString("D3");
+
+                var newPet = new Pet
+                {
+                    PetId = newPetId,
+                    Name = PetName,
+                    Type = PetType,
+                    Breed = PetBreed,
+                    Age = PetAge,
+                    Remark = PetRemark,
+                    CustomerId = newCustomerId, // Link to the new customer
+                    AdminId = HttpContext.Session.GetString("AdminId"),
+                    Photo = "/uploads/pet-placeholder.png" // Default photo for pet
+                };
+
+                _db.Pets.Add(newPet);
+                await _db.SaveChangesAsync(); // Save the new pet
+            }
         }
         catch (Exception dbEx)
         {
@@ -826,7 +912,7 @@ public class HomeController : Controller
     // POST: Edit Customer
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditCustomer(string customerId, Models.Customer customer, IFormFile PhotoUpload)
+    public async Task<IActionResult> EditCustomer(string customerId, Models.Customer customer, IEnumerable<IFormFile> Photos)
     {
         var dbCustomer = await _db.Customers.FindAsync(customerId);
 
@@ -839,27 +925,41 @@ public class HomeController : Controller
         dbCustomer.IC = customer.IC;
         dbCustomer.Status = customer.Status;
 
-        // ✅ Upload new photo to S3 if provided
-        if (PhotoUpload != null && PhotoUpload.Length > 0)
+        // ✅ Upload one or more photos to S3 if provided
+        if (Photos != null)
         {
-            try
+            var uploadedUrls = new List<string>();
+            foreach (var file in Photos)
             {
-                using var memoryStream = new MemoryStream();
-                await PhotoUpload.CopyToAsync(memoryStream);
-                var base64String = Convert.ToBase64String(memoryStream.ToArray());
-                var contentType = PhotoUpload.ContentType ?? "image/jpeg";
-                var base64Image = $"data:{contentType};base64,{base64String}";
+                if (file == null || file.Length == 0) continue;
+                try
+                {
+                    using var memoryStream = new MemoryStream();
+                    await file.CopyToAsync(memoryStream);
+                    var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                    var contentType = file.ContentType ?? "image/jpeg";
+                    var base64Image = $"data:{contentType};base64,{base64String}";
 
-                var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
-                    base64Image,
-                    $"customers/{customerId}"
-                );
-                dbCustomer.Photo = cloudFrontUrl;
+                    var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                        base64Image,
+                        $"customers/{customerId}"
+                    );
+                    if (!string.IsNullOrEmpty(cloudFrontUrl)) uploadedUrls.Add(cloudFrontUrl);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+
+            if (uploadedUrls.Any())
             {
-                Console.WriteLine($"Error uploading customer photo to S3: {ex.Message}");
-                // Keep existing photo if S3 upload fails
+                // if there were existing photos, append new ones, else replace
+                var existing = dbCustomer.Photo;
+                var combined = (string.IsNullOrEmpty(existing) || existing == "/uploads/placeholder.png")
+                    ? string.Join(',', uploadedUrls)
+                    : string.Join(',', existing.Split(',').Concat(uploadedUrls));
+                dbCustomer.Photo = combined;
             }
         }
 
@@ -878,9 +978,33 @@ public class HomeController : Controller
         if (dbCustomer == null)
             return NotFound();
 
+        // Prevent deletion if there are any appointments that are not completed
+        var hasIncompleteAppointments = await _db.Appointments
+            .AnyAsync(a => a.CustomerId == customerId && a.Status != "Completed");
+
+        if (hasIncompleteAppointments)
+        {
+            TempData["ErrorMessage"] = "Cannot delete customer while they have incomplete appointments.";
+            return RedirectToAction(nameof(CustomerProfile), new { customerId = customerId });
+        }
+
+        // Safe to delete: remove related appointments (completed ones) and pets to avoid FK issues
+        var relatedAppointments = await _db.Appointments.Where(a => a.CustomerId == customerId).ToListAsync();
+        if (relatedAppointments.Any())
+        {
+            _db.Appointments.RemoveRange(relatedAppointments);
+        }
+
+        var relatedPets = await _db.Pets.Where(p => p.CustomerId == customerId).ToListAsync();
+        if (relatedPets.Any())
+        {
+            _db.Pets.RemoveRange(relatedPets);
+        }
+
         _db.Customers.Remove(dbCustomer);
         await _db.SaveChangesAsync();
 
+        TempData["SuccessMessage"] = "Customer deleted successfully.";
         return RedirectToAction(nameof(Customer));
     }
     // ========== ADD PET TO CUSTOMER ==========
@@ -902,26 +1026,37 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Customer ID and Pet Name are required" });
             }
 
-            // Generate sequential PetId (P001, P002, etc.)
-            int nextNumber = 1;
-
+            // Generate sequential PetId (P001, P002, etc.) with gap-filling
             var existingPetIds = await _db.Pets
-                .Where(p => p.PetId.StartsWith("P"))
+                .Where(p => p.PetId != null && p.PetId.StartsWith("P"))
                 .Select(p => p.PetId)
                 .ToListAsync();
 
-            if (existingPetIds.Any())
+            string petId;
+            if (!existingPetIds.Any())
             {
-                // Extract numeric part and find the maximum
-                nextNumber = existingPetIds
+                petId = "P001";
+            }
+            else
+            {
+                var usedNumbers = existingPetIds
                     .Select(id => int.TryParse(id.Substring(1), out var n) ? n : 0)
                     .Where(n => n > 0)
                     .OrderBy(n => n)
-                    .ToList()
-                    .Last() + 1;
-            }
+                    .ToList();
 
-            var petId = $"P{nextNumber:D3}";
+                int nextNumber = 1;
+                foreach (var num in usedNumbers)
+                {
+                    if (num != nextNumber) break;
+                    nextNumber++;
+                }
+
+                if (nextNumber <= usedNumbers.Max())
+                    petId = "P" + nextNumber.ToString("D3");
+                else
+                    petId = "P" + (usedNumbers.Max() + 1).ToString("D3");
+            }
             string? photoPath = null;
 
             // ✅ Upload photo to S3 if provided
@@ -3015,5 +3150,105 @@ public class HomeController : Controller
             errors["Description"] = "Description must be 500 characters or fewer.";
 
         return errors;
+    }
+
+    // Request model for customer field validation
+    public class CustomerFieldValidationRequest
+    {
+        public string CustomerId { get; set; } = string.Empty;
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldValue { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// AJAX endpoint for validating customer fields (used by admin Add/Edit customer forms)
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> ValidateCustomerField([FromBody] CustomerFieldValidationRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.FieldName))
+            return Json(new { isValid = false, errorMessage = "Invalid validation request." });
+        try
+        {
+            var fieldNameNormalized = request.FieldName.Trim().ToLowerInvariant();
+            var valueToCheck = (request.FieldValue ?? string.Empty).Trim();
+            bool isDuplicate = false;
+            string errorMessage = string.Empty;
+
+            switch (fieldNameNormalized)
+            {
+                case "name":
+                    if (!_validationService.ValidateName(valueToCheck))
+                        return Json(new { isValid = false, errorMessage = "Name must be 3-200 characters and contain only letters/spaces." });
+                    break;
+
+                case "ic":
+                    // Detailed IC validation: format, not future date, age >= 18
+                    var icPattern = "^\\d{6}-\\d{2}-\\d{4}$";
+                    if (!Regex.IsMatch(valueToCheck, icPattern))
+                        return Json(new { isValid = false, errorMessage = "Invalid IC format. Expected xxxxxx-xx-xxxx (e.g. 900101-01-1234)." });
+
+                    // Parse date portion
+                    string datePart = valueToCheck.Substring(0, 6);
+                    if (!int.TryParse(datePart.Substring(0, 2), out int yy) || !int.TryParse(datePart.Substring(2, 2), out int mm) || !int.TryParse(datePart.Substring(4, 2), out int dd))
+                        return Json(new { isValid = false, errorMessage = "Invalid IC date segment. Expected YYMMDD in the first 6 digits." });
+
+                    int fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+                    DateTime today = DateTime.Now.Date;
+                    DateTime birthDate;
+                    try
+                    {
+                        birthDate = new DateTime(fullYear, mm, dd);
+                    }
+                    catch
+                    {
+                        return Json(new { isValid = false, errorMessage = "Invalid birth date in IC." });
+                    }
+
+                    if (birthDate > today)
+                        return Json(new { isValid = false, errorMessage = "Birth date cannot be in the future." });
+
+                    int age = today.Year - birthDate.Year;
+                    if (today.Month < birthDate.Month || (today.Month == birthDate.Month && today.Day < birthDate.Day)) age--;
+                    if (age < 18)
+                        return Json(new { isValid = false, errorMessage = "Customer must be at least 18 years old." });
+
+                    isDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.IC == valueToCheck)
+                        : await _db.Customers.AnyAsync(c => c.IC == valueToCheck && c.UserId != request.CustomerId);
+                    if (isDuplicate) errorMessage = "This IC number is already registered.";
+                    break;
+
+                case "email":
+                    if (!_validationService.ValidateEmail(valueToCheck))
+                        return Json(new { isValid = false, errorMessage = "Please enter a valid email address." });
+                    isDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.Email.ToLower() == valueToCheck.ToLower())
+                        : await _db.Customers.AnyAsync(c => c.Email.ToLower() == valueToCheck.ToLower() && c.UserId != request.CustomerId);
+                    if (isDuplicate) errorMessage = "This email address is already in use.";
+                    break;
+
+                case "phone":
+                    var formattedPhone = _phoneService.FormatPhoneNumber(valueToCheck);
+                    if (!_phoneService.ValidatePhoneFormat(formattedPhone))
+                        return Json(new { isValid = false, errorMessage = "Phone format must be 01X-XXXXXXX or 01X-XXXXXXXX." });
+                    isDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.Phone == formattedPhone)
+                        : await _db.Customers.AnyAsync(c => c.Phone == formattedPhone && c.UserId != request.CustomerId);
+                    if (isDuplicate) errorMessage = "This phone number is already registered.";
+                    break;
+
+                default:
+                    return Json(new { isValid = false, errorMessage = "Invalid field for validation." });
+            }
+
+            if (isDuplicate) return Json(new { isValid = false, errorMessage = errorMessage });
+            return Json(new { isValid = true });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ValidateCustomerField error: {ex.Message}");
+            return Json(new { isValid = false, errorMessage = "An unexpected error occurred during validation." });
+        }
     }
 }
