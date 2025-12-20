@@ -34,7 +34,7 @@ public class EmailService : IEmailService
     <html>
             <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
            <div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
-        <h2 style='color: #ff9500; text-align: center;'>Welcome to Hajimi House Pet Grooming!</h2>
+        <h2 style='color: #ff9500; text-align: center;'>🐾 Welcome to Hajimi House Pet Grooming!</h2>
       
       <p>Dear <strong>{staffName}</strong>,</p>
   

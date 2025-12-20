@@ -96,6 +96,24 @@
                 </div>
             </div>
 
+                    <!-- Confirmation Modal (page-local, reused from Groomer) -->
+                    <div id="confirmModal" class="modal-backdrop">
+                        <div class="modal-content">
+                            <span class="close-btn" onclick="closeConfirmModal()">&times;</span>
+                            <div style="text-align: center; padding: 20px 0;">
+                                <div style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;">
+                                    <i class="material-icons" id="confirmIcon" style="font-size: 64px;">help_outline</i>
+                                </div>
+                                <h3 id="confirmTitle" style="margin-bottom: 15px; color: var(--text-color);">Confirm Action</h3>
+                                <p id="confirmMessage" style="color: var(--text-light); margin-bottom: 30px; font-size: 15px;"></p>
+                                <div style="display: flex; gap: 12px; justify-content: center;">
+                                    <button onclick="closeConfirmModal()" class="btn btn-action" style="min-width: 100px;">Cancel</button>
+                                    <button id="confirmBtn" class="btn btn-primary" style="min-width: 100px;">Confirm</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
             <!-- Quick Actions -->
             <div class="quick-actions-card">
                 <h6>Quick Actions</h6>
@@ -236,7 +254,7 @@
             <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
-        <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data">
+        <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data" onsubmit="return confirmEditProfile(event, '@Model?.Name')">
             @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
@@ -319,10 +337,14 @@
             @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
-            <div style="text-align:center;margin-bottom:12px;">
-              <img id="addPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
-              <input type="file" id="addPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
-            </div>
+                        <div style="text-align:center;margin-bottom:12px;">
+                            <img id="addPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
+                            <input type="file" id="addPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
+                            <div style="margin-top:8px;">
+                                <span id="addPetPhotoFileName" class="file-name-display">No file chosen</span>
+                                <small id="addPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
+                            </div>
+                        </div>
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
@@ -361,7 +383,7 @@
 
             <div class="modal-form-footer">
                 <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Add Pet</button>
+                <button type="submit" class="btn btn-primary" id="addPetSaveBtn">💾 Add Pet</button>
             </div>
         </form>
     </div>
@@ -430,10 +452,14 @@
             <input type="hidden" id="editPetId" name="petId" value="" />
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
-            <div style="text-align:center;margin-bottom:12px;">
-              <img id="editPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
-              <input type="file" id="editPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
-            </div>
+                        <div style="text-align:center;margin-bottom:12px;">
+                            <img id="editPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
+                            <input type="file" id="editPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
+                            <div style="margin-top:8px;">
+                                <span id="editPetPhotoFileName" class="file-name-display">No file chosen</span>
+                                <small id="editPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
+                            </div>
+                        </div>
 
             <div class="modal-form-grid-2">
                 <div class="modal-form-group">
@@ -471,7 +497,7 @@
 
             <div class="modal-form-footer">
                 <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Save Pet</button>
+                <button type="submit" class="btn btn-primary" id="editPetSaveBtn">💾 Save Pet</button>
             </div>
         </form>
     </div>
@@ -594,6 +620,29 @@
     .existing-photo-item .delete-photo-btn:focus { outline: none; box-shadow: 0 4px 8px rgba(255,149,0,0.15); }
 </style>
 
+<style>
+    /* Groomer-style alert & modal (copied for consistent look) */
+    @@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+    #alertMessage { position: fixed; top: 85px; left: calc(var(--sidebar-width) + 35px); right: 35px; animation: slideDown 0.5s ease; box-shadow: 0 8px 20px rgba(0,0,0,0.25); padding: 24px 32px !important; font-size: 18px !important; font-weight: 600 !important; border-radius: 12px !important; border-width: 3px !important; }
+    #alertMessage.alert-success { background: linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%) !important; color:#065f46 !important; border-left:6px solid #10b981 !important; }
+    #alertMessage.alert-danger { background: linear-gradient(135deg,#fee2e2 0%,#fecaca 100%) !important; color:#991b1b !important; border-left:6px solid #ef4444 !important; }
+    #alertMessage.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
+
+    .alert { position: fixed; top: 85px; left: calc(var(--sidebar-width) + 35px); right: 35px; z-index: 9999; padding: 24px 32px !important; font-size: 18px !important; font-weight: 600 !important; border-radius: 12px !important; box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important; animation: slideDown 0.5s ease !important; }
+    .alert.alert-success { background: linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%) !important; color: #065f46 !important; border-left: 6px solid #10b981 !important; }
+    .alert.alert-danger { background: linear-gradient(135deg,#fee2e2 0%,#fecaca 100%) !important; color:#991b1b !important; border-left:6px solid #ef4444 !important; }
+    .alert.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
+
+    /* Modal Styles */
+    .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal-backdrop.show { display:flex; }
+    .modal-content { background-color:white; padding:20px; border-radius:8px; max-width:500px; width:90%; position:relative; }
+    .close-btn { position:absolute; top:10px; right:10px; font-size:24px; cursor:pointer; color:#666; }
+    .close-btn:hover { color:#000; }
+</style>
+
 @section Scripts {
     <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -639,6 +688,71 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!modal) return;
         modal.classList.remove('show');
         document.body.style.overflow = 'auto';
+    }
+
+    // Page-local confirm modal fallback (reuse Groomer pattern)
+    if (typeof window.showConfirmModal !== 'function') {
+        window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
+            try { ensureConfirmModal(); } catch (e) {}
+            const modal = document.getElementById('confirmModal');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const confirmIcon = document.getElementById('confirmIcon');
+            const confirmTitle = document.getElementById('confirmTitle');
+            const confirmMessage = document.getElementById('confirmMessage');
+            if (!modal || !confirmBtn || !confirmIcon || !confirmTitle || !confirmMessage) {
+                if (confirm(message)) { confirmCallback && confirmCallback(); }
+                return;
+            }
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            confirmIcon.textContent = icon || 'help_outline';
+            confirmIcon.style.color = iconColor || '#000';
+            modal.classList.add('show');
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            newConfirmBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (typeof confirmCallback === 'function') confirmCallback();
+                modal.classList.remove('show');
+            });
+        };
+
+        window.closeConfirmModal = function() { const modal = document.getElementById('confirmModal'); if (modal) modal.classList.remove('show'); };
+
+        window.openConfirmModal = function(title, message, callback) { window.showConfirmModal(title, message, 'help_outline', '#ef4444', callback); };
+
+        window.confirmEditProfile = function(event, name) {
+            if (event && event.preventDefault) event.preventDefault();
+            const form = event && event.target ? event.target : null;
+            window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, function() {
+                if (form) form.submit();
+            });
+            return false;
+        };
+    }
+
+    // showDynamicAlert fallback
+    if (typeof window.showDynamicAlert !== 'function') {
+        window.showDynamicAlert = function(message, type) {
+            const existing = document.getElementById('dynamicAlert');
+            if (existing) existing.remove();
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'dynamicAlert';
+            const bsClass = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
+            alertDiv.className = `alert ${bsClass}`;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.left = '50%';
+            alertDiv.style.transform = 'translateX(-50%)';
+            alertDiv.style.zIndex = '22000';
+            alertDiv.style.minWidth = '300px';
+            alertDiv.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)';
+            alertDiv.style.borderRadius = '8px';
+            alertDiv.style.padding = '12px 18px';
+            alertDiv.innerHTML = `<strong>${type === 'success' ? '✔️ Success' : (type === 'warning' ? '⚠️ Warning' : '❌ Error')}:</strong> ${message}`;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => { alertDiv.classList.add('fade-out'); alertDiv.style.transition = 'opacity 0.4s ease, transform 0.4s ease'; alertDiv.style.opacity = '0'; alertDiv.style.transform = 'translateX(-50%) translateY(-10px)'; setTimeout(() => { alertDiv.remove(); }, 450); }, 5000);
+        };
     }
 
     // Switches between tabs (Pets and Loyalty).
@@ -765,7 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     successMessage.textContent = 'Pet added successfully! Reloading...';
                     successMessage.style.display = 'block';
                 }
-                setTimeout(() => window.location.reload(),1500);
+                setTimeout(() => window.location.reload(),5000);
             } else {
                 // If server returned JSON, prefer its message. Otherwise use raw text or a generic error.
                 let errorMsg = 'An unknown error occurred.';
@@ -915,6 +1029,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         
         document.getElementById('addPetBtn')?.addEventListener('click', () => openModal(addPetModal));
+        // Attach add pet form submit handler
+        document.getElementById('addPetForm')?.addEventListener('submit', handleAddPetSubmit);
         document.querySelectorAll('.add-new-pet-btn').forEach(btn => btn.addEventListener('click', () => openModal(addPetModal)));
 
         document.getElementById('adjustLoyaltyBtn')?.addEventListener('click', () => openModal(adjustLoyaltyModal));
@@ -961,48 +1077,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             if (deleteBtn) {
-                const petId = deleteBtn.dataset.petId;
-                const petName = deleteBtn.dataset.petName || 'this pet';
-                if (!confirm(`Delete ${petName}?`)) return;
+                    const petId = deleteBtn.dataset.petId;
+                    const petName = deleteBtn.dataset.petName || 'this pet';
+                    window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, function() {
+                        // proceed with delete
+                        const formData = new FormData();
+                        formData.append('petId', petId);
+                        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                        if (token) formData.append('__RequestVerificationToken', token);
 
-                // build FormData like customer-side to ensure antiforgery token binds
-                const formData = new FormData();
-                formData.append('petId', petId);
-                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-                if (token) formData.append('__RequestVerificationToken', token);
+                        deleteBtn.disabled = true;
+                        const originalText = deleteBtn.innerHTML;
+                        deleteBtn.innerHTML = 'Deleting...';
 
-                // disable button while request is running
-                deleteBtn.disabled = true;
-                const originalText = deleteBtn.innerHTML;
-                deleteBtn.innerHTML = 'Deleting...';
-
-                fetch('@Url.Action("DeletePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData })
-                .then(async response => {
-                    const text = await response.text();
-                    try {
-                        const data = text ? JSON.parse(text) : {};
-                        if (data.success) {
-                            // mirror customer behavior: reload on success
-                            location.reload();
-                        } else {
-                            console.error('DeletePet error response:', data);
-                            alert(data.message || 'Delete failed');
+                        fetch('@Url.Action("DeletePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData })
+                        .then(async response => {
+                            const text = await response.text();
+                            try {
+                                const data = text ? JSON.parse(text) : {};
+                                if (data.success) {
+                                    showDynamicAlert(`${petName} deleted.`, 'success');
+                                    setTimeout(() => location.reload(), 5000);
+                                } else {
+                                    console.error('DeletePet error response:', data);
+                                    showDynamicAlert(data.message || 'Delete failed', 'danger');
+                                    deleteBtn.disabled = false;
+                                    deleteBtn.innerHTML = originalText;
+                                }
+                            } catch (err) {
+                                console.error('Failed to parse DeletePet response as JSON:', text, err);
+                                showDynamicAlert('Server error while deleting pet.', 'danger');
+                                deleteBtn.disabled = false;
+                                deleteBtn.innerHTML = originalText;
+                            }
+                        })
+                        .catch(err => {
+                            console.error('DeletePet request failed:', err);
+                            showDynamicAlert('Request failed. See console for details.', 'danger');
                             deleteBtn.disabled = false;
                             deleteBtn.innerHTML = originalText;
-                        }
-                    } catch (err) {
-                        console.error('Failed to parse DeletePet response as JSON:', text, err);
-                        alert('Server error while deleting pet. See console for details.');
-                        deleteBtn.disabled = false;
-                        deleteBtn.innerHTML = originalText;
-                    }
-                })
-                .catch(err => {
-                    console.error('DeletePet request failed:', err);
-                    alert('Request failed. See console for details.');
-                    deleteBtn.disabled = false;
-                    deleteBtn.innerHTML = originalText;
-                });
+                        });
+                    });
+
             }
         });
 
@@ -1026,9 +1142,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 let data = {};
                 try { data = text ? JSON.parse(text) : {}; } catch { data = { success: false, message: text || 'Invalid server response' }; }
 
-                if (response.ok && data.success) {
-                    if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
-                    setTimeout(() => { closeModal(editPetModal); location.reload(); },900);
+                    if (response.ok && data.success) {
+                        if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
+                        setTimeout(() => { closeModal(editPetModal); location.reload(); },5000);
                 } else {
                     if (errorMessage) { errorMessage.textContent = data.message || 'Failed to update pet'; errorMessage.style.display = 'block'; }
                 }
@@ -1050,17 +1166,88 @@ document.addEventListener('DOMContentLoaded', function () {
     // preview handler for add pet photo
     const addPetPhotoUpload = document.getElementById('addPetPhotoUpload');
     if (addPetPhotoUpload) {
-      addPetPhotoUpload.addEventListener('change', function (e) {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = evt => {
-          const img = document.getElementById('addPetPhotoPreview');
-          if (img) img.src = evt.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
+            addPetPhotoUpload.addEventListener('change', function (e) {
+                const file = e.target.files && e.target.files[0];
+                const fileNameEl = document.getElementById('addPetPhotoFileName');
+                const validationEl = document.getElementById('addPetPhotoValidationMessage');
+                const saveBtn = document.getElementById('addPetSaveBtn') || (document.getElementById('addPetForm')?.querySelector('button[type="submit"]'));
+                if (!file) {
+                        if (fileNameEl) fileNameEl.textContent = 'No file chosen';
+                        if (validationEl) validationEl.textContent = '';
+                        if (saveBtn) saveBtn.disabled = false;
+                        return;
+                }
+
+                if (fileNameEl) fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`;
+                const err = validatePetFile(file);
+                if (err) {
+                        if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); }
+                        if (saveBtn) saveBtn.disabled = true;
+                } else {
+                        if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.add('valid'); }
+                        if (saveBtn) saveBtn.disabled = false;
+                }
+
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    const img = document.getElementById('addPetPhotoPreview');
+                    if (img) img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
     }
+    
+        // preview + validation handler for edit pet photo
+        const editPetPhotoUpload = document.getElementById('editPetPhotoUpload');
+        if (editPetPhotoUpload) {
+            editPetPhotoUpload.addEventListener('change', function (e) {
+                const file = e.target.files && e.target.files[0];
+                const fileNameEl = document.getElementById('editPetPhotoFileName');
+                const validationEl = document.getElementById('editPetPhotoValidationMessage');
+                const saveBtn = document.getElementById('editPetSaveBtn') || (document.getElementById('editPetForm')?.querySelector('button[type="submit"]'));
+                if (!file) {
+                        if (fileNameEl) fileNameEl.textContent = 'No file chosen';
+                        if (validationEl) validationEl.textContent = '';
+                        if (saveBtn) saveBtn.disabled = false;
+                        return;
+                }
+
+                if (fileNameEl) fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`;
+                const err = validatePetFile(file);
+                if (err) {
+                        if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); }
+                        if (saveBtn) saveBtn.disabled = true;
+                } else {
+                        if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.add('valid'); }
+                        if (saveBtn) saveBtn.disabled = false;
+                }
+
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    const img = document.getElementById('editPetPhotoPreview');
+                    if (img) img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // small helpers for validation
+        function formatBytes(bytes) {
+                if (!bytes) return '0 B';
+                const k = 1024;
+                const sizes = ['B','KB','MB','GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function validatePetFile(file) {
+                if (!file) return null;
+                const allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+                const max = 5 * 1024 * 1024;
+                if (allowed.indexOf(file.type) === -1) return 'Invalid file type. Use JPG/PNG/GIF/WEBP.';
+                if (file.size > max) return `File too large (${formatBytes(file.size)}). Max 5MB.`;
+                return null;
+        }
     
 </script>
 }
