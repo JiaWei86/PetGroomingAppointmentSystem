@@ -54,6 +54,9 @@ builder.Services.AddSession(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
+// Add Recaptcha Service
+builder.Services.AddHttpClient<IRecaptchaService, RecaptchaService>();
+
 var app = builder.Build();
 
 // -----------------------------
