@@ -1,0 +1,68 @@
+/* ============================================
+Price List Image - Responsive Styling
+   ============================================ */
+
+.price-list-image {
+    max-width: 1100px !important;
+ width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+/* Desktop - Large screens (1200px and above) */
+@media (min-width: 1200px) {
+    .price-list-image {
+ max-width: 1100px;
+    }
+}
+
+/* Tablet to Desktop - 992px to 1199px */
+@media (max-width: 1199px) and (min-width: 992px) {
+    .price-list-image {
+        max-width: 900px;
+ }
+}
+
+/* Tablet - 768px to 991px */
+@media (max-width: 991px) and (min-width: 768px) {
+    .price-list-image {
+        max-width: 700px;
+    width: 90%;
+        margin: 0 auto;
+    }
+}
+
+/* Small Tablet - 576px to 767px */
+@media (max-width: 767px) and (min-width: 576px) {
+    .price-list-image {
+ max-width: 100%;
+        width: 95%;
+        margin: 0 auto;
+        padding: 0 2.5%;
+    }
+}
+
+/* Mobile - Below 576px */
+@media (max-width: 575px) {
+    .price-list-image {
+   max-width: 100%;
+        width: 100%;
+        padding: 0;
+        margin: 0 auto;
+    }
+}
+
+/* Extra small mobile - Below 360px */
+@media (max-width: 359px) {
+    .price-list-image {
+        max-width: 100%;
+      width: 100%;
+    }
+}
+
+/* Optional: Add animation on load */
+.price-list-image.wow {
+    animation-duration: 1s;
+}

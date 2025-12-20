@@ -19,7 +19,8 @@
         height: 50px;
     }
 
-        .chatbot-container.minimized .chatbot-messages, .chatbot-container.minimized .chatbot-input-area {
+        .chatbot-container.minimized .chatbot-messages, 
+        .chatbot-container.minimized .chatbot-input-area {
             display: none;
         }
 
@@ -46,6 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
     .chatbot-toggle:hover {
@@ -164,11 +166,141 @@
     }
 }
 
-@media(max-width:480px) {
+/* ============================================
+   MOBILE STYLES - 移动端 FAQ 调整
+   ============================================ */
+@media (max-width: 991px) {
     .chatbot-container {
-        width: calc(100vw-20px);
-        height: 70vh;
+        width: calc(100vw - 30px);
+        max-width: 350px;
+        height: auto;
+        bottom: 15px;
+        right: 15px;
+        border-radius: 16px;
+    }
+
+    /* ✅ 收起时的样式 */
+    .chatbot-container.minimized {
+        height: auto;
+        width: auto;
+        min-width: 200px;
+        max-width: none;
+        border-radius: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    /* ✅ 修复：Header 对齐 */
+    .chatbot-container.minimized .chatbot-header {
+        padding: 12px 16px 12px 20px;
+        border-radius: 30px;
+        gap: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* ✅ 修复：标题样式 */
+    .chatbot-container.minimized .chatbot-header h4,
+    .chatbot-header h4 {
+        margin: 0;
+        padding: 0;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.2;
+        flex: 1;
+    }
+
+    /* ✅ 修复：Toggle 按钮 */
+    .chatbot-container.minimized .chatbot-toggle {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        font-size: 16px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    /* 展开时的高度限制 */
+    .chatbot-container:not(.minimized) {
+        height: 60vh;
+        max-height: 450px;
+    }
+
+    .chatbot-header {
+        padding: 12px 16px;
+        border-radius: 16px 16px 0 0;
+        gap: 10px;
+    }
+
+    .chatbot-toggle {
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .chatbot-messages {
+        padding: 15px;
+    }
+
+    .chatbot-input-area {
+        padding: 10px;
+    }
+
+    .chatbot-input {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .chatbot-send-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    /* ✅ 当 modal 打开时隐藏 FAQ - 使用 JS 添加的 class */
+    .chatbot-container.chatbot-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(50px);
+        transition: all 0.3s ease;
+    }
+}
+
+/* ============================================
+   更小的手机屏幕
+   ============================================ */
+@media (max-width: 480px) {
+    .chatbot-container {
+        width: calc(100vw - 20px);
+        right: 10px;
+        bottom: 10px;
+    }
+
+    .chatbot-container:not(.minimized) {
+        height: 55vh;
+        max-height: 400px;
+    }
+
+    .chatbot-container.minimized {
         bottom: 10px;
         right: 10px;
+        min-width: 175px;
+    }
+
+    .chatbot-container.minimized .chatbot-header {
+        padding: 10px 12px 10px 16px;
+        gap: 12px;
+    }
+
+    .chatbot-container.minimized .chatbot-header h4 {
+        font-size: 13px;
+    }
+
+    .chatbot-container.minimized .chatbot-toggle {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        font-size: 14px;
     }
 }

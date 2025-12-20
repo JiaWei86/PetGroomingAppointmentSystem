@@ -199,6 +199,13 @@
                 <input type="password" id="password" name="password" placeholder="Enter password" required>
             </div>
 
+            @if (ViewData["RecaptchaRequired"] != null && (bool)ViewData["RecaptchaRequired"])
+            {
+                <div class="form-group">
+                    <div class="g-recaptcha" data-sitekey="your_site_key_here"></div>
+                </div>
+            }
+
             <button type="submit" class="login-button" id="submitBtn" @(ViewData["IsLocked"] != null && (bool)ViewData["IsLocked"] ? "disabled" : "")>
                 Login
             </button>
@@ -237,6 +244,34 @@
                 updateTimer();
             }
         });
+
+        // 在表单提交验证中，修改 reCAPTCHA 检查部分
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+
+            const requireRecaptcha = '@(ViewData["RecaptchaRequired"] ?? "false")';
+            if (requireRecaptcha === "true") {
+                // 检查是否为移动设备（通过检查 reCAPTCHA 是否可见）
+                const recaptchaElement = document.querySelector('.g-recaptcha');
+                const isRecaptchaVisible = recaptchaElement && window.getComputedStyle(recaptchaElement).display !== 'none';
+                
+                if (isRecaptchaVisible) {
+                    const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
+                    if (!recaptchaResponse || recaptchaResponse.value.length === 0) {
+                        alert('Please complete the reCAPTCHA verification');
+                        isValid = false;
+                    }
+                }
+            }
+
+            if (!isValid) {
+                event.preventDefault();
+            }
+        });
     </script>
+
+    <!-- 加载 reCAPTCHA 的 JavaScript 文件 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>

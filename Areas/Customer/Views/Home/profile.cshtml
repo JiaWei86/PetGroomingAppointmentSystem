@@ -934,6 +934,58 @@
  document.body.style.overflow = 'auto';
  }
 
+ // ========== FAQ VISIBILITY CONTROL ==========
+function showChatbot() {
+    const chatbot = document.getElementById('chatbot-container');
+    if (chatbot) {
+        chatbot.classList.remove('chatbot-hidden');
+    }
+}
+
+function hideChatbot() {
+    const chatbot = document.getElementById('chatbot-container');
+    if (chatbot) {
+        chatbot.classList.add('chatbot-hidden');
+    }
+}
+
+// Override modal functions to control chatbot
+const originalOpenEditModal = openEditModal;
+openEditModal = function() {
+    hideChatbot();
+    originalOpenEditModal();
+};
+
+const originalCloseEditModal = closeEditModal;
+closeEditModal = function() {
+    originalCloseEditModal();
+    showChatbot();
+};
+
+const originalOpenAddPetModal = openAddPetModal;
+openAddPetModal = function() {
+    hideChatbot();
+    originalOpenAddPetModal();
+};
+
+const originalCloseAddPetModal = closeAddPetModal;
+closeAddPetModal = function() {
+    originalCloseAddPetModal();
+    showChatbot();
+};
+
+const originalOpenWebcamModal = openWebcamModal;
+openWebcamModal = async function() {
+    hideChatbot();
+    await originalOpenWebcamModal();
+};
+
+const originalCloseWebcamModal = closeWebcamModal;
+closeWebcamModal = function() {
+    originalCloseWebcamModal();
+    // Don't show chatbot here, as we might return to edit modal
+};
+
  // ========== FORM SUBMISSION ==========
  function submitEditProfile(event) {
  event.preventDefault();
