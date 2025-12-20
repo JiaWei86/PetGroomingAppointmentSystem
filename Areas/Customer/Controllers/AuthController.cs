@@ -1054,6 +1054,23 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "IC date cannot be in the future." });
             }
 
+            // ✅ ========== VALIDATE AGE (MUST BE AT LEAST 18) ==========
+            var birthDate = new DateTime(fullYear, month, day);
+            var today = DateTime.Today;
+            int age = today.Year - birthDate.Year;
+
+            // Adjust if birthday hasn't occurred yet this year
+            if (birthDate.Date > today.AddYears(-age))
+            {
+                age--;
+            }
+
+            // Check if user is at least 18 years old
+            if (age < 18)
+            {
+                return Json(new { isValid = false, errorMessage = "Age must be at least 18 years old." });
+            }
+
             // Validate state code - ✅ 改为 Substring(7, 2)
             string stateCode = ic.Substring(7, 2);
             var validStates = new[] { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16" };
