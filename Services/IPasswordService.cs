@@ -1,4 +1,4 @@
-namespace PetGroomingAppointmentSystem.Areas.Admin.Services;
+namespace PetGroomingAppointmentSystem.Services;
 
 /// <summary>
 /// Password generation and hashing service interface

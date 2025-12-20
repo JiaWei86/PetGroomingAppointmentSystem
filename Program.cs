@@ -1,5 +1,4 @@
-﻿using PetGroomingAppointmentSystem.Areas.Admin.Services;
-using PetGroomingAppointmentSystem.Models;
+﻿using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,8 +18,6 @@ builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
 // ========== Admin Area Services ==========
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IEmailService, 
                            PetGroomingAppointmentSystem.Areas.Admin.Services.EmailService>();
-builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPasswordService, 
-                           PetGroomingAppointmentSystem.Areas.Admin.Services.PasswordService>();
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IPhoneService, 
                            PetGroomingAppointmentSystem.Areas.Admin.Services.PhoneService>();
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Areas.Admin.Services.IValidationService, 
@@ -34,13 +31,11 @@ builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IEmailService,
 // ✅ 新增：Customer 区域的服务（你的代码）
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IPhoneService, PetGroomingAppointmentSystem.Services.PhoneService>();
 builder.Services.AddScoped<PetGroomingAppointmentSystem.Services.IValidationService, PetGroomingAppointmentSystem.Services.ValidationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
 
 // Add Chatbot Service
 builder.Services.AddScoped<IChatbotService, ChatbotService>();
 builder.Services.AddHttpClient<ChatbotService>();
-
-// Recaptcha Service
-//builder.Services.AddScoped<IRecaptchaService, RecaptchaService>();
 
 // Session support
 builder.Services.AddSession(options =>
