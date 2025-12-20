@@ -27,6 +27,7 @@
 
 </head>
 <body>
+
     <!-- Header -->
     @await Html.PartialAsync("_Header")
 
@@ -34,6 +35,18 @@
     <main role="main">
         @RenderBody()
     </main>
+
+  @*   <div id="loyaltyToast" style="position: fixed; top: 20px; right: 20px; background-color: #ff9800; color: white; padding: 10px 18px; border-radius: 6px; box-shadow: 0 3px 8px rgba(0,0,0,0.15); z-index: 10000; display: none; font-size: 14px; animation: slideInRight 0.3s ease-out;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">🎁</span>
+            <span id="loyaltyToastMessage"></span>
+        </div>
+    </div> *@
+
+    <!-- Place this somewhere near the body tag, hidden by default -->
+    @* <div id="loyaltyContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div> *@
+
+
 
     <!-- Chatbot -->
     @await Html.PartialAsync("_ChatBot")
@@ -196,6 +209,7 @@
                     sendMessage(topic.dataset.topic);
                 });
             });
+
 
         });
 
