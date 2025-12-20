@@ -9,7 +9,12 @@
                         <ul class="address_line">
                             <li><a href="https://wa.me/601160628990" target="_blank">+6011 4589 2563</a></li>
                             <li><a href="mailto:hajimihouse@gmail.com">hajimihouse@gmail.com</a></li>
-                            <li><a href="https://maps.app.goo.gl/iCkdFxSxWYGA5Qj78" target="_blank">63, Jalan, Taman Bukit Hijau, 57315 Kuala Lumpur</a></li>
+                            <li>
+                                <a href="@Html.Raw("https://www.google.com/maps/place/Setapak+Central+Mall/@3.2043282,101.7185105,17z")"
+                                   target="_blank" rel="noopener noreferrer">
+                                    Setapak Central Mall, Jalan Taman Ibu Kota, 53300 Setapak, Kuala Lumpur
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -28,7 +33,14 @@
                         <h3 class="footer_title">Quick Links</h3>
                         <ul class="links">
                             <li><a asp-controller="Home" asp-action="About">About Us</a></li>
-                            <li><a asp-controller="Home" asp-action="Profile">Profile</a></li>
+                            <li>
+                                <a asp-area="Customer"
+                                   asp-controller="Home"
+                                   asp-action="Index"
+                                   asp-fragment="services">
+                                    Services
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -40,7 +52,12 @@
                                 <img src="~/Customer/img/logo.png" alt="">
                             </a>
                         </div>
-                        <p class="address_text"><a href="https://maps.app.goo.gl/iCkdFxSxWYGA5Qj78" target="_blank">63, Jalan, Taman Bukit Hijau, 57315 Kuala Lumpur</a></p>
+                        <p class="address_text">
+                            <a href="@Html.Raw("https://www.google.com/maps/place/Setapak+Central+Mall/@3.2043282,101.7185105,17z")"
+                               target="_blank" rel="noopener noreferrer">
+                                Setapak Central Mall, Jalan Taman Ibu Kota, 53300 Setapak, Kuala Lumpur
+                            </a>
+                        </p>
                     </div>
                 </div>
             </div>
