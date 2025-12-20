@@ -17,6 +17,7 @@ using PetGroomingAppointmentSystem.Models;
 using PetGroomingAppointmentSystem.Models.ViewModels;
 using PetGroomingAppointmentSystem.Services;
 using AdminServices = PetGroomingAppointmentSystem.Areas.Admin.Services;  // Alias for Admin services
+using Microsoft.Extensions.Logging;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 
@@ -31,6 +32,7 @@ public class HomeController : Controller
     private readonly AdminServices.IValidationService _validationService;  // Use alias
     private readonly IS3StorageService _s3Service;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly ILogger<HomeController> _logger;
 
     public HomeController(
         DB context,
@@ -39,7 +41,8 @@ public class HomeController : Controller
         AdminServices.IPhoneService phoneService,  // Use alias
         AdminServices.IValidationService validationService,  // Use alias
         IS3StorageService s3Service,
-        IWebHostEnvironment webHostEnvironment)
+        IWebHostEnvironment webHostEnvironment,
+        ILogger<HomeController> logger)
     {
         _db = context;
         _emailService = emailService;
@@ -48,6 +51,7 @@ public class HomeController : Controller
         _validationService = validationService;
         _s3Service = s3Service;
         _webHostEnvironment = webHostEnvironment;
+        _logger = logger;
     }
     public class FieldValidationRequest
     {
@@ -678,10 +682,29 @@ public class HomeController : Controller
         ModelState.Remove("Password");
         ModelState.Remove("ConfirmPassword");
 
+        // If admin did not choose to add a pet, clear any modelstate entries related to pet fields
+        if (!AddPet)
+        {
+            ModelState.Remove("PetName");
+            ModelState.Remove("PetType");
+            ModelState.Remove("PetBreed");
+            ModelState.Remove("PetAge");
+            ModelState.Remove("PetRemark");
+            ModelState.Remove("Photos");
+        }
+
+        var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
         if (!ModelState.IsValid)
         {
             var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-            TempData["ErrorMessage"] = string.Join(" ", errors);
+            var errorMessage = string.Join(" ", errors);
+            if (isAjax)
+            {
+                return Json(new { success = false, message = errorMessage, errors = ModelState.ToDictionary(k => k.Key, v => v.Value.Errors.Select(e => e.ErrorMessage).FirstOrDefault()) });
+            }
+
+            TempData["ErrorMessage"] = errorMessage;
             return RedirectToAction(nameof(Customer));
         }
 
@@ -691,6 +714,7 @@ public class HomeController : Controller
         // Check for duplicate phone
         if (await _db.Customers.AnyAsync(c => c.Phone == formattedPhone))
         {
+            if (isAjax) return Json(new { success = false, message = "This phone number is already registered." });
             TempData["ErrorMessage"] = "This phone number is already registered.";
             return RedirectToAction(nameof(Customer));
         }
@@ -698,6 +722,7 @@ public class HomeController : Controller
         // Check for duplicate email
         if (await _db.Customers.AnyAsync(c => c.Email == model.Email))
         {
+            if (isAjax) return Json(new { success = false, message = "This email address is already registered." });
             TempData["ErrorMessage"] = "This email address is already registered.";
             return RedirectToAction(nameof(Customer));
         }
@@ -705,6 +730,7 @@ public class HomeController : Controller
         // Check for duplicate IC
         if (await _db.Customers.AnyAsync(c => c.IC == model.IC))
         {
+            if (isAjax) return Json(new { success = false, message = "This IC number is already registered." });
             TempData["ErrorMessage"] = "This IC number is already registered.";
             return RedirectToAction(nameof(Customer));
         }
@@ -746,6 +772,7 @@ public class HomeController : Controller
         string temporaryPassword = _passwordService.GenerateRandomPassword(12);
 
         // Create customer from RegisterViewModel
+        // Store hashed password in DB but keep temporaryPassword (plain) for emailing
         var customer = new Models.Customer
         {
             UserId = newCustomerId,
@@ -753,13 +780,13 @@ public class HomeController : Controller
             IC = model.IC,
             Email = model.Email,
             Phone = formattedPhone,
-            Password = temporaryPassword,
+            Password = _passwordService.HashPassword(temporaryPassword),
             Role = "customer",
             Status = "pending_password",
             CreatedAt = DateTime.Now,
             RegisteredDate = DateTime.Now,
             LoyaltyPoint = 0,
-            Photo = "/uploads/placeholder.png"
+            Photo = "/images/ownerAvatar.png"
         };
 
         // ✅ Upload one or more photos to S3 instead of local storage
@@ -796,7 +823,7 @@ public class HomeController : Controller
             }
             else
             {
-                customer.Photo = "/uploads/placeholder.png";
+                customer.Photo = "/images/ownerAvatar.png";
             }
         }
 
@@ -850,6 +877,14 @@ public class HomeController : Controller
                 }
                 string newPetId = "P" + nextPetNumber.ToString("D3");
 
+                // Determine default pet photo based on type when no photo provided
+                string GetDefaultPetPhoto(string? type)
+                {
+                    if (string.IsNullOrEmpty(type)) return "/Customer/img/default-pet.png";
+                    var t = type.Trim().ToLower();
+                    return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
+                }
+
                 var newPet = new Pet
                 {
                     PetId = newPetId,
@@ -860,7 +895,7 @@ public class HomeController : Controller
                     Remark = PetRemark,
                     CustomerId = newCustomerId, // Link to the new customer
                     AdminId = HttpContext.Session.GetString("AdminId"),
-                    Photo = "/uploads/pet-placeholder.png" // Default photo for pet
+                    Photo = GetDefaultPetPhoto(PetType) // Default photo for pet based on type
                 };
 
                 _db.Pets.Add(newPet);
@@ -869,6 +904,12 @@ public class HomeController : Controller
         }
         catch (Exception dbEx)
         {
+            isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+            if (isAjax)
+            {
+                return Json(new { success = false, message = $"Failed to create customer: {dbEx.Message}" });
+            }
+
             TempData["ErrorMessage"] = $"Failed to create customer: {dbEx.Message}";
             return RedirectToAction(nameof(Customer));
         }
@@ -907,6 +948,81 @@ public class HomeController : Controller
 
         return RedirectToAction(nameof(Customer));
     }
+    
+    // POST: Delete a customer's existing photo (AJAX JSON)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteCustomerPhoto([FromBody] Dictionary<string, string> request)
+    {
+        if (request == null)
+            return Ok(new { success = false, message = "Invalid request" });
+
+        request.TryGetValue("customerId", out var customerId);
+        request.TryGetValue("photoUrl", out var photoUrl);
+
+        if (string.IsNullOrEmpty(customerId) || string.IsNullOrEmpty(photoUrl))
+            return Ok(new { success = false, message = "Missing parameters" });
+
+        var dbCustomer = await _db.Customers.FindAsync(customerId);
+        if (dbCustomer == null)
+            return Ok(new { success = false, message = "Customer not found" });
+
+        try
+        {
+            // If the photo is a local/default asset, skip storage deletion and just remove the reference
+            var isLocalOrDefault = photoUrl.StartsWith("/") || photoUrl.Contains("/images/") || photoUrl.Contains("/Customer/img/") || photoUrl.Contains("/uploads/");
+
+            var storageDeleted = false;
+            string storageMessage = null;
+
+            if (!isLocalOrDefault)
+            {
+                try
+                {
+                    storageDeleted = await _s3Service.DeleteFileAsync(photoUrl);
+                    if (!storageDeleted)
+                    {
+                        storageMessage = "Storage deletion failed";
+                        _logger?.LogWarning("DeleteCustomerPhoto: storage delete returned false for {Url}", photoUrl);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    storageMessage = ex.Message;
+                    _logger?.LogError(ex, "DeleteCustomerPhoto: exception deleting {Url}", photoUrl);
+                }
+            }
+
+            // Remove the photo URL from stored comma-separated list (match by exact or filename suffix)
+            var photos = (dbCustomer.Photo ?? string.Empty).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToList();
+            photos = photos.Where(p => {
+                if (string.Equals(p, photoUrl, StringComparison.OrdinalIgnoreCase)) return false;
+                // also handle urls that differ by scheme/host or contain querystrings
+                try {
+                    var a = new Uri(p, UriKind.RelativeOrAbsolute);
+                    var b = new Uri(photoUrl, UriKind.RelativeOrAbsolute);
+                    if (!a.IsAbsoluteUri || !b.IsAbsoluteUri) return !string.Equals(p, photoUrl, StringComparison.OrdinalIgnoreCase);
+                    return !string.Equals(a.AbsolutePath.TrimEnd('/'), b.AbsolutePath.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+                } catch { return !string.Equals(p, photoUrl, StringComparison.OrdinalIgnoreCase); }
+            }).ToList();
+
+            dbCustomer.Photo = photos.Any() ? string.Join(',', photos) : "/images/ownerAvatar.png";
+            _db.Customers.Update(dbCustomer);
+            await _db.SaveChangesAsync();
+
+            if (!isLocalOrDefault && !storageDeleted)
+            {
+                return Ok(new { success = true, message = "Reference removed but storage deletion failed." });
+            }
+
+            return Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "DeleteCustomerPhoto error");
+            return Ok(new { success = false, message = "Server error deleting photo" });
+        }
+    }
 
 
     // POST: Edit Customer
@@ -918,6 +1034,30 @@ public class HomeController : Controller
 
         if (dbCustomer == null)
             return NotFound();
+
+        // Enforce allowed status transitions:
+        // - If current status is "pending_password", admin may only change it to "active".
+        // - If current status is "active", it cannot be changed back to "pending_password".
+        var currentStatus = (dbCustomer.Status ?? string.Empty).ToLowerInvariant();
+        var requestedStatus = (customer.Status ?? string.Empty).ToLowerInvariant();
+
+        if (currentStatus == "pending_password" && requestedStatus != "active" && requestedStatus != "pending_password")
+        {
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Json(new { success = false, message = "Admin can only change accounts in pending-password state to Active." });
+
+            TempData["ErrorMessage"] = "Admin can only change accounts in pending-password state to Active.";
+            return RedirectToAction(nameof(CustomerProfile), new { customerId = customerId });
+        }
+
+        if (currentStatus == "active" && requestedStatus == "pending_password")
+        {
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Json(new { success = false, message = "Active accounts cannot be set back to pending_password." });
+
+            TempData["ErrorMessage"] = "Active accounts cannot be set back to pending password.";
+            return RedirectToAction(nameof(CustomerProfile), new { customerId = customerId });
+        }
 
         dbCustomer.Name = customer.Name;
         dbCustomer.Email = customer.Email;
@@ -955,11 +1095,35 @@ public class HomeController : Controller
             if (uploadedUrls.Any())
             {
                 // if there were existing photos, append new ones, else replace
-                var existing = dbCustomer.Photo;
-                var combined = (string.IsNullOrEmpty(existing) || existing == "/uploads/placeholder.png")
-                    ? string.Join(',', uploadedUrls)
-                    : string.Join(',', existing.Split(',').Concat(uploadedUrls));
-                dbCustomer.Photo = combined;
+                var existing = (dbCustomer.Photo ?? string.Empty).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim()).Where(p => !string.IsNullOrEmpty(p)).ToList();
+
+                // If we're adding new uploaded photos, remove any default/local placeholder from existing
+                var defaultPlaceholders = new[] { "/images/ownerAvatar.png", "/uploads/placeholder.png", "/Customer/img/default-avatar.png" };
+                if (uploadedUrls.Any())
+                {
+                    existing = existing.Where(p => !defaultPlaceholders.Any(d => string.Equals(d, p, StringComparison.OrdinalIgnoreCase))).ToList();
+                }
+
+                // Append uploaded URLs but avoid duplicates (preserve order)
+                var combinedList = new List<string>(existing);
+                foreach (var url in uploadedUrls)
+                {
+                    if (!combinedList.Any(p => string.Equals(p, url, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        combinedList.Add(url);
+                    }
+                }
+
+                // If there were no existing and no combined items (shouldn't happen), fall back to placeholder
+                if (!combinedList.Any())
+                {
+                    dbCustomer.Photo = "/images/ownerAvatar.png";
+                }
+                else
+                {
+                    dbCustomer.Photo = string.Join(',', combinedList);
+                }
             }
         }
 
@@ -984,6 +1148,13 @@ public class HomeController : Controller
 
         if (hasIncompleteAppointments)
         {
+            // If this was an AJAX request, return JSON so the client can show an inline error
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+            if (isAjax)
+            {
+                return Json(new { success = false, message = "Cannot delete customer while they have incomplete appointments." });
+            }
+
             TempData["ErrorMessage"] = "Cannot delete customer while they have incomplete appointments.";
             return RedirectToAction(nameof(CustomerProfile), new { customerId = customerId });
         }
@@ -1003,6 +1174,12 @@ public class HomeController : Controller
 
         _db.Customers.Remove(dbCustomer);
         await _db.SaveChangesAsync();
+
+        var isAjaxFinal = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+        if (isAjaxFinal)
+        {
+            return Json(new { success = true, message = "Customer deleted successfully." });
+        }
 
         TempData["SuccessMessage"] = "Customer deleted successfully.";
         return RedirectToAction(nameof(Customer));
@@ -1082,6 +1259,13 @@ public class HomeController : Controller
                 }
             }
 
+            string GetDefaultPetPhoto(string? type)
+            {
+                if (string.IsNullOrEmpty(type)) return "/Customer/img/default-pet.png";
+                var t = type.Trim().ToLower();
+                return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
+            }
+
             var pet = new Pet
             {
                 PetId = petId,
@@ -1091,7 +1275,7 @@ public class HomeController : Controller
                 Age = petAge,
                 Remark = petRemark,
                 CustomerId = customerId,
-                Photo = photoPath ?? "/images/pet-placeholder.png"
+                Photo = photoPath ?? GetDefaultPetPhoto(petType)
             };
 
             _db.Pets.Add(pet);
@@ -1131,7 +1315,8 @@ public class HomeController : Controller
 
     // ========== ADJUST LOYALTY POINTS ==========
     [HttpPost]
-    public async Task<IActionResult> AdjustLoyaltyPoints(string customerId, string adjustmentType, int amount)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdjustLoyaltyPoints(string customerId, string adjustmentType, int amount, int loyaltyAmount = 0)
     {
         try
         {
@@ -1141,22 +1326,39 @@ public class HomeController : Controller
                 return Json(new { success = false, message = "Customer not found" });
             }
 
+            // Prevent adjustments when customer is pending password reset
+            if (!string.IsNullOrEmpty(customer.Status) && customer.Status.Equals("pending_password", StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(new { success = false, message = "Cannot adjust points for customers pending password setup." });
+            }
+
+            // Accept either parameter name (amount or loyaltyAmount) from client
+            int amt = loyaltyAmount != 0 ? loyaltyAmount : amount;
+            if (amt < 0)
+            {
+                return Json(new { success = false, message = "Amount must be non-negative." });
+            }
+
             int oldBalance = customer.LoyaltyPoint;
             int newBalance = oldBalance;
 
             if (adjustmentType == "add")
             {
-                newBalance = oldBalance + amount;
+                newBalance = oldBalance + amt;
             }
             else if (adjustmentType == "subtract")
             {
-                newBalance = Math.Max(0, oldBalance - amount);
+                if (amt > oldBalance)
+                {
+                    return Json(new { success = false, message = "Cannot subtract more points than the customer's current balance." });
+                }
+                newBalance = oldBalance - amt;
             }
 
             customer.LoyaltyPoint = newBalance;
             await _db.SaveChangesAsync();
 
-            return Json(new { success = true, message = $"Points updated from {oldBalance} to {newBalance}", newBalance = newBalance });
+            return Json(new { success = true, message = $"Points updated from {oldBalance} to {newBalance}", newLoyaltyPoints = newBalance });
         }
         catch (Exception ex)
         {
@@ -2847,8 +3049,11 @@ public class HomeController : Controller
             var startDate = new DateTime(year, month, 1);
             var endDate = startDate.AddMonths(1).AddDays(-1);
 
-            // Get total available minutes per day (assuming 8 hours = 480 minutes per day)
-            int totalMinutesPerDay = 480;
+            // Get total available minutes per day (assuming 7.5 hours = 450 minutes per day)
+            // Calculate based on active groomers count to support parallel appointments
+            int groomerCount = await _db.Staffs.CountAsync(s => s.Role == "staff");
+            if (groomerCount == 0) groomerCount = 1;
+            int totalMinutesPerDay = 450 * groomerCount;
 
             // Get appointments and their durations
             var appointmentsByDay = await _db.Appointments
