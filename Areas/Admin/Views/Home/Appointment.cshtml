@@ -830,8 +830,9 @@
                                         if (availableMinutes < 0) availableMinutes = 0;
                                         var freeRatio = availableMinutes / totalMinutesForDay;
 
-                                        if (freeRatio >= 0.67) dot.classList.add('dot-green');
-                                        else if (freeRatio >= 0.34) dot.classList.add('dot-orange');
+                                        // Logic: 68-100% Green, 34-67% Orange, 1-33% Red, 0% Black
+                                        if (freeRatio > 0.67) dot.classList.add('dot-green');
+                                        else if (freeRatio > 0.33) dot.classList.add('dot-orange');
                                         else if (freeRatio > 0) dot.classList.add('dot-red');
                                         else dot.classList.add('dot-black');
                                     }

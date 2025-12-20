@@ -675,26 +675,6 @@
  return false;
  };
 
-// Page-local helper to open confirm for the Add form (used by the Add button)
-window.openConfirmAdd = function() {
-  const form = document.getElementById('addGroomerForm');
-  const nameInput = form ? form.querySelector('[name="Name"]') : null;
-  const name = nameInput ? nameInput.value || 'item' : 'item';
-  window.openConfirmModal('Confirm Add', `Are you sure you want to add "${name}"?`, function() {
-    if (form) form.submit();
-  });
-};
-
-// Confirm edit for inline edit forms
-window.confirmEdit = function(event, name) {
-  if (event && event.preventDefault) event.preventDefault();
-  const form = event && event.target ? event.target : null;
-  window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, function() {
-    if (form) form.submit();
-  });
-  return false;
-};
-
  window.showDynamicAlert = function(message, type) {
  const existing = document.getElementById('alertMessage');
  if (existing) existing.remove();

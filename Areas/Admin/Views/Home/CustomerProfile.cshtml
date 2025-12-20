@@ -15,12 +15,29 @@
                                  .Select(p => p.Trim())
                                  .Where(p => !string.IsNullOrEmpty(p))
                                  .ToArray();
+        // Remove duplicate URLs (case-insensitive) so UI doesn't show repeated thumbnails
+        photoList = photoList.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (photoList.Length >0)
         {
             photoSrc = photoList[0];
         }
     }
 }
+
+<script>
+// Early safe fallback for openConfirmModal so other scripts can call it without errors
+if (typeof window !== 'undefined' && typeof window.openConfirmModal !== 'function') {
+    window.openConfirmModal = function(title, message, callback) {
+        try {
+            if (typeof window.showConfirmModal === 'function') {
+                window.showConfirmModal(title, message, 'help_outline', '#ef4444', callback);
+                return;
+            }
+        } catch (e) { /* ignore */ }
+        if (confirm(message)) { try { callback && callback(); } catch (err) { console.error(err); } }
+    };
+}
+</script>
 
 
 <div class="content-header">
@@ -29,6 +46,25 @@
 </div>
 
 <div class="customer-profile-wrapper">
+    @* Use Groomer/Customer-style alert banner so messages match listing page *@
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger" id="alertMessage">
+            <strong>❌ Error:</strong> @TempData["ErrorMessage"]
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" id="alertMessage">
+            <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="alert alert-warning" id="alertMessage">
+            @TempData["WarningMessage"]
+        </div>
+    }
     <div class="profile-container">
 
         <!-- Left Column: Customer Info Card -->
@@ -44,7 +80,7 @@
                     {
                         for (int i = 0; i < photoList.Length; i++)
                         {
-                            <img src="@photoList[i]" alt="avatar @(i+1)" class="profile-avatar avatar-photo @(i==0?"active":"")" data-index="@i" />
+                            <img src="@photoList[i]" alt="avatar @(i+1)" class="profile-avatar avatar-photo @(i==0?"active":"")" data-index="@i" onerror="this.onerror=null;this.src='/Customer/img/default-avatar.png'" />
                         }
                     }
                     @if (photoList.Length > 1)
@@ -121,9 +157,12 @@
                     <button type="button" class="btn btn-primary quick-actions-btn" id="addPetBtn">
                         🐾 Add Pet
                     </button>
-                    <button type="button" class="btn btn-primary quick-actions-btn" id="adjustLoyaltyBtn">
-                        🎁 Adjust Points
-                    </button>
+                    <div class="pending-wrapper" @(Model?.Status == "pending_password" ? "data-pending=\"true\"" : "") style="display:inline-block; position:relative;">
+                        <button type="button" class="btn btn-primary quick-actions-btn @(Model?.Status == "pending_password" ? "btn-disabled" : "")" id="adjustLoyaltyBtn" @(Model?.Status == "pending_password" ? "disabled aria-disabled=\"true\" tabindex=\"-1\"" : "")>
+                            🎁 Adjust Points
+                        </button>
+                        <span id="adjustPendingHint" class="pending-hint">Customer account not activated — cannot adjust points</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -147,8 +186,21 @@
                     <div class="pets-grid">
                         @foreach (var pet in Model.Pets)
                         {
+                            var stored = pet?.Photo?.Trim();
+                            string petImg;
+                            if (string.IsNullOrEmpty(stored) || stored == "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" || stored == "/Customer/img/default-pet.png" || stored == "/uploads/pet-placeholder.png")
+                            {
+                                var t = (pet?.Type ?? "").Trim().ToLower();
+                                petImg = t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
+                            }
+                            else
+                            {
+                                petImg = stored;
+                            }
+
                             <div class="pet-item">
-                                <img src="@(pet?.Photo ?? "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg")"
+                                    <img src="@petImg"
+                                        onerror="this.onerror=null;this.src='/Customer/img/default-pet.png'"
                                      alt="@pet?.Name"
                                      class="pet-avatar" />
                                 <div class="pet-info">
@@ -254,7 +306,7 @@
             <button type="button" class="edit-modal-close-btn">×</button>
         </div>
 
-        <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data" onsubmit="return confirmEditProfile(event, '@Model?.Name')">
+        <form id="editProfileForm" asp-controller="Home" asp-action="EditCustomer" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
@@ -290,13 +342,52 @@
                     <option value="active">Active</option>
                     <option value="blocked">Blocked</option>
                     <option value="inactive">Inactive</option>
+                    <option value="pending_password">Pending Password</option>
                 </select>
+                <small class="modal-form-help-text">Status change rules: pending-password accounts can only be set to Active by admin.</small>
+
+                <script>
+                    (function () {
+                        try {
+                            var currentStatus = '@(Model?.Status ?? "")'.toLowerCase();
+                            var select = document.getElementById('editStatus');
+                            if (!select) return;
+
+                            // If account currently pending_password, admin may only change to Active
+                            if (currentStatus === 'pending_password') {
+                                for (var i = 0; i < select.options.length; i++) {
+                                    var opt = select.options[i];
+                                    var val = (opt.value || '').toLowerCase();
+                                    if (val !== 'pending_password' && val !== 'active') {
+                                        opt.disabled = true;
+                                    }
+                                }
+                            }
+
+                            // If account is active, prevent setting it back to pending_password
+                            if (currentStatus === 'active') {
+                                for (var j = 0; j < select.options.length; j++) {
+                                    var o = select.options[j];
+                                    if ((o.value || '').toLowerCase() === 'pending_password') o.disabled = true;
+                                }
+                            }
+
+                            // select the current status if option exists
+                            for (var k = 0; k < select.options.length; k++) {
+                                if ((select.options[k].value || '').toLowerCase() === currentStatus) {
+                                    select.selectedIndex = k; break;
+                                }
+                            }
+                        } catch (e) { console && console.log && console.log('status select init error', e); }
+                    })();
+                </script>
             </div>
 
             <div class="modal-form-group">
                 <label>Profile Photo</label>
-                <input type="file" name="Photos" accept="image/*" class="modal-form-input" multiple />
+                <input id="editProfilePhotosInput" type="file" name="Photos" accept="image/*" class="modal-form-input" multiple />
                 <small class="modal-form-help-text">You can select multiple photos. Leave empty to keep current photos.</small>
+                <div id="editPhotoPreviewList" class="photo-preview-list" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"></div>
             </div>
 
             @* Existing photos gallery with delete buttons *@
@@ -308,8 +399,8 @@
                         @for (int i = 0; i < photoList.Length; i++)
                         {
                             var p = photoList[i];
-                            <div class="existing-photo-item" data-photo="@p" style="position:relative;width:72px;height:72px;border-radius:50%;overflow:visible;border:2px solid #ff9500;">
-                                <img src="@p" style="width:100%;height:100%;object-fit:cover;display:block;" alt="photo @(i+1)" />
+                            <div class="existing-photo-item" data-photo="@p" style="position:relative;width:72px;height:72px;border:2px solid #ff9500;">
+                                <img src="@p" alt="photo @(i+1)" onerror="this.onerror=null;this.src='/Customer/img/default-avatar.png'" />
                                 <button type="button" class="delete-photo-btn" data-photo="@p" title="Delete photo">×</button>
                             </div>
                         }
@@ -338,12 +429,14 @@
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
                         <div style="text-align:center;margin-bottom:12px;">
-                            <img id="addPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
                             <input type="file" id="addPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
-                            <div style="margin-top:8px;">
-                                <span id="addPetPhotoFileName" class="file-name-display">No file chosen</span>
-                                <small id="addPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
-                            </div>
+                                <div style="margin-top:8px;display:flex;gap:12px;align-items:center;justify-content:center;flex-direction:column;">
+                                    <img id="addPetPhotoPreview" src="/images/dogAvatar.png" alt="Pet preview" style="width:120px;height:120px;border-radius:8px;object-fit:cover;" />
+                                    <div>
+                                        <span id="addPetPhotoFileName" class="file-name-display">No file chosen</span>
+                                        <small id="addPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
+                                    </div>
+                                </div>
                         </div>
 
             <div class="modal-form-grid-2">
@@ -453,12 +546,14 @@
             <input type="hidden" name="customerId" value="@Model?.UserId" />
 
                         <div style="text-align:center;margin-bottom:12px;">
-                            <img id="editPetPhotoPreview" src="/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" alt="Pet Photo" style="width:96px;height:96px;border-radius:8px;object-fit:cover;display:block;margin:0 auto8px;" />
                             <input type="file" id="editPetPhotoUpload" name="petPhotoUpload" accept="image/*" class="modal-form-input" />
-                            <div style="margin-top:8px;">
-                                <span id="editPetPhotoFileName" class="file-name-display">No file chosen</span>
-                                <small id="editPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
-                            </div>
+                                <div style="margin-top:8px;display:flex;gap:12px;align-items:center;justify-content:center;flex-direction:column;">
+                                    <img id="editPetPhotoPreview" src="/images/dogAvatar.png" alt="Pet preview" style="width:120px;height:120px;border-radius:8px;object-fit:cover;" />
+                                    <div>
+                                        <span id="editPetPhotoFileName" class="file-name-display">No file chosen</span>
+                                        <small id="editPetPhotoValidationMessage" class="error-message" aria-live="polite"></small>
+                                    </div>
+                                </div>
                         </div>
 
             <div class="modal-form-grid-2">
@@ -505,8 +600,9 @@
 
 <!-- Validation colors -->
 <style>
-    .error-message { color: #dc3545; font-size:12px; min-height:16px; display:block; }
+    .error-message { color: #6b7280; font-size:12px; min-height:16px; display:block; }
     .error-message.valid { color: #198754; }
+    .error-message.invalid { color: #dc3545; }
     .modal-form-input.is-invalid { border-color: #dc3545 !important; }
     .modal-form-input.is-valid { border-color: #198754 !important; }
 
@@ -596,7 +692,8 @@
     .profile-card .profile-avatar { width: 100%; height: 100%; border-radius: 50%; }
 
     /* Existing photos delete button */
-    .existing-photo-item { position: relative; overflow: visible; display: inline-block; }
+    .existing-photo-item { position: relative; overflow: hidden; display: inline-block; width:72px; height:72px; border-radius:50%; }
+    .existing-photo-item img { width:100%; height:100%; object-fit:cover; display:block; border-radius:50%; }
     .existing-photo-item .delete-photo-btn {
         position: absolute;
         top: 6px; /* inside circle */
@@ -636,11 +733,50 @@
     .alert.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
 
     /* Modal Styles */
-    .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:40000; align-items:center; justify-content:center; }
     .modal-backdrop.show { display:flex; }
     .modal-content { background-color:white; padding:20px; border-radius:8px; max-width:500px; width:90%; position:relative; }
     .close-btn { position:absolute; top:10px; right:10px; font-size:24px; cursor:pointer; color:#666; }
     .close-btn:hover { color:#000; }
+
+    /* Disabled-looking button for pending customers */
+    .btn-disabled {
+        background: #cbd5e1 !important;
+        color: #6b7280 !important;
+        border-color: #cbd5e1 !important;
+        cursor: not-allowed !important;
+        box-shadow: none !important;
+    }
+
+    .pending-hint {
+        display: none;
+        background: rgba(17,24,39,0.9);
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        white-space: nowrap;
+        z-index: 50000;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    }
+
+    .pending-wrapper[data-pending="true"]:hover .pending-hint,
+    .pending-wrapper[data-pending="true"]:focus-within .pending-hint {
+        display: inline-block;
+    }
+
+    .btn-disabled {
+        background: #cbd5e1 !important;
+        color: #6b7280 !important;
+        border-color: #cbd5e1 !important;
+        cursor: not-allowed !important;
+        box-shadow: none !important;
+        pointer-events: none !important;
+    }
 </style>
 
 @section Scripts {
@@ -650,6 +786,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const customerId = '@Model?.UserId';
     let currentLoyaltyPoints = @(Model?.LoyaltyPoint ?? 0); // changed to let so it can be updated
     const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const customerStatus = '@(Model?.Status ?? "")';
 
     const ANIMATION_DELAY = 3200;
     let avatarInterval = null;
@@ -658,9 +795,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- DOM Element References ---
     const avatarContainer = document.getElementById('adminAnimatedAvatar');
-    const avatarPhotos = avatarContainer?.querySelectorAll('.avatar-photo');
+    let avatarPhotos = [];
     const avatarIndicatorsContainer = document.getElementById('adminAvatarIndicators');
-    const avatarIndicators = avatarIndicatorsContainer?.querySelectorAll('.avatar-indicator');
+    let avatarIndicators = [];
 
     const editProfileModal = document.getElementById('editProfileOverlay');
     const addPetModal = document.getElementById('addPetOverlay');
@@ -670,6 +807,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const loyaltyAmountInput = document.getElementById('loyaltyAmount');
     const newBalanceDisplay = document.getElementById('newBalance');
     const currentBalanceDisplay = document.getElementById('currentBalance');
+
+    
 
 
     // --- Functions ---
@@ -688,10 +827,35 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!modal) return;
         modal.classList.remove('show');
         document.body.style.overflow = 'auto';
+        // Cleanup: if closing adjust loyalty modal, clear messages and re-enable submit
+        try {
+            if (modal && modal.id === 'adjustLoyaltyOverlay') {
+                const errEl = document.getElementById('loyaltyErrorMessage');
+                const successEl = document.getElementById('loyaltySuccessMessage');
+                if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+                if (successEl) { successEl.style.display = 'none'; successEl.textContent = ''; }
+                const submitBtn = modal.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.dataset && submitBtn.dataset._wasDisabledByPending) {
+                    submitBtn.disabled = false;
+                    delete submitBtn.dataset._wasDisabledByPending;
+                }
+            }
+        } catch (e) { /* ignore */ }
     }
 
     // Page-local confirm modal fallback (reuse Groomer pattern)
     if (typeof window.showConfirmModal !== 'function') {
+        function ensureConfirmModal() {
+            try {
+                const modal = document.getElementById('confirmModal');
+                if (!modal) return;
+                if (modal.parentElement !== document.body) document.body.appendChild(modal);
+                modal.style.zIndex = '40000';
+                const content = modal.querySelector('.modal-content');
+                if (content) content.style.zIndex = '40001';
+            } catch (e) { console.warn('ensureConfirmModal error', e); }
+        }
+
         window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
             try { ensureConfirmModal(); } catch (e) {}
             const modal = document.getElementById('confirmModal');
@@ -721,37 +885,152 @@ document.addEventListener('DOMContentLoaded', function () {
 
         window.openConfirmModal = function(title, message, callback) { window.showConfirmModal(title, message, 'help_outline', '#ef4444', callback); };
 
+        // Intercept confirm submit so we can include selected preview files and provide smooth UX
+        if (typeof window.confirmEditProfile !== 'function') {
+            window.confirmEditProfile = function(event, name) {
+                if (event && event.preventDefault) event.preventDefault();
+                // Determine the form element (event.target can be the form when used as onsubmit)
+                const form = event && event.target && event.target.tagName === 'FORM' ? event.target : document.getElementById('editProfileForm');
+                const doSubmit = function() { 
+                    if (form) {
+                        console.log('antiforgery token', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                        submitEditProfileForm(form); 
+                    }
+                };
+                if (typeof window.openConfirmModal === 'function') {
+                    window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, doSubmit);
+                } else if (typeof window.showConfirmModal === 'function') {
+                    window.showConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, 'save', '#10b981', doSubmit);
+                } else {
+                    if (confirm(`Are you sure you want to save changes to "${name}"?`)) doSubmit();
+                }
+                return false;
+            };
+        }
+
+        // Ensure confirmEditProfile is defined even if a global showConfirmModal exists
+        if (typeof window.confirmEditProfile !== 'function') {
+            window.confirmEditProfile = function(event, name) {
+                if (event && event.preventDefault) event.preventDefault();
+                const form = event && event.target && event.target.tagName === 'FORM' ? event.target : document.getElementById('editProfileForm');
+                const doSubmit = function() { if (form) submitEditProfileForm(form); };
+                if (typeof window.openConfirmModal === 'function') {
+                    window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, doSubmit);
+                } else if (typeof window.showConfirmModal === 'function') {
+                    window.showConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, 'save', '#10b981', doSubmit);
+                } else {
+                    if (confirm(`Are you sure you want to save changes to "${name}"?`)) doSubmit();
+                }
+                return false;
+            };
+        }
+    }
+
+    // Submit edit profile via fetch so we can control which files are uploaded (based on preview selection)
+    async function submitEditProfileForm(form) {
+        try {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Saving...'; }
+
+            const fd = new FormData();
+            // Append non-file fields
+            Array.from(form.elements).forEach(el => {
+                if (!el.name) return;
+                if (el.type === 'file') return; // handled separately
+                if (el.name === '__RequestVerificationToken') return; // handled manually to avoid duplication
+                if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) return;
+                fd.append(el.name, el.value);
+            });
+
+            // Append files selected via preview manager
+            if (window._editSelectedFiles && window._editSelectedFiles.length) {
+                window._editSelectedFiles.forEach((f) => fd.append('Photos', f));
+            }
+
+            // Ensure anti-forgery token present (append once)
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            if (token) fd.append('__RequestVerificationToken', token);
+
+                // Ensure antiforgery cookie is sent and token header included to prevent 400
+                const tokenValue = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const response = await fetch(form.action || window.location.href, {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'include',
+                    headers: tokenValue ? { 'X-Requested-With': 'XMLHttpRequest', 'RequestVerificationToken': tokenValue } : { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+            // Log status and body for easier debugging when server returns HTML or errors
+            try {
+                const raw = await response.text();
+                console.log('[EditCustomer] response status:', response.status, 'body length:', raw ? raw.length : 0);
+                if (!response.ok) console.error('[EditCustomer] response body:', raw);
+                // Re-create a Response object if caller expects response.json() later (not needed here)
+            } catch (e) { console.warn('Could not read EditCustomer response body', e); }
+
+            if (response.ok) {
+                showDynamicAlert('Profile updated', 'success');
+                // delay longer so console messages are visible before the reload
+                setTimeout(() => { window.location.href = '@Url.Action("CustomerProfile","Home", new { area = "Admin", customerId = Model?.UserId })'; }, 6000);
+            } else {
+                // Already logged body above
+                showDynamicAlert('Failed to update profile. See console.', 'danger');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = '💾 Save Changes'; }
+            }
+        } catch (err) {
+            console.error('submitEditProfileForm error', err);
+            showDynamicAlert('Network error. See console.', 'danger');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = '💾 Save Changes'; }
+        }
+    }
+
+    // Ensure `confirmEditProfile` exists even when a global `showConfirmModal` is already present
+    if (typeof window.confirmEditProfile !== 'function') {
         window.confirmEditProfile = function(event, name) {
             if (event && event.preventDefault) event.preventDefault();
-            const form = event && event.target ? event.target : null;
-            window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, function() {
-                if (form) form.submit();
-            });
+            const form = event && event.target && event.target.tagName === 'FORM' ? event.target : document.getElementById('editProfileForm');
+            const doSubmit = function() { if (form) submitEditProfileForm(form); };
+            if (typeof window.openConfirmModal === 'function') {
+                window.openConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, doSubmit);
+            } else if (typeof window.showConfirmModal === 'function') {
+                window.showConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, 'save', '#10b981', doSubmit);
+            } else {
+                if (confirm(`Are you sure you want to save changes to "${name}"?`)) doSubmit();
+            }
             return false;
         };
     }
 
-    // showDynamicAlert fallback
+    // showDynamicAlert fallback — use same Groomer/Customer listing style (banner from sidebar to right edge)
     if (typeof window.showDynamicAlert !== 'function') {
         window.showDynamicAlert = function(message, type) {
-            const existing = document.getElementById('dynamicAlert');
-            if (existing) existing.remove();
-            const alertDiv = document.createElement('div');
-            alertDiv.id = 'dynamicAlert';
-            const bsClass = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
-            alertDiv.className = `alert ${bsClass}`;
-            alertDiv.style.position = 'fixed';
-            alertDiv.style.top = '20px';
-            alertDiv.style.left = '50%';
-            alertDiv.style.transform = 'translateX(-50%)';
-            alertDiv.style.zIndex = '22000';
-            alertDiv.style.minWidth = '300px';
-            alertDiv.style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)';
-            alertDiv.style.borderRadius = '8px';
-            alertDiv.style.padding = '12px 18px';
-            alertDiv.innerHTML = `<strong>${type === 'success' ? '✔️ Success' : (type === 'warning' ? '⚠️ Warning' : '❌ Error')}:</strong> ${message}`;
-            document.body.appendChild(alertDiv);
-            setTimeout(() => { alertDiv.classList.add('fade-out'); alertDiv.style.transition = 'opacity 0.4s ease, transform 0.4s ease'; alertDiv.style.opacity = '0'; alertDiv.style.transform = 'translateX(-50%) translateY(-10px)'; setTimeout(() => { alertDiv.remove(); }, 450); }, 5000);
+            try {
+                const existing = document.getElementById('alertMessage');
+                if (existing) existing.remove();
+
+                const alertDiv = document.createElement('div');
+                alertDiv.id = 'alertMessage';
+                const bsClass = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
+                alertDiv.className = `alert ${bsClass}`;
+                alertDiv.setAttribute('role', 'alert');
+                // Use the same structure as listing page alerts so CSS matches
+                alertDiv.innerHTML = `<strong>${type === 'success' ? '✔️ Success:' : (type === 'warning' ? '⚠️ Warning:' : '❌ Error:')}</strong> ${message}`;
+
+                document.body.appendChild(alertDiv);
+
+                // Auto hide after 5 seconds
+                setTimeout(() => {
+                    if (alertDiv) {
+                        alertDiv.classList.add('fade-out');
+                        alertDiv.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                        alertDiv.style.opacity = '0';
+                        alertDiv.style.transform = 'translateY(-10px)';
+                        setTimeout(() => { alertDiv.remove(); }, 450);
+                    }
+                }, 5000);
+            } catch (e) {
+                console.error('showDynamicAlert error:', e);
+            }
         };
     }
 
@@ -768,15 +1047,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Avatar Carousel Logic ---
 
     function updateAvatarUI() {
-        avatarPhotos?.forEach((photo, idx) => {
+        if (!avatarPhotos || avatarPhotos.length === 0) return;
+        avatarPhotos.forEach((photo, idx) => {
             const isActive = idx === currentPhotoIndex;
             photo.classList.toggle('active', isActive);
             photo.style.opacity = isActive ? '1' : '0';
             photo.style.transform = isActive ? 'scale(1)' : 'scale(0.98)';
         });
-        avatarIndicators?.forEach((indicator, idx) => {
-            indicator.classList.toggle('active', idx === currentPhotoIndex);
-        });
+        if (avatarIndicators && avatarIndicators.length) {
+            avatarIndicators.forEach((indicator, idx) => {
+                indicator.classList.toggle('active', idx === currentPhotoIndex);
+            });
+        }
     }
 
     function advanceAvatar() {
@@ -797,7 +1079,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initAvatarAnimation() {
-        if (!avatarContainer || !avatarPhotos || avatarPhotos.length <= 1) return;
+        if (!avatarContainer) return;
+
+        // Re-query photos/indicators to ensure we have the live nodes
+        avatarPhotos = Array.from(avatarContainer.querySelectorAll('.avatar-photo'));
+        avatarIndicators = avatarIndicatorsContainer ? Array.from(avatarIndicatorsContainer.querySelectorAll('.avatar-indicator')) : [];
+
+        if (!avatarPhotos || avatarPhotos.length <= 1) return;
 
         // Set initial state
         const activePhoto = avatarContainer.querySelector('.avatar-photo.active');
@@ -813,14 +1101,17 @@ document.addEventListener('DOMContentLoaded', function () {
             isAvatarPaused = false;
             avatarInterval = setInterval(advanceAvatar, ANIMATION_DELAY);
         });
-        
-        avatarIndicatorsContainer.addEventListener('click', e => {
-            if(e.target.matches('.avatar-indicator')) {
-                 const index = parseInt(e.target.dataset.index, 10);
-                 goToPhoto(index);
-            }
-        });
 
+        if (avatarIndicatorsContainer) {
+            avatarIndicatorsContainer.addEventListener('click', e => {
+                if (e.target && e.target.matches('.avatar-indicator')) {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    if (!Number.isNaN(index)) goToPhoto(index);
+                }
+            });
+        }
+
+        clearInterval(avatarInterval);
         avatarInterval = setInterval(advanceAvatar, ANIMATION_DELAY);
     }
     
@@ -836,6 +1127,9 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             newBalance -= amount;
         }
+
+        // Ensure new balance never goes negative
+        newBalance = Math.max(0, newBalance);
 
         if (newBalanceDisplay) newBalanceDisplay.textContent = `${newBalance} pts`;
     }
@@ -859,10 +1153,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
+            // Ensure antiforgery token appended and cookies sent
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            if (token) formData.append('__RequestVerificationToken', token);
             // Use the correct action name defined in controller
+            const tokenHeaderAdd = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
             const response = await fetch('@Url.Action("AddPetToCustomer", "Home", new { area = "Admin" })', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include',
+                headers: tokenHeaderAdd ? { 'X-Requested-With': 'XMLHttpRequest', 'RequestVerificationToken': tokenHeaderAdd } : { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
             // Read response as text first so we can detect non-JSON responses (e.g. HTML login page due to redirect)
@@ -879,6 +1179,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     successMessage.textContent = 'Pet added successfully! Reloading...';
                     successMessage.style.display = 'block';
                 }
+                try { showDynamicAlert('Pet added successfully! Reloading...', 'success'); } catch (e) {}
                 setTimeout(() => window.location.reload(),5000);
             } else {
                 // If server returned JSON, prefer its message. Otherwise use raw text or a generic error.
@@ -910,11 +1211,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const submitButton = form.querySelector('button[type="submit"]');
         const originalButtonText = submitButton?.innerHTML || 'Saving...';
         
+        const rawAmount = form.querySelector('input[name="loyaltyAmount"]').value;
+        const amt = parseInt(rawAmount, 10);
+        const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
         const data = {
             customerId: form.querySelector('input[name="customerId"]').value,
             adjustmentType: form.querySelector('input[name="adjustmentType"]:checked').value,
-            loyaltyAmount: form.querySelector('input[name="loyaltyAmount"]').value,
-            __RequestVerificationToken: form.querySelector('input[name="__RequestVerificationToken"]')?.value
+            loyaltyAmount: isNaN(amt) ? 0 : amt
         };
 
         if(successMessage) successMessage.style.display = 'none';
@@ -922,46 +1226,71 @@ document.addEventListener('DOMContentLoaded', function () {
         if(submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
 
         try {
-            const response = await fetch('@Url.Action("AdjustLoyalty", "Home", new { area = "Admin" })', {
+            if (isNaN(amt) || amt < 0) {
+                if (errorMessage) { errorMessage.textContent = 'Amount must be a non-negative integer.'; errorMessage.style.display = 'block'; }
+                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalButtonText; }
+                return;
+            }
+
+            // Client-side guard: when subtracting, do not allow subtracting more than current balance
+            const adjustmentType = form.querySelector('input[name="adjustmentType"]:checked')?.value || 'add';
+            if (adjustmentType === 'subtract' && (isNaN(amt) ? 0 : amt) > (typeof currentLoyaltyPoints === 'number' ? currentLoyaltyPoints : 0)) {
+                if (errorMessage) { errorMessage.textContent = 'Cannot subtract more than the customer\'s current balance.'; errorMessage.style.display = 'block'; }
+                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalButtonText; }
+                return;
+            }
+
+            // Client-side guard: block adjustments for customers pending password setup
+            if (customerStatus && customerStatus.toLowerCase() === 'pending_password') {
+                if (errorMessage) { errorMessage.textContent = 'Cannot adjust points: customer account not activated.'; errorMessage.style.display = 'block'; }
+                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalButtonText; }
+                return;
+            }
+
+            // Use FormData so ASP.NET model binding binds primitive params correctly
+            const fd = new FormData();
+            fd.append('customerId', data.customerId);
+            fd.append('adjustmentType', data.adjustmentType);
+            fd.append('loyaltyAmount', String(data.loyaltyAmount));
+            if (token) fd.append('__RequestVerificationToken', token);
+
+            const response = await fetch('@Url.Action("AdjustLoyaltyPoints", "Home", new { area = "Admin" })', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                credentials: 'include',
+                headers: token ? { 'RequestVerificationToken': token } : {},
+                body: fd
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    if(successMessage){ successMessage.textContent = 'Points adjusted successfully!'; successMessage.style.display = 'block'; }
+            const raw = await response.text();
+            let result = {};
+            try { result = raw ? JSON.parse(raw) : {}; } catch (e) { result = { success: false, message: raw || 'Invalid server response' }; }
 
-                    const newPoints = result.newLoyaltyPoints;
-                    currentLoyaltyPoints = newPoints; // Update mutable global state
-                    
-                    const loyaltyPointsEl = document.getElementById('loyaltyPointsDisplay');
-                    if(loyaltyPointsEl) loyaltyPointsEl.textContent = `${newPoints} pts`;
+            if (response.ok && result && result.success) {
+                if(successMessage){ successMessage.textContent = 'Points adjusted successfully!'; successMessage.style.display = 'block'; }
 
-                    document.querySelectorAll('#loyaltyBalanceDisplay, #currentBalance').forEach(el => {
-                        el.textContent = `${newPoints}`;
-                    });
+                const newPoints = result.newLoyaltyPoints;
+                currentLoyaltyPoints = newPoints; // Update mutable global state
+                
+                const loyaltyPointsEl = document.getElementById('loyaltyPointsDisplay');
+                if(loyaltyPointsEl) loyaltyPointsEl.textContent = `${newPoints} pts`;
 
-                    updateLoyaltyPreview();
+                document.querySelectorAll('#loyaltyBalanceDisplay, #currentBalance').forEach(el => {
+                    el.textContent = `${newPoints}`;
+                });
 
-                    setTimeout(() => {
-                        closeModal(document.getElementById('adjustLoyaltyOverlay'));
-                        if(successMessage) successMessage.style.display = 'none';
-                    },1500);
-                } else {
-                    if(errorMessage){ errorMessage.textContent = result.message || 'An unknown error occurred.'; errorMessage.style.display = 'block'; }
-                }
+                updateLoyaltyPreview();
+
+                // Show global dynamic alert and close modal after a short delay
+                try { showDynamicAlert('Points adjusted successfully!', 'success'); } catch (e) {}
+                setTimeout(() => { try { closeModal(adjustLoyaltyModal); } catch (e) {} }, 1200);
+
+                setTimeout(() => {
+                    closeModal(document.getElementById('adjustLoyaltyOverlay'));
+                    if(successMessage) successMessage.style.display = 'none';
+                },1500);
             } else {
-                let errorMsg = 'An unknown server error occurred.';
-                const text = await response.text();
-                try {
-                    const errorData = text ? JSON.parse(text) : null;
-                    errorMsg = (errorData && (errorData.message || errorData.error)) ? (errorData.message || errorData.error) : text || errorMsg;
-                } catch (e) {
-                    errorMsg = text || errorMsg;
-                }
-                if(errorMessage) { errorMessage.textContent = errorMsg; errorMessage.style.display = 'block'; }
+                const errMsg = result && (result.message || result.error) ? (result.message || result.error) : (raw || 'An unknown server error occurred.');
+                if(errorMessage) { errorMessage.textContent = errMsg; errorMessage.style.display = 'block'; }
             }
         } catch (error) {
             console.error('Error adjusting loyalty points:', error);
@@ -972,48 +1301,76 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function deleteCustomerPhoto(photoUrl, button) {
-        if (!confirm('Are you sure you want to delete this photo?')) return;
-        
-        button.disabled = true;
-        try {
-            const response = await fetch('@Url.Action("DeleteCustomerPhoto", "Home", new { area = "Admin" })', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': antiForgeryToken
-                },
-                body: JSON.stringify({ customerId, photoUrl })
-            });
+        // Use page confirm modal (Groomer style) to match Customer page
+        if (typeof window.showConfirmModal === 'function') {
+            window.showConfirmModal('Confirm Delete', 'Are you sure you want to delete this photo?', 'delete', '#ef4444', async function() {
+                // proceed with deletion
+                if (button) button.disabled = true;
+                try {
+                    const response = await fetch('@Url.Action("DeleteCustomerPhoto", "Home", new { area = "Admin" })', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': antiForgeryToken
+                        },
+                        body: JSON.stringify({ customerId, photoUrl })
+                    });
 
-            if (response.ok) {
-                 // On success, remove the photo from the modal and the carousel
-                document.querySelector(`.existing-photo-item[data-photo="${photoUrl}"]`)?.remove();
-                const carouselPhoto = document.querySelector(`#adminAnimatedAvatar .avatar-photo[src="${photoUrl}"]`);
-                if(carouselPhoto){
-                    const wasActive = carouselPhoto.classList.contains('active');
-                    carouselPhoto.remove();
-                    // Refresh photos nodeList and reset animation
-                    const freshPhotos = avatarContainer?.querySelectorAll('.avatar-photo');
-                    if(freshPhotos.length > 0 && wasActive){
-                        goToPhoto(0);
-                    } else if (freshPhotos.length <= 1) {
-                         clearInterval(avatarInterval);
+                    if (response.ok) {
+                        try { button.closest('.existing-photo-item')?.remove(); } catch (e) {}
+
+                        let carouselPhoto = null;
+                        if (avatarContainer) {
+                            carouselPhoto = Array.from(avatarContainer.querySelectorAll('.avatar-photo')).find(img => {
+                                const s = img.getAttribute('src') || '';
+                                try { return s === photoUrl || img.src.endsWith(photoUrl) || s.endsWith(photoUrl); } catch { return s === photoUrl; }
+                            });
+                        }
+
+                        if (carouselPhoto) {
+                            const wasActive = carouselPhoto.classList.contains('active');
+                            carouselPhoto.remove();
+                            const freshPhotos = avatarContainer?.querySelectorAll('.avatar-photo') || [];
+                            if (freshPhotos.length > 0 && wasActive) goToPhoto(0);
+                            if (freshPhotos.length <= 1) clearInterval(avatarInterval);
+                        }
+
+                        if (document.querySelectorAll('.existing-photo-item').length === 0) {
+                            const container = document.getElementById('existingPhotosContainer');
+                            if (container) container.innerHTML = '<p style="color:#999;">No photos remaining.</p>';
+                        }
+
+                        showDynamicAlert('Photo deleted', 'success');
+                    } else {
+                        const text = await response.text();
+                        console.error('DeleteCustomerPhoto failed:', text);
+                        showDynamicAlert('Failed to delete photo. See console.', 'danger');
                     }
+                } catch (err) {
+                    console.error('Error deleting photo:', err);
+                    showDynamicAlert('Network error deleting photo.', 'danger');
+                } finally {
+                    if (button) button.disabled = false;
                 }
-                // Check if no photos are left
-                if (document.querySelectorAll('.existing-photo-item').length === 0) {
-                     const container = document.getElementById('existingPhotosContainer');
-                     if(container) container.innerHTML = '<p style="color:#999;">No photos remaining.</p>';
+            });
+        } else {
+            if (!confirm('Are you sure you want to delete this photo?')) return;
+            // fallback to original behavior if modal not available
+            try { button.disabled = true; } catch (e) {}
+            try {
+                const response = await fetch('@Url.Action("DeleteCustomerPhoto", "Home", new { area = "Admin" })', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgeryToken },
+                    body: JSON.stringify({ customerId, photoUrl })
+                });
+                if (response.ok) {
+                    try { button.closest('.existing-photo-item')?.remove(); } catch (e) {}
+                    showDynamicAlert('Photo deleted', 'success');
+                } else {
+                    showDynamicAlert('Failed to delete photo.', 'danger');
                 }
-                // TODO: Add a more robust success notification
-            } else {
-                throw new Error('Server responded with an error.');
-            }
-        } catch (error) {
-            console.error('Error deleting photo:', error);
-            alert('Failed to delete the photo. Please check the console and try again.');
-        } finally {
-            button.disabled = false;
+            } catch (e) { console.error(e); showDynamicAlert('Network error deleting photo.', 'danger'); }
+            finally { try { button.disabled = false; } catch (e) {} }
         }
     }
 
@@ -1029,11 +1386,39 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         
         document.getElementById('addPetBtn')?.addEventListener('click', () => openModal(addPetModal));
-        // Attach add pet form submit handler
-        document.getElementById('addPetForm')?.addEventListener('submit', handleAddPetSubmit);
+        // Attach add pet form submit handler (with confirmation)
+        document.getElementById('addPetForm')?.addEventListener('submit', function (e) { confirmAddPet(e); });
+        // Adjust loyalty form uses double-confirm flow
+        document.getElementById('adjustLoyaltyForm')?.addEventListener('submit', function (e) { try { e.preventDefault(); confirmAdjustLoyalty(e); } catch (ex) {} });
         document.querySelectorAll('.add-new-pet-btn').forEach(btn => btn.addEventListener('click', () => openModal(addPetModal)));
 
-        document.getElementById('adjustLoyaltyBtn')?.addEventListener('click', () => openModal(adjustLoyaltyModal));
+        // Prevent opening the Adjust Points modal for pending_password customers; show error instead
+        document.getElementById('adjustLoyaltyBtn')?.addEventListener('click', (e) => {
+            // If customer is pending password, open the modal but show an inline error and disable submit
+            if (customerStatus && customerStatus.toLowerCase() === 'pending_password') {
+                openModal(adjustLoyaltyModal);
+                try {
+                    const errEl = document.getElementById('loyaltyErrorMessage');
+                    const successEl = document.getElementById('loyaltySuccessMessage');
+                    if (successEl) successEl.style.display = 'none';
+                    if (errEl) {
+                        errEl.textContent = 'Cannot adjust points: customer account not activated.';
+                        errEl.style.display = 'block';
+                    }
+                    // disable the submit button inside the modal to prevent attempts
+                    const submitBtn = adjustLoyaltyModal?.querySelector('button[type="submit"]');
+                    if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset._wasDisabledByPending = 'true'; }
+                } catch (ex) { console.warn('failed to show inline pending message', ex); }
+                return;
+            }
+            // Normal flow
+            openModal(adjustLoyaltyModal);
+            // Ensure error message hidden and submit enabled
+            try { document.getElementById('loyaltyErrorMessage').style.display = 'none'; } catch (e) {}
+            try { const submitBtn = adjustLoyaltyModal?.querySelector('button[type="submit"]'); if (submitBtn) submitBtn.disabled = false; } catch (e) {}
+        });
+
+        // Hover hint is now handled by CSS using the .pending-wrapper container
         document.querySelectorAll('.adjust-points-btn').forEach(btn => btn.addEventListener('click', () => openModal(adjustLoyaltyModal)));
 
         // --- Modal Close/Cancel Buttons ---
@@ -1079,7 +1464,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (deleteBtn) {
                     const petId = deleteBtn.dataset.petId;
                     const petName = deleteBtn.dataset.petName || 'this pet';
-                    window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, function() {
+                    if (typeof window.openConfirmModal === 'function') {
+                        window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, function() {
+                            // proceed with delete
+                            proceedDelete();
+                        });
+                    } else if (typeof window.showConfirmModal === 'function') {
+                        window.showConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, 'delete', '#ef4444', function() { proceedDelete(); });
+                    } else {
+                        if (confirm(`Are you sure you want to delete "${petName}"?`)) { proceedDelete(); }
+                    }
+                    function proceedDelete() {
                         // proceed with delete
                         const formData = new FormData();
                         formData.append('petId', petId);
@@ -1117,44 +1512,227 @@ document.addEventListener('DOMContentLoaded', function () {
                             deleteBtn.disabled = false;
                             deleteBtn.innerHTML = originalText;
                         });
-                    });
+                    }
 
             }
         });
 
-        // --- Edit Pet Form Submit ---
-        document.getElementById('editPetForm')?.addEventListener('submit', async function (event) {
+        // Fallback: global delegated listener for .delete-pet-btn in case the local handler is blocked
+        document.addEventListener('click', function (e) {
+            try {
+                const deleteBtn = e.target && e.target.closest ? e.target.closest('.delete-pet-btn') : null;
+                if (!deleteBtn) return;
+                // Prevent duplicate execution if the local handler already handled it
+                if (deleteBtn.__handling) return;
+                deleteBtn.__handling = true;
+                e.preventDefault();
+
+                const petId = deleteBtn.dataset.petId;
+                const petName = deleteBtn.dataset.petName || 'this pet';
+
+                const proceed = function () {
+                    const formData = new FormData();
+                    formData.append('petId', petId);
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    if (token) formData.append('__RequestVerificationToken', token);
+
+                    deleteBtn.disabled = true;
+                    const originalText = deleteBtn.innerHTML;
+                    deleteBtn.innerHTML = 'Deleting...';
+
+                    fetch('@Url.Action("DeletePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData, credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(async response => {
+                            const text = await response.text();
+                            try {
+                                const data = text ? JSON.parse(text) : {};
+                                if (data.success) {
+                                    showDynamicAlert(`${petName} deleted.`, 'success');
+                                    setTimeout(() => location.reload(), 5000);
+                                } else {
+                                    console.error('DeletePet error response:', data);
+                                    showDynamicAlert(data.message || 'Delete failed', 'danger');
+                                    deleteBtn.disabled = false;
+                                    deleteBtn.innerHTML = originalText;
+                                }
+                            } catch (err) {
+                                console.error('Failed to parse DeletePet response as JSON:', text, err);
+                                showDynamicAlert('Server error while deleting pet.', 'danger');
+                                deleteBtn.disabled = false;
+                                deleteBtn.innerHTML = originalText;
+                            }
+                        })
+                        .catch(err => {
+                            console.error('DeletePet request failed:', err);
+                            showDynamicAlert('Request failed. See console for details.', 'danger');
+                            deleteBtn.disabled = false;
+                            deleteBtn.innerHTML = originalText;
+                        })
+                        .finally(() => { deleteBtn.__handling = false; });
+                };
+
+                if (typeof window.openConfirmModal === 'function') {
+                    if (typeof window.openConfirmModal === 'function') {
+                        window.openConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, proceed);
+                    } else if (typeof window.showConfirmModal === 'function') {
+                        window.showConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, 'delete', '#ef4444', proceed);
+                    } else {
+                        if (confirm(`Are you sure you want to delete "${petName}"?`)) proceed();
+                    }
+                } else if (typeof window.showConfirmModal === 'function') {
+                    window.showConfirmModal('Confirm Delete', `Are you sure you want to delete "${petName}"?`, 'delete', '#ef4444', proceed);
+                } else {
+                    if (confirm(`Are you sure you want to delete "${petName}"?`)) proceed();
+                }
+            } catch (e) { console.warn('global delete-pet-btn handler error', e); }
+        });
+
+        // --- Edit Pet Form Submit (with confirmation) ---
+        document.getElementById('editPetForm')?.addEventListener('submit', function (event) {
             event.preventDefault();
             const form = event.target;
-            const successMessage = document.getElementById('editPetSuccessMessage');
-            const errorMessage = document.getElementById('editPetErrorMessage');
-            const submitButton = form.querySelector('button[type="submit"]');
-            const originalText = submitButton?.innerHTML || 'Saving...';
-
-            if (successMessage) successMessage.style.display = 'none';
-            if (errorMessage) errorMessage.style.display = 'none';
-            if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
-
-            try {
-                const formData = new FormData(form);
-                const response = await fetch('@Url.Action("UpdatePet", "Home", new { area = "Admin" })', { method: 'POST', body: formData });
-                const text = await response.text();
-                let data = {};
-                try { data = text ? JSON.parse(text) : {}; } catch { data = { success: false, message: text || 'Invalid server response' }; }
-
-                    if (response.ok && data.success) {
-                        if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
-                        setTimeout(() => { closeModal(editPetModal); location.reload(); },5000);
-                } else {
-                    if (errorMessage) { errorMessage.textContent = data.message || 'Failed to update pet'; errorMessage.style.display = 'block'; }
-                }
-            } catch (err) {
-                console.error('Error updating pet:', err);
-                if (document.getElementById('editPetErrorMessage')) { document.getElementById('editPetErrorMessage').textContent = 'Request failed'; document.getElementById('editPetErrorMessage').style.display = 'block'; }
-            } finally {
-                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalText; }
-            }
+            confirmEditPet(event);
+            return;
         });
+
+        // confirmAddPet/confirmEditPet helpers show the Groomer-style double-confirm modal
+        window.confirmAddPet = function(event) {
+            try { if (event && event.preventDefault) event.preventDefault(); } catch (e) {}
+            const form = event && event.target ? event.target : document.getElementById('addPetForm');
+            const nameInput = form ? form.querySelector('[name="petName"]') : null;
+            const name = nameInput ? (nameInput.value || 'pet') : 'pet';
+            if (typeof window.showConfirmModal === 'function') {
+                window.showConfirmModal('Confirm Add', `Are you sure you want to add "${name}"?`, 'save', '#10b981', function() {
+                    // call existing handler with a synthetic event-like object
+                    handleAddPetSubmit({ target: form, preventDefault: function(){} });
+                });
+            } else {
+                if (confirm(`Are you sure you want to add "${name}"?`)) {
+                    handleAddPetSubmit({ target: form, preventDefault: function(){} });
+                }
+            }
+        };
+
+        window.confirmEditPet = function(event) {
+            try { if (event && event.preventDefault) event.preventDefault(); } catch (e) {}
+            const form = event && event.target ? event.target : document.getElementById('editPetForm');
+            const nameInput = form ? form.querySelector('[name="petName"]') || form.querySelector('#editPetName') : null;
+            const name = nameInput ? (nameInput.value || 'pet') : 'pet';
+            if (typeof window.showConfirmModal === 'function') {
+                window.showConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${name}"?`, 'save', '#10b981', function() {
+                    // perform the existing submit logic inline
+                    (async function(form) {
+                        const successMessage = document.getElementById('editPetSuccessMessage');
+                        const errorMessage = document.getElementById('editPetErrorMessage');
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        const originalText = submitButton?.innerHTML || 'Saving...';
+                        if (successMessage) successMessage.style.display = 'none';
+                        if (errorMessage) errorMessage.style.display = 'none';
+                        if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
+                        try {
+                            const formData = new FormData(form);
+                            // append antiforgery token and include credentials
+                            try {
+                                const t = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                                if (t) formData.append('__RequestVerificationToken', t);
+                            } catch (e) {}
+                            const tokenHeader = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                            const response = await fetch('@Url.Action("UpdatePet", "Home", new { area = "Admin" })', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include',
+                                headers: tokenHeader ? { 'X-Requested-With': 'XMLHttpRequest', 'RequestVerificationToken': tokenHeader } : { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            const text = await response.text();
+                            let data = {};
+                            try { data = text ? JSON.parse(text) : {}; } catch { data = { success: false, message: text || 'Invalid server response' }; }
+                            if (response.ok && data.success) {
+                                if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
+                                try { showDynamicAlert(data.message || 'Pet updated!', 'success'); } catch (e) {}
+                                setTimeout(() => { closeModal(editPetModal); location.reload(); },5000);
+                            } else {
+                                if (errorMessage) { errorMessage.textContent = data.message || 'Failed to update pet'; errorMessage.style.display = 'block'; }
+                            }
+                        } catch (err) {
+                            console.error('Error updating pet:', err);
+                            if (errorMessage) { errorMessage.textContent = 'A network error occurred. Please try again.'; errorMessage.style.display = 'block'; }
+                        } finally {
+                            if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalText; }
+                        }
+                    })(form);
+                });
+            } else {
+                if (confirm(`Are you sure you want to save changes to "${name}"?`)) {
+                    // submit without confirmation modal
+                    (async function(form) {
+                        const successMessage = document.getElementById('editPetSuccessMessage');
+                        const errorMessage = document.getElementById('editPetErrorMessage');
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        const originalText = submitButton?.innerHTML || 'Saving...';
+                        if (successMessage) successMessage.style.display = 'none';
+                        if (errorMessage) errorMessage.style.display = 'none';
+                        if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = 'Saving...'; }
+                        try {
+                            const formData = new FormData(form);
+                            // append antiforgery token and include credentials
+                            try {
+                                const t = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                                if (t) formData.append('__RequestVerificationToken', t);
+                            } catch (e) {}
+                            const tokenHeader2 = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                            const response = await fetch('@Url.Action("UpdatePet", "Home", new { area = "Admin" })', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include',
+                                headers: tokenHeader2 ? { 'X-Requested-With': 'XMLHttpRequest', 'RequestVerificationToken': tokenHeader2 } : { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            const text = await response.text();
+                            let data = {};
+                            try { data = text ? JSON.parse(text) : {}; } catch { data = { success: false, message: text || 'Invalid server response' }; }
+                            if (response.ok && data.success) {
+                                if (successMessage) { successMessage.textContent = data.message || 'Pet updated!'; successMessage.style.display = 'block'; }
+                                setTimeout(() => { closeModal(editPetModal); location.reload(); },5000);
+                            } else {
+                                if (errorMessage) { errorMessage.textContent = data.message || 'Failed to update pet'; errorMessage.style.display = 'block'; }
+                            }
+                        } catch (err) {
+                            console.error('Error updating pet:', err);
+                            if (errorMessage) { errorMessage.textContent = 'A network error occurred. Please try again.'; errorMessage.style.display = 'block'; }
+                        } finally {
+                            if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalText; }
+                        }
+                    })(form);
+                }
+            }
+        };
+
+        // Double-confirm for adjusting loyalty points
+        window.confirmAdjustLoyalty = function(event) {
+            try { if (event && event.preventDefault) event.preventDefault(); } catch (e) {}
+            const form = event && event.target ? event.target : document.getElementById('adjustLoyaltyForm');
+            if (!form) return;
+            // If customer is pending_password, show inline error instead of confirm
+            if (customerStatus && customerStatus.toLowerCase() === 'pending_password') {
+                try { const errEl = document.getElementById('loyaltyErrorMessage'); if (errEl) { errEl.textContent = 'Cannot adjust points: customer account not activated.'; errEl.style.display = 'block'; } } catch (e) {}
+                return;
+            }
+
+            const type = form.querySelector('input[name="adjustmentType"]:checked')?.value || 'add';
+            const amtRaw = form.querySelector('input[name="loyaltyAmount"]')?.value || '0';
+            const amt = parseInt(amtRaw, 10) || 0;
+            const verb = type === 'add' ? 'add' : 'subtract';
+            const pretty = `${amt} pts`;
+
+            if (typeof window.showConfirmModal === 'function') {
+                window.showConfirmModal('Confirm Adjustment', `Are you sure you want to ${verb} ${pretty} to this customer?`, 'save', '#10b981', function() {
+                    // call actual submit handler
+                    handleAdjustLoyaltySubmit({ target: form, preventDefault: function(){} });
+                });
+            } else {
+                if (confirm(`Are you sure you want to ${verb} ${pretty} to this customer?`)) {
+                    handleAdjustLoyaltySubmit({ target: form, preventDefault: function(){} });
+                }
+            }
+        };
     }
 
 
@@ -1162,6 +1740,259 @@ document.addEventListener('DOMContentLoaded', function () {
     initAvatarAnimation();
     setupEventListeners();
     updateLoyaltyPreview(); // Initial calculation
+
+    // Live-update loyalty preview when amount or adjustment type changes
+    try {
+        if (loyaltyAmountInput) loyaltyAmountInput.addEventListener('input', updateLoyaltyPreview);
+        document.querySelectorAll('input[name="adjustmentType"]').forEach(r => r.addEventListener('change', updateLoyaltyPreview));
+    } catch (e) { /* ignore */ }
+
+    // Bind edit form submit to confirm handler now that handlers are defined
+    try {
+        const editForm = document.getElementById('editProfileForm');
+        const editName = '@(Model?.Name?.Replace("'", "\\'") ?? "")';
+        if (editForm) {
+            // Remove any existing handler to avoid double-binding
+            if (editForm.removeEventListener) editForm.removeEventListener('submit', window.confirmEditProfile);
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                try { confirmEditProfile(e, editName); } catch (err) { console.error('confirmEditProfile missing', err); }
+                return false;
+            });
+        }
+    } catch (err) { console.warn('Binding edit form submit failed', err); }
+
+    // --- Edit modal field validation (reuse Add Customer validation pattern) ---
+    async function validateCustomerField_Edit(inputElement) {
+        const rawFieldName = inputElement.name; // e.g., "Name", "Email", "Phone", "IC"
+        const fieldName = rawFieldName.toLowerCase();
+        const fieldValue = inputElement.value;
+        const errorElement = document.getElementById(`error-${rawFieldName}`);
+
+        if (errorElement) errorElement.textContent = '';
+        if (errorElement) errorElement.classList.remove('valid');
+        inputElement.classList.remove('is-invalid');
+
+        if (inputElement.required && !fieldValue.trim()) {
+            if (errorElement) errorElement.textContent = `${rawFieldName} is required.`;
+            inputElement.classList.add('is-invalid');
+            return;
+        }
+
+        if (!inputElement.required && !fieldValue.trim()) return;
+
+        try {
+            const response = await fetch('@Url.Action("ValidateCustomerField", "Home")', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ CustomerId: '@Model?.UserId', FieldName: fieldName, FieldValue: fieldValue })
+            });
+
+            if (!response.ok) throw new Error('Server validation failed');
+            const result = await response.json();
+            if (!result.isValid) {
+                if (errorElement) errorElement.textContent = result.errorMessage;
+                inputElement.classList.add('is-invalid');
+            } else {
+                if (errorElement) { errorElement.textContent = '✓ Valid'; errorElement.classList.add('valid'); }
+            }
+        } catch (err) {
+            console.error('Edit field validation error:', err);
+        }
+    }
+
+    // Attach validation handlers to edit modal inputs
+    (function attachEditValidationHandlers() {
+        const inputs = ['customerName','customerEmail','customerPhone','customerIC'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('blur', function () { validateCustomerField_Edit(this); });
+            el.addEventListener('input', function () {
+                // Clear error while typing
+                const err = document.getElementById('error-' + this.name);
+                if (err) { err.textContent = ''; err.classList.remove('valid'); }
+                this.classList.remove('is-invalid');
+            });
+        });
+    })();
+
+    // --- Pet Age Validation (mirror Customer.cshtml behavior) ---
+    function validatePetAgeField(inputId, errorId, submitBtnId) {
+        const petAgeInput = document.getElementById(inputId);
+        const errorEl = document.getElementById(errorId);
+        const saveBtn = submitBtnId ? document.getElementById(submitBtnId) : null;
+        if (!petAgeInput || !errorEl) return true;
+
+        const raw = petAgeInput.value;
+        if (raw === null || raw === undefined || raw === '') {
+            errorEl.textContent = '';
+            errorEl.classList.remove('valid','invalid');
+            petAgeInput.classList.remove('is-invalid');
+            petAgeInput.setCustomValidity('');
+            if (saveBtn) saveBtn.disabled = false;
+            return true;
+        }
+
+        const age = Number(raw);
+        if (Number.isNaN(age) || !isFinite(age)) {
+            errorEl.textContent = 'Age must be a number.';
+            errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+            petAgeInput.classList.add('is-invalid');
+            petAgeInput.setCustomValidity('Invalid age');
+            if (saveBtn) saveBtn.disabled = true;
+            return false;
+        }
+
+        if (age < 0) {
+            errorEl.textContent = 'Age cannot be negative.';
+            errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+            petAgeInput.classList.add('is-invalid');
+            petAgeInput.setCustomValidity('Age cannot be negative');
+            if (saveBtn) saveBtn.disabled = true;
+            return false;
+        }
+
+        if (age > 30) {
+            errorEl.textContent = 'Age cannot be greater than 30.';
+            errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+            petAgeInput.classList.add('is-invalid');
+            petAgeInput.setCustomValidity('Age too large');
+            if (saveBtn) saveBtn.disabled = true;
+            return false;
+        }
+
+        // Valid
+        errorEl.textContent = '✓ Valid';
+        errorEl.classList.remove('invalid'); errorEl.classList.add('valid');
+        petAgeInput.classList.remove('is-invalid');
+        petAgeInput.setCustomValidity('');
+        if (saveBtn) saveBtn.disabled = false;
+        return true;
+    }
+
+    // Ensure error <small> elements exist for pet age fields
+    (function ensurePetAgeErrorEls() {
+        const addPetWrapper = document.querySelector('#addPetForm');
+        if (addPetWrapper) {
+            const existing = document.getElementById('error-PetAge');
+            if (!existing) {
+                const el = document.createElement('small');
+                el.id = 'error-PetAge'; el.className = 'error-message';
+                const petAgeInput = document.getElementById('petAge');
+                if (petAgeInput && petAgeInput.parentNode) petAgeInput.parentNode.appendChild(el);
+            }
+        }
+
+        const editPetWrapper = document.querySelector('#editPetForm');
+        if (editPetWrapper) {
+            const existing2 = document.getElementById('error-EditPetAge');
+            if (!existing2) {
+                const el2 = document.createElement('small');
+                el2.id = 'error-EditPetAge'; el2.className = 'error-message';
+                const petAgeInput2 = document.getElementById('editPetAge');
+                if (petAgeInput2 && petAgeInput2.parentNode) petAgeInput2.parentNode.appendChild(el2);
+            }
+        }
+    })();
+
+    // Attach handlers
+    (function attachPetAgeHandlers() {
+        const petAgeInput = document.getElementById('petAge');
+        const editPetAgeInput = document.getElementById('editPetAge');
+        if (petAgeInput) {
+            petAgeInput.addEventListener('input', () => validatePetAgeField('petAge','error-PetAge','addPetSaveBtn'));
+            petAgeInput.addEventListener('blur', () => validatePetAgeField('petAge','error-PetAge','addPetSaveBtn'));
+        }
+        if (editPetAgeInput) {
+            editPetAgeInput.addEventListener('input', () => validatePetAgeField('editPetAge','error-EditPetAge','editPetSaveBtn'));
+            editPetAgeInput.addEventListener('blur', () => validatePetAgeField('editPetAge','error-EditPetAge','editPetSaveBtn'));
+        }
+    })();
+
+    // --- Input formatting (phone & IC) ---
+    function formatWithSegments(digits, segments) {
+        let out = '';
+        let idx = 0;
+        for (let s = 0; s < segments.length; s++) {
+            const segLen = segments[s];
+            if (idx >= digits.length) break;
+            const part = digits.substr(idx, segLen);
+            out += part; idx += part.length;
+            if (idx < digits.length) out += '-';
+        }
+        if (idx < digits.length) out += digits.substr(idx);
+        return out;
+    }
+
+    function attachFormatter(inputEl, segments) {
+        if (!inputEl) return;
+        let previous = inputEl.value || '';
+        inputEl.addEventListener('input', function (e) {
+            const selStart = this.selectionStart || 0;
+            const rawBeforeCursor = (this.value.slice(0, selStart) || '').replace(/[^0-9]/g, '');
+            const digits = this.value.replace(/[^0-9]/g, '');
+            const formatted = formatWithSegments(digits, segments);
+            // compute new cursor position based on digits before cursor
+            let newPos = 0; let seenDigits = 0;
+            for (let i = 0; i < formatted.length; i++) {
+                if (/[0-9]/.test(formatted[i])) seenDigits++;
+                newPos++;
+                if (seenDigits >= rawBeforeCursor.length) break;
+            }
+            this.value = formatted;
+            try { this.setSelectionRange(newPos, newPos); } catch (err) {}
+            previous = this.value;
+        });
+    }
+
+    // phone: 3-remaining (e.g., 012-3456789). IC: 6-2-4
+    attachFormatter(document.getElementById('customerPhone'), [3]);
+    attachFormatter(document.getElementById('customerIC'), [6,2,4]);
+
+    // --- Edit profile photo preview manager ---
+    window._editSelectedFiles = [];
+    const editPhotoInput = document.getElementById('editProfilePhotosInput');
+    const editPhotoPreviewList = document.getElementById('editPhotoPreviewList');
+
+    function renderEditPhotoPreviews() {
+        if (!editPhotoPreviewList) return;
+        editPhotoPreviewList.innerHTML = '';
+        window._editSelectedFiles.forEach((file, idx) => {
+            const url = URL.createObjectURL(file);
+            const div = document.createElement('div');
+            div.className = 'existing-photo-item selected-preview';
+            div.style.position = 'relative'; div.style.width = '72px'; div.style.height = '72px'; div.style.borderRadius = '50%'; div.style.overflow = 'hidden';
+            const img = document.createElement('img'); img.src = url; img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.alt = file.name;
+            const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'delete-photo-btn remove-selected-photo'; btn.title = 'Remove selected file'; btn.textContent = '×';
+            btn.style.position = 'absolute'; btn.style.top = '6px'; btn.style.right = '6px';
+            btn.addEventListener('click', function () { window._editSelectedFiles.splice(idx,1); renderEditPhotoPreviews(); });
+            div.appendChild(img); div.appendChild(btn); editPhotoPreviewList.appendChild(div);
+        });
+    }
+
+    if (editPhotoInput) {
+        editPhotoInput.addEventListener('change', function (e) {
+            const files = Array.from(e.target.files || []);
+            // replace selection with chosen files
+            window._editSelectedFiles = files.slice(0);
+            renderEditPhotoPreviews();
+        });
+    }
+
+    // Wire delete buttons for existing photos (delegated)
+    document.getElementById('existingPhotosContainer')?.addEventListener('click', function (e) {
+        const btn = e.target.closest && e.target.closest('.delete-photo-btn');
+        if (!btn) return;
+        const photo = btn.dataset.photo || btn.getAttribute('data-photo');
+        if (!photo) return;
+        deleteCustomerPhoto(photo, btn);
+    });
 
     // preview handler for add pet photo
     const addPetPhotoUpload = document.getElementById('addPetPhotoUpload');
@@ -1172,20 +2003,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 const validationEl = document.getElementById('addPetPhotoValidationMessage');
                 const saveBtn = document.getElementById('addPetSaveBtn') || (document.getElementById('addPetForm')?.querySelector('button[type="submit"]'));
                 if (!file) {
-                        if (fileNameEl) fileNameEl.textContent = 'No file chosen';
-                        if (validationEl) validationEl.textContent = '';
+                        if (fileNameEl) { fileNameEl.textContent = 'No file chosen'; fileNameEl.style.display = ''; }
+                        if (validationEl) { validationEl.textContent = ''; validationEl.classList.remove('valid','invalid'); }
                         if (saveBtn) saveBtn.disabled = false;
                         return;
                 }
-
-                if (fileNameEl) fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`;
+                if (fileNameEl) { fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`; fileNameEl.style.display = 'none'; }
                 const err = validatePetFile(file);
                 if (err) {
-                        if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); }
-                        if (saveBtn) saveBtn.disabled = true;
+                    if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); validationEl.classList.add('invalid'); }
+                    if (saveBtn) saveBtn.disabled = true;
                 } else {
-                        if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.add('valid'); }
-                        if (saveBtn) saveBtn.disabled = false;
+                    if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.remove('invalid'); validationEl.classList.add('valid'); }
+                    if (saveBtn) saveBtn.disabled = false;
                 }
 
                 const reader = new FileReader();
@@ -1196,6 +2026,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.readAsDataURL(file);
             });
     }
+    // When pet type changes and no photo selected, show a type-based default preview
+    const addPetTypeSelect = document.getElementById('petType');
+    const addPetPhotoPreviewImg = document.getElementById('addPetPhotoPreview');
+    function getTypeDefaultImg(type) {
+        if (!type) return '/Customer/img/default-pet.png';
+        const t = type.trim().toLowerCase();
+        if (t === 'dog') return '/images/dogAvatar.png';
+        if (t === 'cat') return '/images/catAvatar.png';
+        return '/Customer/img/default-pet.png';
+    }
+    addPetTypeSelect?.addEventListener('change', function () {
+        try {
+            if (addPetPhotoUpload && addPetPhotoUpload.files && addPetPhotoUpload.files.length > 0) return; // user already picked a photo
+            if (addPetPhotoPreviewImg) addPetPhotoPreviewImg.src = getTypeDefaultImg(this.value);
+        } catch (e) { console.error('Error setting pet type default preview', e); }
+    });
+
+    // Edit-pet modal: if changing type and no custom photo chosen, update preview accordingly
+    const editPetTypeSelect = document.getElementById('editPetType');
+    const editPetPhotoPreviewImg = document.getElementById('editPetPhotoPreview');
+    editPetTypeSelect?.addEventListener('change', function () {
+        try {
+            if (editPetPhotoUpload && editPetPhotoUpload.files && editPetPhotoUpload.files.length > 0) return;
+            if (editPetPhotoPreviewImg) editPetPhotoPreviewImg.src = getTypeDefaultImg(this.value);
+        } catch (e) { console.error('Error setting edit pet default preview', e); }
+    });
     
         // preview + validation handler for edit pet photo
         const editPetPhotoUpload = document.getElementById('editPetPhotoUpload');
@@ -1206,20 +2062,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 const validationEl = document.getElementById('editPetPhotoValidationMessage');
                 const saveBtn = document.getElementById('editPetSaveBtn') || (document.getElementById('editPetForm')?.querySelector('button[type="submit"]'));
                 if (!file) {
-                        if (fileNameEl) fileNameEl.textContent = 'No file chosen';
-                        if (validationEl) validationEl.textContent = '';
+                        if (fileNameEl) { fileNameEl.textContent = 'No file chosen'; fileNameEl.style.display = ''; }
+                        if (validationEl) { validationEl.textContent = ''; validationEl.classList.remove('valid','invalid'); }
                         if (saveBtn) saveBtn.disabled = false;
                         return;
                 }
-
-                if (fileNameEl) fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`;
+                if (fileNameEl) { fileNameEl.textContent = `${file.name} (${formatBytes(file.size)})`; fileNameEl.style.display = 'none'; }
                 const err = validatePetFile(file);
                 if (err) {
-                        if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); }
-                        if (saveBtn) saveBtn.disabled = true;
+                    if (validationEl) { validationEl.textContent = err; validationEl.classList.remove('valid'); validationEl.classList.add('invalid'); }
+                    if (saveBtn) saveBtn.disabled = true;
                 } else {
-                        if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.add('valid'); }
-                        if (saveBtn) saveBtn.disabled = false;
+                    if (validationEl) { validationEl.textContent = `✓ Selected: ${file.name}`; validationEl.classList.remove('invalid'); validationEl.classList.add('valid'); }
+                    if (saveBtn) saveBtn.disabled = false;
                 }
 
                 const reader = new FileReader();
@@ -1249,5 +2104,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 return null;
         }
     
-</script>
-}
+        }); // end DOMContentLoaded
+
+    </script>
+    }
+
+    

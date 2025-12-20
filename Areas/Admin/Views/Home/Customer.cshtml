@@ -183,7 +183,7 @@
         .alert.alert-warning { background: linear-gradient(135deg,#fef3c7 0%,#fde68a 100%) !important; color:#92400e !important; border-left:6px solid #f59e0b !important; }
 
         /* Modal Styles */
-        .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+        .modal-backdrop { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5); z-index:40000; align-items:center; justify-content:center; }
         .modal-backdrop.show { display:flex; }
         /* Only style the confirm modal content so page modals (like Add Customer) keep their existing layout */
         #confirmModal .modal-content, .modal-backdrop .modal-content { background-color:white; padding:20px; border-radius:8px; max-width:500px; width:90%; position:relative; }
@@ -496,6 +496,19 @@
 
 
             // Build FormData but only include selected photos
+            // Client-side guard: if Add Pet is checked, ensure required pet fields are filled
+            const addPetCheckbox = form.querySelector('#addPetCheckbox');
+            if (addPetCheckbox && addPetCheckbox.checked) {
+                const pName = (form.querySelector('#petName')?.value || '').trim();
+                const pType = (form.querySelector('#petType')?.value || '').trim();
+                const pBreed = (form.querySelector('#petBreed')?.value || '').trim();
+                const pAge = (form.querySelector('#petAge')?.value || '').trim();
+                if (!pName || !pType || !pBreed || pAge === '') {
+                    try { showDynamicAlert('Please fill Pet Name, Type, Breed and Age or uncheck "Add a pet".', 'danger'); } catch(e) { alert('Please fill pet details or uncheck Add a pet.'); }
+                    saveBtn.disabled = false; saveBtn.innerHTML = originalBtnText; return;
+                }
+            }
+
             const formData = new FormData(form);
             // Remove any files added automatically by FormData for 'Photos'
             try { formData.delete('Photos'); } catch (e) {}
@@ -514,7 +527,8 @@
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'RequestVerificationToken': getAntiForgeryToken()
+                    'RequestVerificationToken': getAntiForgeryToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             })
             .then(async response => {
@@ -1051,16 +1065,23 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'RequestVerificationToken': getAntiForgeryToken()
+                        'RequestVerificationToken': getAntiForgeryToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: `customerId=${encodeURIComponent(customerId)}`
                 })
-                .then(response => {
-                        if (response.ok || response.redirected) {
+                .then(async response => {
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json().catch(() => null);
+                        if (data && data.success) {
                             showDynamicAlert(`${customerName} has been deleted successfully.`, 'success');
-                            // Give users 5 seconds to read the success message before reload
                             setTimeout(() => location.reload(), 5000);
                         } else {
+                            showDynamicAlert((data && data.message) ? data.message : 'Failed to delete customer. Please try again.', 'danger');
+                        }
+                    } else {
+                        // Non-JSON response — treat as failure to avoid showing success when server redirected with an error
                         showDynamicAlert('Failed to delete customer. Please try again.', 'danger');
                     }
                 })
@@ -1164,6 +1185,17 @@
 
 // Page-local confirm modal and helpers (Groomer style). Uses requestSubmit where possible so
 // the form's onsubmit/AJAX handlers are triggered instead of bypassing them.
+    function ensureConfirmModal() {
+        try {
+            const modal = document.getElementById('confirmModal');
+            if (!modal) return;
+            if (modal.parentElement !== document.body) document.body.appendChild(modal);
+            modal.style.zIndex = '40000';
+            const content = modal.querySelector('.modal-content');
+            if (content) content.style.zIndex = '40001';
+        } catch (e) { console.warn('ensureConfirmModal error', e); }
+    }
+
     window.showConfirmModal = function(title, message, icon, iconColor, confirmCallback) {
         try { ensureConfirmModal(); } catch (e) {}
         const modal = document.getElementById('confirmModal');
