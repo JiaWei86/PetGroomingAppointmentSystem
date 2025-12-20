@@ -115,8 +115,16 @@ public class HomeController : Controller
 
         var pets = _db.Pets.Where(p => p.CustomerId == customer.UserId).ToList();
 
+        // ✅ NEW: Load redeemed gifts with gift details
+        var redeemedGifts = _db.CustomerRedeemGifts
+            .Include(cr => cr.Gift)
+            .Where(cr => cr.CustomerId == customer.UserId)
+            .OrderByDescending(cr => cr.RedeemDate)
+            .ToList();
+
         ViewBag.Customer = customer;
         ViewBag.Pets = pets;
+        ViewBag.RedeemedGifts = redeemedGifts;  // ✅ NEW
 
         // Pass flag to view so frontend can open change-password modal for pending_password accounts
         ViewBag.ShowPendingPassword = string.Equals(customer.Status, "pending_password", StringComparison.OrdinalIgnoreCase);
