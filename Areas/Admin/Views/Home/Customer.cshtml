@@ -5,6 +5,138 @@
     ViewData["Title"] = "Customer Management";
     ViewData["ActivePage"] = "Customer";
 }
+@* ========== Alerts ========== *@
+@if (ViewData["Error"] != null)
+{
+    <div class="alert alert-danger" id="alertMessage">
+        <strong>❌ Error:</strong> @ViewData["Error"]
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger" id="alertMessage">
+        <strong>❌ Error:</strong> @TempData["ErrorMessage"]
+    </div>
+}
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" id="alertMessage">
+        <strong>✔️ Success:</strong> @TempData["SuccessMessage"]
+    </div>
+}
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning" id="alertMessage">
+        @TempData["WarningMessage"]
+    </div>
+}
+
+@section Styles {
+    <style>
+    /* Status tag for pending password */
+    .status-tag.status-pending {
+        background-color: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fbbf24;
+    }
+
+    /* New customer badge */
+    .new-customer-badge {
+        display: inline-block;
+        font-size: 10px;
+        padding: 2px 8px;
+        margin-left: 8px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #d97706;
+        border-radius: 12px;
+        font-weight: 600;
+        vertical-align: middle;
+        animation: pulse-badge 2s infinite;
+    }
+
+    @@keyframes pulse-badge {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    /* Info notice styling */
+    #newCustomerNotice {
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border-left-color: #10b981;
+        color: #065f46;
+        margin-bottom: 20px;
+    }
+
+    /* Modal header styling */
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: linear-gradient(135deg, #d97706, #b45309);
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0;
+    }
+
+    .modal-close-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #ffffff;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+        .modal-close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+    .modal-body {
+        padding: 24px;
+        max-height: calc(100vh - 220px);
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 16px 24px;
+        border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 12px;
+        margin-top: 4px;
+        display: block;
+        min-height: 15px;
+    }
+
+    .error-message.valid {
+        color: #28a745; /* Green for valid messages */
+    }
+
+
+
+</style>
+}
 
 @Html.AntiForgeryToken()
 
@@ -138,7 +270,7 @@
                 <button type="button" class="modal-close-btn" onclick="closeCustomerModal()">×</button>
             </div>
 
-            <form id="customerForm" asp-controller="Home" asp-action="CreateCustomer" method="post" enctype="multipart/form-data">
+            <form id="customerForm" onsubmit="handleCustomerFormSubmit(event)">
                 <div class="modal-body">
                     <!-- Info Notice for New Customers -->
                     <div class="form-section-info" id="newCustomerNotice">
@@ -163,22 +295,26 @@
                         <div class="modal-form-row">
                             <div class="modal-form-group">
                                 <label>Full Name <span class="required">*</span></label>
-                                <input type="text" id="customerName" name="Name" class="modal-form-input" required placeholder="John Doe" />
+                                <input type="text" id="customerName" name="Name" class="modal-form-input" required placeholder="John Doe" onblur="validateCustomerField(this)"/>
+                                <small class="error-message" id="error-Name"></small>
                             </div>
                             <div class="modal-form-group">
                                 <label>Email <span class="required">*</span></label>
-                                <input type="email" id="customerEmail" name="Email" class="modal-form-input" required placeholder="john@example.com" />
+                                <input type="email" id="customerEmail" name="Email" class="modal-form-input" required placeholder="john@example.com" onblur="validateCustomerField(this)"/>
+                                <small class="error-message" id="error-Email"></small>
                             </div>
                         </div>
 
                         <div class="modal-form-row">
                             <div class="modal-form-group">
                                 <label>Phone Number <span class="required">*</span></label>
-                                <input type="tel" id="customerPhone" name="Phone" class="modal-form-input" required placeholder="012-3456789" />
+                                <input type="tel" id="customerPhoneNumber" name="PhoneNumber" class="modal-form-input" required placeholder="012-3456789" onblur="validateCustomerField(this)"/>
+                                <small class="error-message" id="error-PhoneNumber"></small>
                             </div>
                             <div class="modal-form-group">
-                                <label>IC Number</label>
-                                <input type="text" id="customerIC" name="IC" class="modal-form-input" placeholder="123456-78-9012" />
+                                <label>IC Number <span class="required">*</span></label>
+                                <input type="text" id="customerIC" name="IC" class="modal-form-input" required placeholder="123456-78-9012" onblur="validateCustomerField(this)"/>
+                                <small class="error-message" id="error-IC"></small>
                             </div>
                         </div>
 
@@ -188,8 +324,8 @@
                             <div class="modal-form-group">
                                 <label>Profile Photo</label>
                                 <div class="file-upload-wrapper">
-                                    <input type="file" id="customerPhoto" name="PhotoUpload" class="modal-form-input" accept="image/*" />
-                                    <span id="photoFileName" class="file-name-display">No file chosen</span>
+                                    <input type="file" id="customerPhoto" name="PhotoUploads" class="modal-form-input" accept="image/*" multiple />
+                                    <span id="photoFileName" class="file-name-display">No files chosen</span>
                                 </div>
                                 <small class="form-help-text">Max 5MB, PNG/JPG recommended</small>
                             </div>
@@ -251,118 +387,156 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">💾 Save Customer</button>
+                    <button type="submit" class="btn btn-primary" id="saveCustomerBtn">💾 Save Customer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<style>
-    /* Status tag for pending password */
-    .status-tag.status-pending {
-        background-color: #fef3c7;
-        color: #d97706;
-        border: 1px solid #fbbf24;
-    }
 
-    /* New customer badge */
-    .new-customer-badge {
-        display: inline-block;
-        font-size: 10px;
-        padding: 2px 8px;
-        margin-left: 8px;
-        background: linear-gradient(135deg, #fef3c7, #fde68a);
-        color: #d97706;
-        border-radius: 12px;
-        font-weight: 600;
-        vertical-align: middle;
-        animation: pulse-badge 2s infinite;
-    }
-
-    @@keyframes pulse-badge {
-        0%, 100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.7;
-        }
-    }
-
-    /* Info notice styling */
-    #newCustomerNotice {
-        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-        border-left-color: #10b981;
-        color: #065f46;
-        margin-bottom: 20px;
-    }
-
-    /* Modal header styling */
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 24px;
-        border-bottom: 1px solid #e5e7eb;
-        background: linear-gradient(135deg, #d97706, #b45309);
-    }
-
-    .modal-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ffffff;
-        margin: 0;
-    }
-
-    .modal-close-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #ffffff;
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        transition: all 0.3s ease;
-    }
-
-        .modal-close-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-    .modal-body {
-        padding: 24px;
-        max-height: calc(100vh - 220px);
-        overflow-y: auto;
-    }
-
-    .modal-footer {
-        padding: 16px 24px;
-        border-top: 1px solid #e5e7eb;
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        background: #f9fafb;
-    }
-</style>
 
 @section Scripts {
     <script>
         // Get anti-forgery token
+        function handleCustomerFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const saveBtn = document.getElementById('saveCustomerBtn');
+            const originalBtnText = saveBtn.innerHTML;
+
+            // Disable button and show loading state
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '💾 Saving...';
+
+            // Clear previous general errors
+            const generalErrorContainer = document.getElementById('ajaxErrorContainer'); // Assuming you have this from Groomer page
+            if (generalErrorContainer) generalErrorContainer.style.display = 'none';
+
+
+            const formData = new FormData(form);
+
+            fetch('@Url.Action("CreateCustomer", "Home")', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': getAntiForgeryToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Success
+                    closeCustomerModal();
+                    if (data.warning) {
+                        // Show a warning if email failed
+                        showDynamicAlert(`Warning: ${data.message} Manual password: ${data.tempPass}`, 'warning');
+                    } else {
+                        showDynamicAlert(data.message, 'success');
+                    }
+                    // Reload the page after a short delay to show the new customer
+                    setTimeout(() => window.location.reload(), 5000);
+                } else {
+                    // Handle validation errors
+                    if (data.errors) {
+                        for (const fieldName in data.errors) {
+                            const errorElement = document.getElementById(`error-${fieldName}`);
+                            if (errorElement) {
+                                errorElement.textContent = data.errors[fieldName];
+                                const inputElement = document.getElementById(`customer${fieldName}`);
+                                if(inputElement) inputElement.classList.add('is-invalid');
+                            } else {
+                                // Show general errors if a specific field isn't found
+                                alert(`Error: ${data.errors[fieldName]}`);
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Form submission error:', error);
+                alert('An unexpected error occurred. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            });
+        }
+
         function getAntiForgeryToken() {
             return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        }
+
+        // AJAX Field Validation
+        async function validateCustomerField(inputElement) {
+            const rawFieldName = inputElement.name; // e.g., "PhoneNumber", "Email", "Name", "IC"
+            // Map client field names to server expected validation keys
+            const fieldName = (rawFieldName === 'PhoneNumber') ? 'phone' : rawFieldName.toLowerCase();
+            const fieldValue = inputElement.value;
+            const errorElement = document.getElementById(`error-${rawFieldName}`);
+
+            // Clear previous error
+            if (errorElement) errorElement.textContent = '';
+            if (errorElement) errorElement.classList.remove('valid');
+            inputElement.classList.remove('is-invalid');
+
+            // Basic client-side required check
+            if (inputElement.required && !fieldValue.trim()) {
+                if (errorElement) errorElement.textContent = `${rawFieldName} is required.`;
+                inputElement.classList.add('is-invalid');
+                return;
+            }
+
+            // Don't validate empty optional fields (like IC)
+            if (!inputElement.required && !fieldValue.trim()) {
+                return;
+            }
+
+            try {
+                const response = await fetch('@Url.Action("ValidateCustomerField", "Home")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': getAntiForgeryToken()
+                    },
+                    body: JSON.stringify({ CustomerId: null, FieldName: fieldName, FieldValue: fieldValue })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Server validation failed');
+                }
+
+                const result = await response.json();
+                if (!result.isValid) {
+                    if (errorElement) errorElement.textContent = result.errorMessage;
+                    inputElement.classList.add('is-invalid');
+                } else {
+                    // ✅ Show valid message
+                    if (errorElement) {
+                        errorElement.textContent = '✓ Valid';
+                        errorElement.classList.add('valid');
+                    }
+                }
+            } catch (error) {
+                console.error('AJAX Validation error:', error);
+            }
         }
 
         // Modal Management
         function openAddCustomerModal() {
             document.getElementById('customerModalOverlay').classList.add('show');
             document.body.style.overflow = 'hidden';
-            document.getElementById('customerForm').reset();
+            const form = document.getElementById('customerForm');
+            form.reset();
+
+            // Clear all validation messages and styles
+            form.querySelectorAll('.error-message').forEach(el => {
+                el.textContent = '';
+                el.classList.remove('valid');
+            });
+            form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
             document.getElementById('customerModalTitle').textContent = '➕ Add New Customer';
             document.getElementById('newCustomerNotice').style.display = 'block';
             switchModalTab('customer');
@@ -417,9 +591,23 @@
 
         // File Upload Display
         document.getElementById('customerPhoto')?.addEventListener('change', function() {
-            const fileName = this.files[0]?.name || 'No file chosen';
-            document.getElementById('photoFileName').textContent = fileName;
+            const files = Array.from(this.files || []);
+            const display = document.getElementById('photoFileName');
+            if (!display) return;
+            if (files.length ===0) {
+                display.textContent = 'No files chosen';
+            } else if (files.length ===1) {
+                display.textContent = files[0].name;
+            } else {
+                display.textContent = `${files.length} files selected`;
+            }
         });
+
+        // Auto-format phone input (attach to correct element id)
+        document.getElementById('customerPhoneNumber')?.addEventListener('input', function(e) {
+            autoFormatInput(this, [{ len:3, char: '-' }, { len:8, char: '' }]);
+        });
+
 
         // Customer Actions
         function editCustomer(customerId) {
@@ -460,6 +648,106 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeCustomerModal();
         });
+        // Auto-hide alert message after 5 seconds
+
+        // ==================================================
+        // == Auto-formatting for IC and Phone with cursor handling ==
+        // ==================================================
+        function autoFormatInput(input, formatPatterns) {
+            let originalValue = input.value;
+            let originalCursorPos = input.selectionStart;
+            let digitsOnly = originalValue.replace(/\D/g, '');
+            let digitsBeforeCursor = (originalValue.substring(0, originalCursorPos).replace(/\D/g, '')).length;
+
+            let formattedValue = '';
+            let digitIndex = 0;
+            let newCursorPos = originalCursorPos;
+
+            for (const pattern of formatPatterns) {
+                if (digitIndex >= digitsOnly.length) break;
+                let segment = digitsOnly.substring(digitIndex, digitIndex + pattern.len);
+                formattedValue += segment;
+                if (segment.length === pattern.len && digitsOnly.length > digitIndex + pattern.len) {
+                    formattedValue += pattern.char;
+                }
+                digitIndex += pattern.len;
+            }
+
+            input.value = formattedValue;
+
+            // Recalculate cursor position
+            let finalCursorPos = 0;
+            let digitsCounted = 0;
+            for (let i = 0; i < input.value.length && digitsCounted < digitsBeforeCursor; i++) {
+                finalCursorPos++;
+                if (/\d/.test(input.value[i])) {
+                    digitsCounted++;
+                }
+            }
+            input.setSelectionRange(finalCursorPos, finalCursorPos);
+        }
+
+        document.getElementById('customerIC')?.addEventListener('input', function(e) {
+            autoFormatInput(this, [{ len: 6, char: '-' }, { len: 2, char: '-' }, { len: 4, char: '' }]);
+        });
+
+        document.getElementById('customerPhone')?.addEventListener('input', function(e) {
+            autoFormatInput(this, [{ len: 3, char: '-' }, { len: 8, char: '' }]); // This will now apply to customerPhoneNumber
+        });
+
+
+    (function () {
+        const alertMessage = document.getElementById('alertMessage');
+        if (!alertMessage) return;
+
+        setTimeout(function () {
+            alertMessage.classList.add('fade-out');
+            setTimeout(function () {
+                if (alertMessage && alertMessage.parentNode) {
+                    alertMessage.parentNode.removeChild(alertMessage);
+                }
+            }, 500);
+        }, 5000);
+    })();
+
+    function showDynamicAlert(message, type) {
+        try {
+            // Remove existing dynamic alert if present
+            const existing = document.getElementById('dynamicAlert');
+            if (existing) existing.remove();
+
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'dynamicAlert';
+            const bsClass = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
+            alertDiv.className = `alert ${bsClass}`;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.left = '50%';
+            alertDiv.style.transform = 'translateX(-50%)';
+            alertDiv.style.zIndex = '22000';
+            alertDiv.style.minWidth = '300px';
+            alertDiv.style.boxShadow = '06px20px rgba(0,0,0,0.12)';
+            alertDiv.style.borderRadius = '8px';
+            alertDiv.style.padding = '12px18px';
+            alertDiv.innerHTML = `<strong>${type === 'success' ? '✔️ Success' : (type === 'warning' ? '⚠️ Warning' : '❌ Error')}:</strong> ${message}`;
+
+            document.body.appendChild(alertDiv);
+
+            // Auto hide after5 seconds
+            setTimeout(() => {
+                if (alertDiv) {
+                    alertDiv.classList.add('fade-out');
+                    alertDiv.style.transition = 'opacity0.4s ease, transform0.4s ease';
+                    alertDiv.style.opacity = '0';
+                    alertDiv.style.transform = 'translateX(-50%) translateY(-10px)';
+                    setTimeout(() => { alertDiv.remove(); },450);
+                }
+            },5000);
+        } catch (e) {
+            console.error('showDynamicAlert error:', e);
+        }
+    }
+
     </script>
 }
-

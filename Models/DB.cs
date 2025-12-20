@@ -71,7 +71,8 @@ public class User
     [Required, MaxLength(200)]
     public string Password { get; set; }
 
-    [MaxLength(300)]
+    // Allow storing multiple photo URLs (comma-separated) or long CloudFront URLs
+    [Column(TypeName = "nvarchar(max)")]
     public string Photo { get; set; }
 
     [Required, MaxLength(20)]
@@ -220,7 +221,7 @@ public class Service
  ========================= */
 public class Appointment
 {
-    [Key, MaxLength(15)]
+    [Key]
     public string AppointmentId { get; set; }
 
     [MaxLength(50)]

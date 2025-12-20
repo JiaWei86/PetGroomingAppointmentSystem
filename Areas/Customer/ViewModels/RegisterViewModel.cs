@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
-
+using System.Collections.Generic;
 namespace PetGroomingAppointmentSystem.Areas.Customer.ViewModels
 {
     public class RegisterViewModel

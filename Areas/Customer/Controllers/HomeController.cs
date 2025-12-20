@@ -52,9 +52,21 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
+        // If user is logged in and their status is pending_password, redirect to Profile to force password change
+        var sessionUserId = HttpContext.Session.GetString("CustomerId");
+        if (!string.IsNullOrEmpty(sessionUserId))
+        {
+            var sessionCustomer = _db.Customers.FirstOrDefault(c => c.UserId == sessionUserId);
+            if (sessionCustomer != null && string.Equals(sessionCustomer.Status, "pending_password", StringComparison.OrdinalIgnoreCase))
+            {
+                // Redirect to Profile - Profile action will set the view flag to show the notice/modal
+                return RedirectToAction("Profile");
+            }
+        }
+
         // Get current user's ID from SESSION (not Claims)
         var userId = HttpContext.Session.GetString("CustomerId");
-        var loyaltyPoints = 0;
+        var loyaltyPoints =0;
 
         // If user is logged in, fetch their loyalty points
         if (!string.IsNullOrEmpty(userId))
@@ -69,14 +81,14 @@ public class HomeController : Controller
         var vm = new HomeViewModel
         {
             DogServices = _db.Services
-                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "dog"))
-                .ToList(),
+            .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+            .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "dog") && s.Status == "Active")
+            .ToList(),
 
             CatServices = _db.Services
-                .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
-                .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "cat"))
-                .ToList(),
+            .Include(s => s.ServiceServiceCategories).ThenInclude(ssc => ssc.Category)
+            .Where(s => s.ServiceServiceCategories.Any(ssc => ssc.Category.PetType.ToLower() == "cat") && s.Status == "Active")
+            .ToList(),
 
             RedeemGifts = _db.RedeemGifts.ToList(),
             CustomerLoyaltyPoints = loyaltyPoints
@@ -105,6 +117,9 @@ public class HomeController : Controller
 
         ViewBag.Customer = customer;
         ViewBag.Pets = pets;
+
+        // Pass flag to view so frontend can open change-password modal for pending_password accounts
+        ViewBag.ShowPendingPassword = string.Equals(customer.Status, "pending_password", StringComparison.OrdinalIgnoreCase);
 
         return View();
     }
@@ -176,6 +191,13 @@ public class HomeController : Controller
                 return BadRequest(new { success = false, message = "Current password is incorrect" });
 
             customer.Password = newPassword;
+
+            // ✅ If customer was pending, activate their account now
+            if (customer.Status == "pending_password")
+            {
+                customer.Status = "active";
+            }
+
             _db.Customers.Update(customer);
             _db.SaveChanges();
 
@@ -196,19 +218,8 @@ public class HomeController : Controller
             if (customer == null)
                 return Unauthorized();
 
-            var pets = _db.Pets
-                .Where(p => p.CustomerId == customer.UserId)
-                .Select(p => new
-                {
-                    petId = p.PetId,
-                    name = p.Name,
-                    age = p.Age,
-                    type = p.Type,
-                    breed = p.Breed,
-                    remark = p.Remark,
-                    photo = p.Photo
-                })
-                .ToList();
+            var pets = _db.Pets.Where(p => p.CustomerId == customer.UserId).ToList();
+
             return Json(new { success = true, data = pets });
         }
         catch (Exception ex)
