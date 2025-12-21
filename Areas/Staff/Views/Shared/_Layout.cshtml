@@ -11,6 +11,27 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @RenderSection("Styles", required: false)
+    <style>
+        .profile-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background-color 0.3s ease;
+        }
+
+            .profile-link:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+
+            .profile-link i {
+                font-size: 28px;
+            }
+    </style>
 </head>
 <body>
     <div id="app-container">

@@ -191,6 +191,20 @@ public class HomeController : Controller
         })
         .ToListAsync();
 
+        // --- 5. 填充缺货礼品通知 (Out-of-stock Redeem Gifts) ---
+        try
+        {
+            viewModel.OutOfStockGifts = await _db.RedeemGifts
+                .Where(g => !g.IsDeleted && (g.Quantity == 0))
+                .OrderBy(g => g.Name)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log and continue silently; dashboard should still render
+            Console.WriteLine($"Error fetching out-of-stock gifts: {ex.Message}");
+            viewModel.OutOfStockGifts = new List<RedeemGift>();
+        }
 
         return View(viewModel);
     }
@@ -2355,6 +2369,26 @@ public class HomeController : Controller
                     };
                     break;
 
+                case "redeemGifts":
+                    // Ignore date range for stock report — show current gift quantities
+                    var gifts = await _db.RedeemGifts
+                        .Where(g => !g.IsDeleted)
+                        .Select(g => new { Label = g.Name, Value = g.Quantity })
+                        .OrderByDescending(x => x.Value)
+                        .ToListAsync();
+
+                    reportData = new
+                    {
+                        TotalAppointments = gifts.Count,
+                        StartDate = "",
+                        EndDate = "",
+                        GroupedData = new Dictionary<string, object>
+                        {
+                            { "Redeem Gifts Stock", gifts.Cast<object>().ToList() }
+                        }
+                    };
+                    break;
+
                 default:
                     return Json(new { success = false, message = "Invalid report type." });
             }
@@ -2433,6 +2467,12 @@ public class HomeController : Controller
                     foreach (var item in topCustomers) sb.AppendLine($"{item.Label},{item.Value}");
                     break;
 
+                case "redeemGifts":
+                    sb.AppendLine("Gift Name,Quantity");
+                    var gifts = await _db.RedeemGifts.Where(g => !g.IsDeleted).Select(g => new { g.Name, g.Quantity }).OrderByDescending(g => g.Quantity).ToListAsync();
+                    foreach (var g in gifts) sb.AppendLine($"{g.Name},{g.Quantity}");
+                    break;
+
                 default:
                     sb.AppendLine("Invalid report type specified.");
                     break;
@@ -2447,6 +2487,26 @@ public class HomeController : Controller
             Console.WriteLine($"Error downloading report as Excel: {ex.Message}");
             // Return a simple text file with the error message
             return Content("An error occurred while generating the Excel file: " + ex.Message);
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadRedeemGiftsAsExcel()
+    {
+        try
+        {
+            var gifts = await _db.RedeemGifts.Where(g => !g.IsDeleted).Select(g => new { g.Name, g.Quantity }).OrderByDescending(g => g.Quantity).ToListAsync();
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Gift Name,Quantity");
+            foreach (var g in gifts) sb.AppendLine($"{g.Name},{g.Quantity}");
+
+            var fileName = $"RedeemGifts_Stock_{DateTime.Now:yyyyMMdd}.csv";
+            return File(System.Text.Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading redeem gifts CSV: {ex.Message}");
+            return Content("An error occurred while generating the CSV file: " + ex.Message);
         }
     }
 
@@ -3159,10 +3219,17 @@ public class HomeController : Controller
                 return RedirectToAction("Profile");
             }
 
-            bool phoneExists = _db.Users.Any(u =>
-                u.Phone == formattedPhone && u.UserId != model.UserId);
+            // Robust uniqueness check: compare cleaned digits as well and explicitly exclude current user record
+            var cleanedInput = System.Text.RegularExpressions.Regex.Replace(formattedPhone ?? model.Phone, "\\D", "");
 
-            if (phoneExists)
+            var existingUser = _db.Users
+                .AsEnumerable()
+                .FirstOrDefault(u =>
+                    (!string.IsNullOrEmpty(u.Phone) && u.Phone == formattedPhone) ||
+                    (!string.IsNullOrEmpty(u.Phone) && System.Text.RegularExpressions.Regex.Replace(u.Phone, "\\D", "") == cleanedInput)
+                );
+
+            if (existingUser != null && existingUser.UserId != model.UserId)
             {
                 TempData["ErrorMessage"] = "This phone number is already registered.";
                 return RedirectToAction("Profile");
@@ -3220,7 +3287,15 @@ public class HomeController : Controller
          * ========================= */
         if (!string.IsNullOrWhiteSpace(model.Password))
         {
-            admin.Password = model.Password; // hash if applicable
+            try
+            {
+                admin.Password = _passwordService.HashPassword(model.Password);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Unable to update password at this time.";
+                return RedirectToAction("Profile");
+            }
         }
 
         await _db.SaveChangesAsync();

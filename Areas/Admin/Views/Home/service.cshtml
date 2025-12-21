@@ -153,7 +153,7 @@
 
  <div class="form-group">
  <label for="duration">Duration (mins)</label>
- <input type="number" id="duration" name="DurationTime" placeholder="e.g.,60" required />
+ <input type="number" id="duration" name="DurationTime" placeholder="e.g.,60" required min="0" step="1" oninput="if(this.value!=='' && parseInt(this.value) < 0) this.value = 0;" />
  </div>
 
  <div class="form-group">
@@ -236,7 +236,7 @@
  <!-- Duration -->
  <td>
  <input type="number" name="DurationTime" value="@service.DurationTime" required
- class="form-control" placeholder="e.g.,60" />
+ class="form-control" placeholder="e.g.,60" min="0" step="1" oninput="if(this.value!=='' && parseInt(this.value) < 0) this.value = 0;" />
  </td>
 
  <!-- Status -->
@@ -387,8 +387,43 @@
  window.openConfirmModal(title, message, cb);
  };
  window.closeConfirmModal = function(){ var m=document.getElementById('confirmModal'); if(m) m.classList.remove('show'); };
- window.confirmAdd = function(e){ if(e&&e.preventDefault) e.preventDefault(); var f=e.target; var name=(f&&f.querySelector('[name="Name"]')?f.querySelector('[name="Name"]').value:'item'); window.openConfirmModal('Confirm Add', 'Are you sure you want to add "'+name+'"?', function(){ try{ appendSelectedCategoriesToForm(f); }catch{} if(f) f.submit(); }); return false; };
+ window.confirmAdd = function(e){
+                if(e&&e.preventDefault) e.preventDefault();
+                var f=e.target;
+                var name=(f&&f.querySelector('[name="Name"]')?f.querySelector('[name="Name"]').value:'item');
+                // validate duration is non-negative
+                try {
+                    var durationEl = f.querySelector('[name="DurationTime"]');
+                    if (durationEl) {
+                        var d = parseInt(durationEl.value);
+                        if (isNaN(d) || d < 0) {
+                            showDynamicAlert('Duration must be 0 or greater.', 'warning');
+                            return false;
+                        }
+                    }
+                } catch (ex) {}
+                window.openConfirmModal('Confirm Add', 'Are you sure you want to add "'+name+'"?', function(){ try{ appendSelectedCategoriesToForm(f); }catch{} if(f) f.submit(); });
+                return false;
+            };
  window.confirmDelete = function(e,name){ if(e&&e.preventDefault) e.preventDefault(); var f=e.target; window.openConfirmModal('Confirm Delete', 'Are you sure you want to delete "'+name+'"?', function(){ if(f) f.submit(); }); return false; };
+
+// confirmEdit used by inline edit rows: validate duration then show modal
+window.confirmEdit = function(e, name) {
+    if (e && e.preventDefault) e.preventDefault();
+    var f = e.target;
+    try {
+        var durationEl = f.querySelector('[name="DurationTime"]');
+        if (durationEl) {
+            var d = parseInt(durationEl.value);
+            if (isNaN(d) || d < 0) {
+                showDynamicAlert('Duration must be 0 or greater.', 'warning');
+                return false;
+            }
+        }
+    } catch (ex) {}
+    window.openConfirmModal('Confirm Edit', 'Are you sure you want to save changes to "' + (name || '') + '"?', function() { if (f) f.submit(); });
+    return false;
+};
  })();
  </script>
 }

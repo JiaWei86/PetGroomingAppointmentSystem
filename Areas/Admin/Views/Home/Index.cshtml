@@ -5,6 +5,30 @@
 }
 @section Styles {
     <link rel="stylesheet" href="~/admin/css/dashboard.css" />
+    <style>
+        /* Out-of-stock alert box */
+        .stock-alert {
+            background: linear-gradient(180deg,#fffaf0,#fff7ed); /* light yellow */
+            border: 1px solid rgba(250,204,21,0.35);
+            color: #92400e;
+            padding: 20px 22px;
+            border-radius: 8px;
+            margin: 12px auto 18px auto; /* center horizontally */
+            box-shadow: 0 2px 8px rgba(250,204,21,0.06);
+            border-left: 6px solid #f59e0b; /* slightly thicker left bar like cards */
+            max-width: 1200px; /* align with cards */
+            position: relative;
+            box-sizing: border-box;
+        }
+        .stock-alert-inner { display:flex; align-items:flex-start; gap:16px; }
+        .stock-alert .stock-icon { font-size:20px; margin-top:4px; color:#b45309; }
+        .stock-alert .gift-list { font-weight:700; margin-left:6px; }
+        .stock-alert .stock-message { margin-top:8px; color:#7c2d12; font-size:13px; }
+        .stock-alert .close-btn { background:transparent; border:none; font-size:18px; color:#7c2d12; cursor:pointer; position:absolute; top:12px; right:14px; }
+        .stock-alert .action-row { margin-top:10px; display:flex; gap:8px; }
+        /* Keep some horizontal breathing room so it aligns with cards */
+        /* remove extra lateral offsets — centered via max-width */
+    </style>
 }
 <div class="content-header">
     <div>
@@ -12,6 +36,29 @@
         <p class="breadcrumb">Welcome back, Admin! Here's what's happening today.</p>
     </div>
 </div>
+
+@if (Model?.OutOfStockGifts != null && Model.OutOfStockGifts.Any())
+{
+    <div class="stock-alert" id="outOfStockAlert">
+        <div class="stock-alert-inner">
+            <div class="stock-icon">⚠️</div>
+            <div style="flex:1">
+                <div><strong>The following redeem gifts are out of stock:</strong></div>
+                <ul style="margin:8px 0 6px 18px">
+                    @foreach (var g in Model.OutOfStockGifts)
+                    {
+                        <li>@(g.Name) (ID: @g.GiftId) is out of stock.</li>
+                    }
+                </ul>
+                <div class="stock-message">Please restock these items to avoid failed redemptions.</div>
+                <div class="action-row">
+                    <a class="btn btn-primary" href="@Url.Action("RedeemGift","Home", new { area = "Admin" })">Go to Redeem Gifts</a>
+                    <button class="close-btn" aria-label="Dismiss" onclick="document.getElementById('outOfStockAlert').style.display='none'">✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="stats-grid">
     <div class="stat-card blue">
