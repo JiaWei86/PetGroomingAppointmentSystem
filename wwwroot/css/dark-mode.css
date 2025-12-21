@@ -1,0 +1,1576 @@
+﻿/*
+  PetGroomingAppointmentSystem Dark Mode Theme
+  - A professional, modern dark theme that respects the original orange accent color.
+  - Improves readability and visual comfort.
+  - Gracefully handles background images and hero sections with a dark overlay.
+  - Dims standalone images to prevent them from being too bright.
+*/
+
+/* ========== COLOR PALETTE DEFINITIONS ========== */
+
+:root {
+    /* Light mode colors (Original) */
+    --accent: #ff7a18;
+    --accent-dark: #e35f00;
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg-light: #faf7f2;
+    --bg: #ffffff;
+    --text: #1a202c;
+    --text-light: #6b7280;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --transition: all 200ms ease;
+}
+
+html.dark-mode {
+    /* Dark mode colors - Re-introducing the Orange accent */
+    --accent: #ff7a18;       /* Keep the vibrant orange for primary actions */
+    --accent-dark: #e35f00;  /* Darker orange for hover states */
+    --success: #4ade80;
+    --error: #ff6b6b;
+    --warning: #fbbf24;
+    --muted: #9ca3af;
+    --border: #374151;      /* Dark gray for borders */
+    --bg-light: #1f2937;    /* Slightly lighter surface color for cards/modals */
+    --bg: #111827;          /* Deep dark blue-gray for main background */
+    --text: #f3f4f6;        /* Off-white for main text for better readability */
+    --text-light: #d1d5db;  /* Lighter gray for secondary text */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* ========== GLOBAL STYLES & TRANSITIONS ========== */
+    html.dark-mode .site-logo {
+        content: url("/Customer/img/logo-dark.png");
+    }
+
+html.dark-mode,
+html.dark-mode body {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+/* Apply smooth transitions to all elements for a polished feel */
+html.dark-mode * {
+    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, filter 200ms ease;
+}
+
+/* ========== SPECIAL HANDLING FOR IMAGES & BACKGROUNDS ========== */
+
+/* 1. For standalone images, slightly reduce brightness so they don't appear too harsh. */
+html.dark-mode img,
+html.dark-mode video {
+    filter: brightness(0.85) contrast(0.95);
+}
+
+/* 2. For elements with a background image (like hero/bradcam), reduce saturation. */
+html.dark-mode .hero-section,
+html.dark-mode .banner-area,
+html.dark-mode [style*="background-image"] {
+    position: relative;
+    z-index: 1;
+    background-color: transparent !important; /* Override generic container styles */
+    filter: saturate(20%) brightness(90%) contrast(110%); /* Reduce saturation and adjust brightness/contrast */
+}
+
+/* Ensure containers and text blocks inside sections with background images are transparent */
+html.dark-mode .bradcam_area .container,
+html.dark-mode .bradcam_area .bradcam_text,
+html.dark-mode .slider_area .container,
+html.dark-mode .contact_anipat .container {
+    background-color: transparent !important;
+}
+
+/* Specifically disable the image filter for the main home page slider */
+html.dark-mode .slider_area {
+    filter: none !important;
+    
+}
+
+/* The dark overlay is no longer needed for these elements, so we make it transparent. */
+html.dark-mode .hero-section::before,
+html.dark-mode .banner-area::before,
+html.dark-mode [style*="background-image"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: transparent; /* Make overlay transparent */
+    z-index: -1; /* Place the overlay behind the content but above the background image */
+}
+
+/* Remove the crude brightness filter from the old implementation */
+html.dark-mode .appt-header,
+html.dark-mode .hero-section,
+html.dark-mode [class*="banner"],
+html.dark-mode [class*="hero"] {
+    filter: none !important;
+}
+
+/* ========== GENERAL COMPONENT STYLING (Inherits colors from :root) ========== */
+
+/* Headers & Navigation */
+html.dark-mode .header-area,
+html.dark-mode .main-header-area,
+html.dark-mode .navbar,
+html.dark-mode nav {
+    background-color: var(--bg-light) !important;
+    border-color: var(--border) !important;
+}
+
+html.dark-mode .main-menu ul li a {
+    color: var(--text) !important;
+}
+
+html.dark-mode .main-menu ul li a:hover {
+    color: var(--accent) !important;
+}
+
+/* Links & Buttons */
+html.dark-mode a {
+    color: var(--accent) !important;
+}
+
+html.dark-mode a:hover {
+    color: var(--accent-dark) !important;
+}
+
+html.dark-mode .btn-primary,
+html.dark-mode button[type="submit"],
+html.dark-mode .btn,
+html.dark-mode .book_btn a,
+html.dark-mode .boxed-btn4 {
+    background-color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #ffffff !important; /* White text on orange buttons for contrast */
+}
+
+html.dark-mode .btn-primary:hover,
+html.dark-mode button[type="submit"]:hover,
+html.dark-mode .btn:hover,
+html.dark-mode .book_btn a:hover,
+html.dark-mode .boxed-btn4:hover {
+    background-color: var(--accent-dark) !important;
+    border-color: var(--accent-dark) !important;
+    color: #ffffff !important;
+}
+
+/* Cards & Containers */
+html.dark-mode .card,
+html.dark-mode [class*="container"],
+html.dark-mode .bg-white,
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background-color: white"] {
+    background-color: var(--bg-light) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* Text Elements */
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6 {
+    color: var(--text) !important;
+}
+html.dark-mode p,
+html.dark-mode span,
+html.dark-mode div,
+html.dark-mode li {
+    color: var(--text-light) !important;
+}
+/* Ensure main headings and links inside text are more prominent */
+html.dark-mode .card-body h5,
+html.dark-mode .media-body h3,
+html.dark-mode .section-tittle h2 {
+    color: var(--text) !important;
+}
+
+/* Form Elements */
+html.dark-mode input,
+html.dark-mode textarea,
+html.dark-mode select,
+html.dark-mode .form-control {
+    background-color: var(--bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+    color: var(--muted) !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode textarea:focus,
+html.dark-mode select:focus,
+html.dark-mode .form-control:focus {
+    outline: none;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(255, 122, 24, 0.15) !important; /* Orange focus ring */
+}
+
+/* Tables */
+html.dark-mode table,
+html.dark-mode thead,
+html.dark-mode tbody,
+html.dark-mode tr,
+html.dark-mode th,
+html.dark-mode td {
+    background-color: transparent !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+html.dark-mode thead {
+    background-color: var(--bg-light) !important;
+}
+
+html.dark-mode tbody tr:hover {
+    background-color: #253142 !important;
+}
+
+/* Modals */
+html.dark-mode .modal-content {
+    background-color: var(--bg-light) !important;
+    color: var(--text) !important;
+}
+
+html.dark-mode .modal-header,
+html.dark-mode .modal-footer {
+    background-color: var(--bg-light) !important;
+    border-color: var(--border) !important;
+}
+
+/* Redeem Gift Popup */
+html.dark-mode .popup-box {
+    background-color: var(--bg-light) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+}
+
+html.dark-mode .popup-box h3 {
+    color: #ffffff !important;
+}
+
+html.dark-mode .popup-box p,
+html.dark-mode .popup-box label {
+    color: var(--text-light) !important;
+}
+
+html.dark-mode .popup-box .close-popup {
+    color: var(--muted) !important;
+}
+
+html.dark-mode .popup-box .close-popup:hover {
+    color: var(--text) !important;
+}
+
+/* Owl Carousel Navigation Arrows */
+html.dark-mode .owl-nav button.owl-prev,
+html.dark-mode .owl-nav button.owl-next {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid var(--border) !important;
+}
+
+html.dark-mode .owl-nav button.owl-prev:hover,
+html.dark-mode .owl-nav button.owl-next:hover {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+}
+
+/* Admin/Staff Specific */
+html.dark-mode #sidebar,
+html.dark-mode #topbar {
+    background-color: var(--bg-light) !important;
+    border-color: var(--border) !important;
+}
+
+html.dark-mode .sidebar-nav a:hover {
+    background-color: #253142 !important;
+    color: var(--accent) !important;
+}
+
+html.dark-mode .sidebar-nav a.active {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+/* ========== DARK MODE TOGGLE BUTTON ========== */
+/* This style was accidentally omitted and has been restored. */
+.dark-mode-toggle {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent); /* Use the orange accent color */
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+    z-index: 999; /* Ensure it's on top of other elements */
+}
+
+.dark-mode-toggle:hover {
+    transform: scale(1.1);
+    background: var(--accent-dark); /* Use the darker orange on hover */
+    box-shadow: 0 6px 20px rgba(255, 122, 24, 0.3);
+}
+
+.dark-mode-toggle:active {
+    transform: scale(0.95);
+}
+
+/* ========== FOOTER ========== */
+/* This style ensures the footer adopts the dark theme. */
+html.dark-mode footer,
+html.dark-mode .footer-area {
+    background: var(--bg-light) !important;
+}
+
+html.dark-mode footer p,
+html.dark-mode footer li,
+html.dark-mode footer h1,
+html.dark-mode footer h2,
+html.dark-mode footer h3,
+html.dark-mode footer h4,
+html.dark-mode footer .footer-copy-right p {
+    color: var(--text) !important;
+}
+
+html.dark-mode footer a {
+    color: var(--text-light) !important;
+}
+
+html.dark-mode footer a:hover {
+    color: var(--accent) !important;
+}
+
+/* ========== HISTORY PAGE ========== */
+
+/* Main Layout & Header */
+html.dark-mode .history-wrap {
+    background-color: var(--bg);
+}
+html.dark-mode .history-header {
+    background-color: var(--bg-light);
+    border-bottom: 1px solid var(--border);
+}
+html.dark-mode .header-title {
+    color: var(--text) !important;
+}
+html.dark-mode .header-subtitle {
+    color: var(--text-light) !important;
+}
+html.dark-mode .stat-card {
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+}
+html.dark-mode .stat-label {
+    color: var(--text-light);
+}
+
+/* Tabs */
+html.dark-mode .tabs {
+    border-bottom-color: var(--border);
+}
+html.dark-mode .tab-btn {
+    color: var(--text-light);
+    background: transparent;
+}
+html.dark-mode .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--bg-light);
+}
+html.dark-mode .tab-btn:hover {
+    background-color: var(--bg-light);
+    color: var(--text);
+}
+html.dark-mode .tab-badge {
+    background-color: var(--accent);
+    color: white !important;
+}
+
+/* Controls */
+html.dark-mode .controls-section {
+    background-color: var(--bg-light);
+    border-color: var(--border);
+}
+html.dark-mode .filter-label,
+html.dark-mode .filter-info span {
+    color: var(--text-light);
+}
+html.dark-mode .search-clear-btn {
+    color: var(--muted);
+}
+html.dark-mode .search-clear-btn:hover {
+    color: var(--text);
+}
+
+/* Table */
+html.dark-mode .table-wrap {
+    border-color: var(--border);
+}
+html.dark-mode .history-table thead {
+    background-color: #253142; /* Darker than bg-light for emphasis */
+}
+html.dark-mode .history-table th {
+    color: var(--text);
+}
+html.dark-mode .history-table tbody tr {
+    border-bottom-color: var(--border);
+}
+html.dark-mode .history-table tbody tr:hover {
+    background-color: #253142; /* A bit darker than bg-light */
+}
+
+/* Status & Points Badges */
+html.dark-mode .status-badge {
+    background-color: var(--bg-light) !important;
+    color: var(--text-light) !important;
+    border: 1px solid var(--border) !important;
+    font-weight: 500;
+}
+html.dark-mode .status-badge.status-confirmed,
+html.dark-mode .status-badge.status-complete,
+html.dark-mode .status-badge.status-used {
+    background-color: rgba(16, 185, 129, 0.1) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+html.dark-mode .status-badge.status-cancelled {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+html.dark-mode .points-badge {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+
+/* Empty State */
+html.dark-mode .empty-state {
+    background-color: var(--bg-light);
+    border-color: var(--border);
+}
+html.dark-mode .empty-state h3 {
+    color: var(--text) !important;
+}
+html.dark-mode .empty-state p {
+    color: var(--text-light) !important;
+}
+
+/* Pagination */
+html.dark-mode .pager-section {
+    border-top-color: var(--border);
+}
+html.dark-mode .pager-btn {
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+html.dark-mode .pager-btn:hover:not(:disabled) {
+    background-color: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+html.dark-mode .pager-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Custom Action Buttons from embedded style */
+html.dark-mode .view-btn,
+html.dark-mode .cancel-btn {
+    background: transparent;
+    transition: all 0.2s ease;
+}
+html.dark-mode .view-btn {
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+html.dark-mode .view-btn:hover {
+    background: var(--accent);
+    color: white;
+}
+html.dark-mode .cancel-btn {
+    color: var(--error);
+    border: 1px solid var(--error);
+}
+html.dark-mode .cancel-btn:hover:not(:disabled) {
+    background: var(--error);
+    color: white;
+}
+html.dark-mode .cancel-btn:disabled {
+    color: var(--muted);
+    border-color: var(--muted);
+    opacity: 0.5;
+}
+
+/* Modals on History Page */
+html.dark-mode #detailModal .modal-content,
+html.dark-mode #rescheduleModal .modal-content,
+html.dark-mode #confirmModal .modal-content {
+    background-color: var(--bg-light) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+}
+html.dark-mode .modal-header h2 {
+     color: var(--text) !important;
+}
+html.dark-mode .modal-details label, html.dark-mode .form-group label {
+    color: var(--muted) !important;
+}
+html.dark-mode .modal-details p, html.dark-mode .form-group small {
+    color: var(--text-light) !important;
+}
+html.dark-mode .confirm-modal .confirm-body p {
+    color: var(--text-light) !important;
+}
+html.dark-mode .btn-secondary {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+html.dark-mode .btn-secondary:hover {
+    background-color: #253142; /* A bit darker than bg-light */
+}
+html.dark-mode .btn-outline {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+html.dark-mode .btn-outline:hover {
+    background-color: #253142;
+}
+html.dark-mode #detailModal .modal-close,
+html.dark-mode #rescheduleModal .modal-close,
+html.dark-mode #confirmModal .modal-close {
+    color: var(--muted);
+}
+html.dark-mode #detailModal .modal-close:hover,
+html.dark-mode #rescheduleModal .modal-close:hover,
+html.dark-mode #confirmModal .modal-close:hover {
+    color: var(--text);
+}
+
+/* Make services and price list section transparent */
+html.dark-mode .services_price_area,
+html.dark-mode .services_price_area .container,
+html.dark-mode .services_price_area .section_title,
+html.dark-mode .services_price_area .text-center {
+    background-color: transparent !important;
+}
+
+
+/* Make service selection areas transparent */
+html.dark-mode .service_area,
+html.dark-mode .service_area .container,
+html.dark-mode .service_area .section_title,
+html.dark-mode .service_area .single_service,
+html.dark-mode .service_area .service_content {
+    background-color: transparent !important;
+}
+
+/* ================================
+   ABOUT US – FORCE TRANSPARENT BACKGROUND
+   ================================ */
+
+/* All major sections on About Us page */
+html.dark-mode .bradcam_area,
+html.dark-mode .pet_care_area,
+html.dark-mode .service_area,
+html.dark-mode .team_area,
+html.dark-mode .store_location_area {
+    background-color: transparent !important;
+}
+
+    /* Containers inside sections */
+    html.dark-mode .bradcam_area .container,
+    html.dark-mode .pet_care_area .container,
+    html.dark-mode .service_area .container,
+    html.dark-mode .team_area .container,
+    html.dark-mode .store_location_area .container {
+        background-color: transparent !important;
+    }
+
+/* Section titles & inner wrappers */
+html.dark-mode .section_title,
+html.dark-mode .pet_info,
+html.dark-mode .service_content,
+html.dark-mode .location_info {
+    background-color: transparent !important;
+}
+
+
+
+/* =========================================================
+   HISTORY PAGE – FINAL DARK MODE STYLESHEET
+   ========================================================= */
+
+/* ========== PAGE BACKGROUND ========== */
+html.dark-mode section.history-section {
+    background: radial-gradient(
+        1200px 600px at 50% -200px,
+        rgba(255, 87, 34, 0.18),
+        #0b1220 45%,
+        #020617 100%
+    ) !important;
+    padding-bottom: 80px;
+}
+
+/* ========== HEADER CARD ========== */
+html.dark-mode .history-header {
+    background: linear-gradient(180deg, #0f172a, #020617);
+    border-radius: 16px;
+    border: 1px solid #1e293b;
+    box-shadow: 0 20px 50px rgba(0,0,0,.6);
+}
+
+html.dark-mode .header-title {
+    color: #fb923c !important;
+}
+
+html.dark-mode .header-subtitle {
+    color: #94a3b8 !important;
+}
+
+/* Stats */
+html.dark-mode .stat-card {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+}
+
+html.dark-mode .stat-value {
+    color: #e5e7eb;
+}
+
+/* ========== TABS ========== */
+html.dark-mode .tabs {
+    border-bottom: 1px solid #1e293b;
+}
+
+html.dark-mode .tab-btn {
+    color: #94a3b8;
+}
+
+html.dark-mode .tab-btn.active {
+    color: #fb923c;
+    background: rgba(255,255,255,.03);
+    border-bottom: 2px solid #fb923c;
+}
+
+/* ========== FILTER BAR ========== */
+html.dark-mode .controls-section {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+}
+
+html.dark-mode .select-filter,
+html.dark-mode .date-filter,
+html.dark-mode .search-input {
+    background: #020617 !important;
+    border: 1px solid #1e293b !important;
+    color: #e5e7eb !important;
+}
+
+html.dark-mode .search-input::placeholder {
+    color: #64748b;
+}
+
+/* ========== TABLE ========== */
+html.dark-mode .table-wrap {
+    background: linear-gradient(180deg, #0f172a, #020617);
+    border-radius: 16px;
+    border: 1px solid #1e293b;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0,0,0,.65);
+}
+
+html.dark-mode .history-table thead {
+    background: #020617;
+}
+
+html.dark-mode .history-table th {
+    color: #94a3b8;
+    font-weight: 600;
+    border-bottom: 1px solid #1e293b;
+}
+
+html.dark-mode .history-table td {
+    color: #e5e7eb;
+    border-top: 1px solid #1e293b;
+}
+
+html.dark-mode .history-table tbody tr:hover {
+    background: rgba(255,255,255,.04);
+}
+
+/* ========== STATUS (TEXT ONLY) ========== */
+html.dark-mode .status-badge {
+    all: unset !important;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+html.dark-mode .status-confirmed {
+    color: #22c55e;
+}
+
+html.dark-mode .status-cancelled {
+    color: #ef4444;
+}
+
+html.dark-mode .status-complete,
+html.dark-mode .status-used {
+    color: #38bdf8;
+}
+
+/* ========== ACTION BUTTONS ========== */
+html.dark-mode .view-btn,
+html.dark-mode .cancel-btn {
+    background: transparent;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+html.dark-mode .view-btn {
+    color: #fb923c;
+    border: 1px solid rgba(251,146,60,.6);
+}
+
+html.dark-mode .view-btn:hover {
+    background: rgba(251,146,60,.15);
+}
+
+html.dark-mode .cancel-btn {
+    color: #f87171;
+    border: 1px solid rgba(248,113,113,.5);
+}
+
+html.dark-mode .cancel-btn:hover:not(:disabled) {
+    background: rgba(248,113,113,.15);
+}
+
+html.dark-mode .cancel-btn:disabled {
+    opacity: .35;
+}
+
+/* ========== PAGINATION ========== */
+html.dark-mode .pager-btn {
+    background: #020617;
+    border: 1px solid #1e293b;
+    color: #e5e7eb;
+    border-radius: 10px;
+}
+
+html.dark-mode .pager-btn:hover:not(:disabled) {
+    background: #fb923c;
+    border-color: #fb923c;
+    color: #020617;
+}
+
+html.dark-mode .pager-info {
+    color: #94a3b8;
+}
+
+/* ========== EMPTY STATE ========== */
+html.dark-mode .empty-state {
+    background: #0f172a;
+    border: 1px dashed #334155;
+    border-radius: 14px;
+}
+
+/* =========================================================
+   CONFIRM CANCEL MODAL – DEEP BLUE
+   ========================================================= */
+
+html.dark-mode .modal-overlay {
+    background: rgba(2,6,23,.7);
+    backdrop-filter: blur(6px);
+}
+
+html.dark-mode .confirm-modal {
+    background: linear-gradient(180deg, #0f172a, #020617);
+    border-radius: 16px;
+    border: 1px solid #1e293b;
+    box-shadow: 0 30px 80px rgba(0,0,0,.75);
+    color: #e5e7eb;
+}
+
+html.dark-mode .confirm-icon {
+    font-size: 42px;
+    color: #f87171;
+}
+
+html.dark-mode .confirm-header h2 {
+    color: #f87171;
+    font-weight: 700;
+}
+
+html.dark-mode .confirm-body p {
+    color: #94a3b8;
+    text-align: center;
+}
+
+html.dark-mode .confirm-footer {
+    border-top: 1px solid #1e293b;
+    display: flex;
+    gap: 14px;
+}
+
+html.dark-mode .confirm-footer .btn-outline {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #e5e7eb;
+    border-radius: 10px;
+}
+
+html.dark-mode .confirm-footer .btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border-radius: 10px;
+}
+
+/* =========================================================
+   FIX CANCEL MESSAGE (FORCE DARK CONTENT)
+   ========================================================= */
+
+/* 强制覆盖 modal content */
+html.dark-mode .confirm-modal,
+html.dark-mode .confirm-modal * {
+    background-color: transparent !important;
+}
+
+/* Header 区域 */
+html.dark-mode .confirm-header {
+    background: transparent !important;
+    border-bottom: 1px solid #1e293b;
+}
+
+    /* Title */
+    html.dark-mode .confirm-header h2 {
+        color: #f87171 !important;
+    }
+
+/* Message 内容 */
+html.dark-mode .confirm-body {
+    background: transparent !important;
+}
+
+    html.dark-mode .confirm-body p {
+        color: #cbd5f5 !important; /* 明亮但不刺眼 */
+        opacity: 1 !important;
+    }
+
+/* Footer 区域 */
+html.dark-mode .confirm-footer {
+    background: transparent !important;
+    border-top: 1px solid #1e293b;
+}
+
+/*==========================================
+    END HISTORY PAGE DARK MODE STYLESHEET
+  ==========================================
+*/
+
+
+
+/* =========================================================
+   PROFILE PAGE – DARK MODE (FINAL)
+   ========================================================= */
+
+/* ========== PAGE BACKGROUND ========== */
+html.dark-mode .profile-page-wrapper {
+    background: #111827   !important;
+    min-height: 100vh;
+}
+
+
+
+/* =========================================================
+   MAIN PROFILE CARDS (LEFT & RIGHT)
+   ========================================================= */
+
+html.dark-mode .profile-card-main {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+}
+
+/* =========================================================
+   PROFILE AVATAR
+   ========================================================= */
+
+html.dark-mode .animated-avatar-container {
+    background: transparent;
+}
+
+html.dark-mode .avatar-photo {
+    border: 3px solid #ff9500;
+}
+
+html.dark-mode .photo-count-badge {
+    background: #ff9500;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* =========================================================
+   PROFILE TEXT
+   ========================================================= */
+
+html.dark-mode #profileName {
+    color: #f8fafc;
+}
+
+html.dark-mode #profilePhone,
+html.dark-mode #profileEmail {
+    color: #cbd5f5;
+}
+
+/* =========================================================
+   LIST GROUP (Member / Status / Points)
+   ========================================================= */
+
+html.dark-mode .profile-card-main .list-group-item {
+    background: transparent;
+    border-color: rgba(255,255,255,0.08);
+    color: #e5e7eb;
+}
+
+    html.dark-mode .profile-card-main .list-group-item strong {
+        color: #cbd5f5;
+    }
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.status-badge-active {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.status-badge-inactive {
+    color: #facc15;
+    font-weight: 600;
+}
+
+.status-badge-blocked {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* =========================================================
+   QUICK ACTIONS
+   ========================================================= */
+
+html.dark-mode .quick-actions-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.btn-orange-primary {
+    background: #ff9500;
+    border: none;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+    .btn-orange-primary:hover {
+        background: #ff7a00;
+    }
+
+.btn-orange-outline {
+    border: 1px solid #ff9500;
+    color: #ff9500;
+    background: transparent;
+}
+
+    .btn-orange-outline:hover {
+        background: rgba(255,149,0,0.15);
+    }
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+html.dark-mode .nav-tabs-orange {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+    html.dark-mode .nav-tabs-orange .nav-link {
+        color: #94a3b8;
+        background: transparent;
+        border: none;
+    }
+
+        html.dark-mode .nav-tabs-orange .nav-link.active {
+            color: #ff9500;
+            border-bottom: 2px solid #ff9500;
+            background: transparent;
+        }
+
+/* =========================================================
+   PET CARDS (NO GRADIENT)
+   ========================================================= */
+
+html.dark-mode .pet-card {
+    background: rgba(2, 6, 23, 0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+    html.dark-mode .pet-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 30px rgba(0,0,0,0.5);
+    }
+
+    html.dark-mode .pet-card h6 {
+        color: #f8fafc;
+    }
+
+    html.dark-mode .pet-card p {
+        color: #cbd5f5;
+    }
+
+/* =========================================================
+   LOYALTY & TIPS SECTIONS
+   ========================================================= */
+
+html.dark-mode .loyalty-section,
+html.dark-mode .tips-item {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+html.dark-mode .loyalty-points-display {
+    color: #ff9500;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+/* =========================================================
+   CUSTOM MODALS (EDIT PROFILE / PET)
+   ========================================================= */
+
+html.dark-mode .custom-modal-content {
+    background: #0f172a;
+    border-radius: 16px;
+    color: #e5e7eb;
+}
+
+html.dark-mode .custom-modal-header {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+html.dark-mode .custom-modal-footer {
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+/* =========================================================
+   FORM CONTROLS
+   ========================================================= */
+
+html.dark-mode .form-control {
+    background: #020617;
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e5e7eb;
+}
+
+    html.dark-mode .form-control:focus {
+        border-color: #ff9500;
+        box-shadow: none;
+    }
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+
+html.dark-mode .alert {
+    background: rgba(2, 6, 23, 0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #e5e7eb;
+}
+
+/* =====================================================
+   FORCE DARK – ADD / EDIT PET MODAL
+   ===================================================== */
+
+/* ===== Overlay ===== */
+#addPetOverlay,
+#editPetOverlay {
+    background: rgba(2, 6, 23, 0.88) !important;
+    backdrop-filter: blur(4px);
+}
+
+/* ===== Modal Card ===== */
+#addPetOverlay .custom-modal-content,
+#editPetOverlay .custom-modal-content {
+    background: #0f172a !important;
+    color: #e5e7eb !important;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+}
+
+/* ===== Header ===== */
+#addPetOverlay .custom-modal-header,
+#editPetOverlay .custom-modal-header {
+    background: linear-gradient(135deg, #ff9500, #ff7a00) !important;
+    color: #0f172a !important;
+    border-bottom: none !important;
+}
+
+#addPetOverlay .custom-modal-title,
+#editPetOverlay .custom-modal-title {
+    font-weight: 700;
+}
+
+/* ===== Body ===== */
+#addPetOverlay .custom-modal-body,
+#editPetOverlay .custom-modal-body {
+    background: #020617 !important;
+}
+
+/* ===== Labels ===== */
+#addPetOverlay label,
+#editPetOverlay label {
+    color: #cbd5f5 !important;
+    font-size: 13px;
+}
+
+/* ===== Inputs / Select / Textarea ===== */
+#addPetOverlay .form-control,
+#editPetOverlay .form-control {
+    background: #0f172a !important;
+    color: #e5e7eb !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 8px;
+}
+
+#addPetOverlay .form-control::placeholder,
+#editPetOverlay .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+#addPetOverlay .form-control:focus,
+#editPetOverlay .form-control:focus {
+    border-color: #ff9500 !important;
+    box-shadow: none !important;
+}
+
+/* ===== Select Options ===== */
+#addPetOverlay select option,
+#editPetOverlay select option {
+    background: #020617 !important;
+    color: #e5e7eb !important;
+}
+
+/* ===== File Input ===== */
+#addPetOverlay input[type="file"],
+#editPetOverlay input[type="file"] {
+    background: #020617 !important;
+    color: #cbd5f5 !important;
+    border: 1px dashed rgba(255,255,255,0.3) !important;
+}
+
+#addPetOverlay input[type="file"]::file-selector-button,
+#editPetOverlay input[type="file"]::file-selector-button {
+    background: #ff9500 !important;
+    color: #0f172a !important;
+    border: none !important;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* ===== Footer ===== */
+#addPetOverlay .custom-modal-footer,
+#editPetOverlay .custom-modal-footer {
+    background: #020617 !important;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ===== Footer Buttons ===== */
+#addPetOverlay .btn-secondary,
+#editPetOverlay .btn-secondary {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+    color: #cbd5f5 !important;
+}
+
+#addPetOverlay .btn-secondary:hover,
+#editPetOverlay .btn-secondary:hover {
+    background: rgba(255,255,255,0.08) !important;
+}
+
+#addPetOverlay .btn-orange-primary,
+#editPetOverlay .btn-orange-primary {
+    background: #ff9500 !important;
+    color: #0f172a !important;
+    font-weight: 600;
+}
+
+/* ===== Alerts ===== */
+#addPetOverlay .alert,
+#editPetOverlay .alert {
+    background: rgba(15,23,42,0.9) !important;
+    color: #e5e7eb !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/*==============================
+    END PROFILE PAGE DARK MODE
+      ==============================
+*/
+
+
+
+/* =========================================================
+   APPOINTMENT PAGE – DARK MODE (FINAL)
+   Focus: Typography, readability, hierarchy
+   ========================================================= */
+
+/* ===== Base ===== */
+.appt-bg {
+    padding: 60px 0;
+}
+
+html.dark-mode .appt-bg {
+    color: #e5e7eb;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+/* ===== Bradcam ===== */
+html.dark-mode .bradcam_text h3 {
+    color: #f9fafb;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+/* ===== Card Base ===== */
+html.dark-mode .card {
+    background: #1f2937;
+    border-radius: 14px;
+    border: 1px solid #334155;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+/* ===== Appointments Detail Card (Left) ===== */
+html.dark-mode .appointments-header {
+    background: linear-gradient(135deg, #ff7a18, #ff9f45);
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 12px 12px 0 0;
+}
+
+    html.dark-mode .appointments-header h3 {
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+html.dark-mode .appointment-detail-card {
+    background: #111827;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+html.dark-mode .appointment-detail-time {
+    color: #f9fafb;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+html.dark-mode .appointment-detail-pet,
+html.dark-mode .appointment-detail-service {
+    color: #e5e7eb;
+    font-weight: 500;
+}
+
+html.dark-mode .appointment-detail-groomer {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+/* Status text only (no badge box) */
+html.dark-mode .appointment-detail-status {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+    html.dark-mode .appointment-detail-status.confirmed {
+        color: #4ade80;
+    }
+
+    html.dark-mode .appointment-detail-status.cancelled {
+        color: #f87171;
+    }
+
+    html.dark-mode .appointment-detail-status.completed {
+        color: #60a5fa;
+    }
+
+/* ===== Calendar ===== */
+html.dark-mode .cal-title {
+    color: #f9fafb;
+    font-weight: 600;
+    letter-spacing: .3px;
+}
+
+html.dark-mode .weekdays div {
+    color: #cbd5f5;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .4px;
+}
+
+html.dark-mode .day-num {
+    color: #f3f4f6;
+    font-weight: 500;
+}
+
+html.dark-mode .day--outside .day-num {
+    color: #6b7280;
+}
+
+html.dark-mode .day--disabled {
+    opacity: .45;
+}
+
+html.dark-mode .day--selected {
+    outline: 2px solid #ff7a18;
+}
+
+/* Legend */
+html.dark-mode .legend span {
+    color: #d1d5db;
+    font-size: 12px;
+}
+
+/* ===== Form Panel ===== */
+html.dark-mode .form-card legend {
+    color: #f9fafb;
+    font-weight: 600;
+    letter-spacing: .2px;
+}
+
+html.dark-mode .form-label {
+    color: #e5e7eb;
+    font-weight: 500;
+}
+
+html.dark-mode .required {
+    color: #fb7185;
+}
+
+html.dark-mode .form-control {
+    background: #020617;
+    border: 1px solid #334155;
+    color: #f9fafb;
+    font-weight: 500;
+}
+
+    html.dark-mode .form-control::placeholder {
+        color: #9ca3af;
+    }
+
+    html.dark-mode .form-control:focus {
+        border-color: #ff7a18;
+        box-shadow: 0 0 0 2px rgba(255,122,24,.25);
+    }
+
+html.dark-mode .form-hint,
+html.dark-mode small {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+/* ===== Pet Cards ===== */
+html.dark-mode .pet-card {
+    background: #020617;
+    border: 1px solid #334155;
+    border-radius: 12px;
+}
+
+html.dark-mode .pet-name {
+    color: #f9fafb;
+    font-weight: 600;
+}
+
+html.dark-mode .pet-meta {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+/* ===== Buttons ===== */
+html.dark-mode .btn-primary {
+    background: linear-gradient(135deg, #ff7a18, #ff9f45);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+
+    html.dark-mode .btn-primary:hover {
+        filter: brightness(1.05);
+    }
+
+html.dark-mode .today-btn {
+    background: transparent;
+    border: 1px solid #ff7a18;
+    color: #ff7a18;
+    font-weight: 600;
+}
+
+    html.dark-mode .today-btn:hover {
+        background: #ff7a18;
+        color: #fff;
+    }
+
+/* ===== Toast ===== */
+html.dark-mode .appt-toast {
+    background: #1f2937;
+    border: 1px solid #334155;
+    color: #e5e7eb;
+}
+
+html.dark-mode .toast-title {
+    color: #f9fafb;
+    font-weight: 600;
+}
+
+html.dark-mode .toast-message,
+html.dark-mode .error-message-text {
+    color: #e5e7eb;
+}
+
+/* ===== No Appointment Empty ===== */
+html.dark-mode .appointments-details-list svg {
+    stroke: #9ca3af;
+}
+
+html.dark-mode .appointments-details-list p {
+    color: #9ca3af;
+}
+
+/* ===== Appointment badges (Dog / Cat / Status) ===== */
+html.dark-mode .appointment-detail-pet-type,
+html.dark-mode .appointment-detail-status {
+    background: #020617;
+    color: #f9fafb;
+    border: 1px solid #334155;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+    /* Status colors */
+    html.dark-mode .appointment-detail-status.confirmed {
+        background: rgba(74, 222, 128, 0.15);
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.4);
+    }
+
+    html.dark-mode .appointment-detail-status.cancelled {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.4);
+    }
+
+    html.dark-mode .appointment-detail-status.completed {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+        border-color: rgba(96, 165, 250, 0.4);
+    }
+
+/* ===== Select & Option Dark Mode ===== */
+html.dark-mode select.form-control {
+    background-color: #020617;
+    color: #f9fafb;
+    border: 1px solid #334155;
+}
+
+    html.dark-mode select.form-control option {
+        background-color: #020617;
+        color: #f9fafb;
+    }
+
+        /* Selected option */
+        html.dark-mode select.form-control option:checked {
+            background-color: #ff7a18;
+            color: #ffffff;
+        }
+
+
+        /* Groomer unavailable option */
+        html.dark-mode select.form-control option:disabled {
+            color: #6b7280;
+            background-color: #020617;
+        }
+
+/* Dropdown with unavailable groomers */
+html.dark-mode select.has-unavailable-groomers {
+    border-color: #f59e0b;
+}
+/*=========================================================
+    END APPOINTMENT PAGE DARK MODE
+    =========================================================
+*/
+
+
+
+/* =========================
+   FAQ Chatbot
+   ========================= */
+
+html.dark-mode .chatbot-container .message.bot-message p {
+    color: #1f2937 !important;
+    line-height: 1.6;
+}
+
+    /* 如果以后 bot message 里有 span / li */
+    html.dark-mode .chatbot-container .message.bot-message p *,
+    html.dark-mode .chatbot-container .message.bot-message li {
+        color: #1f2937 !important;
+    }

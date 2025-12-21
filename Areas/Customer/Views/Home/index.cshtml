@@ -54,6 +54,18 @@
         z-index: 10002 !important;
         pointer-events: auto !important;
     }
+
+    .redeem-toast {
+        background: linear-gradient(135deg, #ff9800, #ff6a00);
+        color: #ffffff;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+        .redeem-toast span {
+            color: #ffffff;
+        }
+
 </style>
 
 <!-- slider_area_start -->
@@ -572,9 +584,8 @@
                 shownGiftIds.add(giftId); // ✅ mark as shown
 
                 const toast = document.createElement('div');
+                toast.classList.add('redeem-toast');
                 toast.style.cssText = `
-                    background-color: #ff9800;
-                    color: white;
                     padding: 10px 18px;
                     border-radius: 6px;
                     box-shadow: 0 3px 8px rgba(0,0,0,0.15);
