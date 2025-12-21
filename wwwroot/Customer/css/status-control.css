@@ -253,40 +253,68 @@
 /* ========== INACTIVE RESTRICTIONS ========== */
 .redeem-restricted {
     position: relative;
-    opacity: 0.6;
-    pointer-events: none;
+    display: inline-block;
 }
 
-    .redeem-restricted::after {
-        content: 'Restricted';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(245, 158, 11, 0.95);
-        color: #fff;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
-    }
+.redeem-restricted::after {
+    content: 'RESTRICTED';
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    white-space: nowrap;
+    animation: restrictedPulse 2s ease-in-out infinite;
+}
 
-/* Inactive restriction message */
+@keyframes restrictedPulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.6);
+    }
+}
+
+/* Disabled button inside restricted container */
+.redeem-restricted .btn {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%) !important;
+    border-color: #d1d5db !important;
+    color: #9ca3af !important;
+}
+
+/* Inactive restriction message - improved */
 .inactive-restriction-msg {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #d97706;
+    align-items: flex-start;
+    gap: 10px;
+    color: #b45309;
     font-size: 13px;
-    margin-top: 10px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 8px;
+    border-left: 4px solid #f59e0b;
+    line-height: 1.5;
 }
 
-    .inactive-restriction-msg i {
-        font-size: 14px;
-    }
+.inactive-restriction-msg i {
+    font-size: 16px;
+    color: #d97706;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
 
 /* ========== STATUS INFO TOOLTIP ========== */
 .status-info-tooltip {
