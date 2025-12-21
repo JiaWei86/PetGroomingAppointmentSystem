@@ -18,6 +18,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         private static Dictionary<string, (int attempts, int secondsRemaining)> loginAttempts = new();
         private static bool timerStarted = false;
+        private static readonly object timerLock = new object();  // ✅ 新增：线程安全锁
 
         private const int LOCKOUT_THRESHOLD = 3;
         private const int LOCKOUT_DURATION_SECONDS = 15;
@@ -36,6 +37,20 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             _validationService = validationService;
             _recaptchaService = recaptchaService;
             _passwordService = passwordService;  // ✅ 新增
+            
+            // ✅ 改进：使用 lock 确保线程安全，只启动一次
+            if (!timerStarted)
+            {
+                lock (timerLock)
+                {
+                    if (!timerStarted)
+                    {
+                        timerStarted = true;
+                        StartLockoutTimerThread();
+                        Console.WriteLine("[TIMER] Lockout timer thread started");
+                    }
+                }
+            }
         }
 
         // ✅ 添加这个方法
