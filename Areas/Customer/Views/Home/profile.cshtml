@@ -296,26 +296,36 @@
                                             <div class="loyalty-points-display">@customer?.LoyaltyPoint pts</div>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Loyalty Tab - Tier Status Section (replace existing) -->
                                     <div class="col-md-6">
                                         <div class="loyalty-section">
                                             <h6>Tier Status</h6>
                                             @if (isBlocked)
                                             {
-                                                <button class="btn btn-sm btn-blocked" disabled title="Account blocked">
-                                                    <i class="fa fa-lock"></i> Redeem Rewards
-                                                </button>
+                                                <div class="tier-status-blocked">
+                                                    <button class="btn btn-sm btn-blocked" disabled title="Account blocked">
+                                                        <i class="fa fa-lock"></i> Redeem Rewards
+                                                    </button>
+                                                    <p class="blocked-restriction-msg">
+                                                        <i class="fa fa-ban"></i>
+                                                        Account blocked. Contact support for assistance.
+                                                    </p>
+                                                </div>
                                             }
                                             else if (isInactive)
                                             {
-                                                <div class="redeem-restricted">
-                                                    <button class="btn btn-sm btn-orange-primary" disabled>
-                                                        <i class="fa fa-gift"></i> Redeem Rewards
-                                                    </button>
+                                                <div class="tier-status-inactive">
+                                                    <div class="redeem-restricted">
+                                                        <button class="btn btn-sm btn-orange-primary" disabled>
+                                                            <i class="fa fa-gift"></i> Redeem Rewards
+                                                        </button>
+                                                    </div>
+                                                    <p class="inactive-restriction-msg">
+                                                        <i class="fa fa-exclamation-triangle"></i>
+                                                        <span>Gift redemption is restricted for inactive accounts. Please complete a booking or contact support to reactivate.</span>
+                                                    </p>
                                                 </div>
-                                                <p class="inactive-restriction-msg">
-                                                    <i class="fa fa-exclamation-triangle"></i> 
-                                                    Gift redemption is restricted for inactive accounts.
-                                                </p>
                                             }
                                             else
                                             {
