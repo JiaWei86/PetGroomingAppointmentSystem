@@ -91,7 +91,7 @@
                                     <th>Pet(s)</th>
                                     <th>Groomer</th>
                                     <th>Service</th>
-                                    <th class="text-center">Status</th>
+                                    class="text-center">Status</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -125,13 +125,10 @@
                     <div class="controls">
                         <div class="left">
                             <div class="filter-group">
-                                <label for="redeemStatusFilter">
-                                    <span class="filter-label">Filter by Status</span>
+                                <label for="redeemDateFilter">
+                                    <span class="filter-label">Filter by Date</span>
                                 </label>
-                                <select id="redeemStatusFilter" class="select-filter">
-                                    <option value="all">All statuses</option>
-                                    <option value="used">✓ Used</option>
-                                </select>
+                                <input type="date" id="redeemDateFilter" class="date-filter" style="padding:8px;border:1px solid #ddd;border-radius:4px;width:100%;"/>
                             </div>
                         </div>
 
@@ -155,7 +152,6 @@
                                     <th>Item</th>
                                     <th>Points</th>
                                     <th>Redeemed By</th>
-                                    <th class="text-center">Status</th>
                                     <th class="text-center">Action</th>
                                 </tr>
                             </thead>
@@ -383,7 +379,7 @@ const redeemState = {
     currentPage: 1,
     pageSize: 5,
     searchTerm: '',
-    statusFilter: 'all'
+    dateFilter: ''
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -450,8 +446,8 @@ document.addEventListener('DOMContentLoaded', function() {
         FilterAndDisplayRedeem();
     });
 
-    document.getElementById('redeemStatusFilter').addEventListener('change', (e) => {
-        redeemState.statusFilter = e.target.value;
+    document.getElementById('redeemDateFilter').addEventListener('change', (e) => {
+        redeemState.dateFilter = e.target.value;
         redeemState.currentPage = 1;
         FilterAndDisplayRedeem();
     });
@@ -673,10 +669,21 @@ function FilterAndDisplayRedeem() {
             r.itemName.toLowerCase().includes(redeemState.searchTerm) ||
             r.redeemedBy.toLowerCase().includes(redeemState.searchTerm);
         
-        const matchesStatus = redeemState.statusFilter === 'all' || 
-            r.status.toLowerCase() === redeemState.statusFilter;
+        // ✅ FIX: HTML date input returns ISO format (yyyy-MM-dd)
+        let matchesDate = true;
+        if (redeemState.dateFilter) {
+            // Parse ISO format date from HTML input (format: yyyy-MM-dd)
+            const [year, month, day] = redeemState.dateFilter.split('-');
+            // Convert to "MMM DD, YYYY" format to match backend format
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthName = months[parseInt(month) - 1];
+            const formattedFilterDate = `${monthName} ${parseInt(day)}, ${year}`;
+            
+            // Compare with redeem date
+            matchesDate = r.date === formattedFilterDate;
+        }
         
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesDate;
     });
 
     UpdateRedeemFilterInfo();
@@ -690,8 +697,13 @@ function UpdateRedeemFilterInfo() {
     if (redeemState.searchTerm) {
         activeFilters.push(`Search: "${redeemState.searchTerm}"`);
     }
-    if (redeemState.statusFilter !== 'all') {
-        activeFilters.push(`Status: ${redeemState.statusFilter}`);
+    if (redeemState.dateFilter) {
+        // ✅ FIX: Parse ISO format (yyyy-MM-dd) from HTML date input
+        const [year, month, day] = redeemState.dateFilter.split('-');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthName = months[parseInt(month) - 1];
+        const formattedDate = `${monthName} ${parseInt(day)}, ${year}`;
+        activeFilters.push(`Date: ${formattedDate}`);
     }
     
     if (activeFilters.length > 0) {
@@ -725,7 +737,6 @@ function DisplayRedeemPage() {
             <td><strong>${r.itemName}</strong></td>
             <td><span class="points-badge">⭐ ${r.pointsUsed}</span></td>
             <td>${r.redeemedBy}</td>
-            <td class="text-center"><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
             <td class="text-center"><button class="view-btn" onclick="ViewRedeem('${r.crgId}')">View</button></td>
         </tr>
     `).join('');

@@ -183,12 +183,13 @@ html.dark-mode h5,
 html.dark-mode h6 {
     color: var(--text) !important;
 }
-html.dark-mode p,
-html.dark-mode span,
-html.dark-mode div,
-html.dark-mode li {
-    color: var(--text-light) !important;
-}
+    html.dark-mode p,
+    html.dark-mode span,
+    html.dark-mode div,
+    html.dark-mode li{
+        color: var(--text-light) !important;
+    }
+
 /* Ensure main headings and links inside text are more prominent */
 html.dark-mode .card-body h5,
 html.dark-mode .media-body h3,
@@ -364,6 +365,58 @@ html.dark-mode footer a {
 html.dark-mode footer a:hover {
     color: var(--accent) !important;
 }
+
+/* =========================
+   DARK MODE – REDEEM GIFT
+   ========================= */
+
+/* Overlay */
+html.dark-mode #redeemPopup {
+    background: rgba(2, 6, 23, 0.55) !important;
+    backdrop-filter: blur(6px);
+}
+
+    /* Popup Box */
+    html.dark-mode #redeemPopup .popup-box {
+        background: #0f172a !important;
+        color: #e5e7eb !important;
+        border-radius: 16px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+    }
+
+    /* Text */
+    html.dark-mode #redeemPopup p,
+    html.dark-mode #redeemPopup label,
+    html.dark-mode #redeemPopup span {
+        color: #cbd5f5 !important;
+    }
+
+    /* Quantity input */
+    html.dark-mode #redeemPopup input[type="number"] {
+        background: #020617 !important;
+        color: #f9fafb !important;
+        border: 1px solid #334155 !important;
+    }
+
+/* Redeem popup image container – REMOVE background */
+html.dark-mode .popup-image-container {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 auto 16px auto;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+    /* 图片本身 */
+    html.dark-mode .popup-image-container img {
+        display: block;
+        width: 100%;
+        max-width: 240px;
+        margin: 0 auto;
+        border-radius: 12px;
+    }
+
+
 
 /* ========== HISTORY PAGE ========== */
 
@@ -1131,130 +1184,358 @@ html.dark-mode .alert {
 }
 
 /* =====================================================
-   FORCE DARK – ADD / EDIT PET MODAL
+   DARK MODE – ADD / EDIT PET MODAL (FIXED)
    ===================================================== */
 
 /* ===== Overlay ===== */
-#addPetOverlay,
-#editPetOverlay {
+html.dark-mode #addPetOverlay,
+html.dark-mode #editPetOverlay {
     background: rgba(2, 6, 23, 0.88) !important;
     backdrop-filter: blur(4px);
 }
 
-/* ===== Modal Card ===== */
-#addPetOverlay .custom-modal-content,
-#editPetOverlay .custom-modal-content {
-    background: #0f172a !important;
+    /* ===== Modal Card ===== */
+    html.dark-mode #addPetOverlay .custom-modal-content,
+    html.dark-mode #editPetOverlay .custom-modal-content {
+        background: #0f172a !important;
+        color: #e5e7eb !important;
+        border-radius: 16px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.65);
+    }
+
+    /* ===== Header ===== */
+    html.dark-mode #addPetOverlay .custom-modal-header,
+    html.dark-mode #editPetOverlay .custom-modal-header {
+        background: linear-gradient(135deg, #ff9500, #ff7a00) !important;
+        color: #0f172a !important;
+        border-bottom: none !important;
+    }
+
+    html.dark-mode #addPetOverlay .custom-modal-title,
+    html.dark-mode #editPetOverlay .custom-modal-title {
+        font-weight: 700;
+    }
+
+    /* ===== Body ===== */
+    html.dark-mode #addPetOverlay .custom-modal-body,
+    html.dark-mode #editPetOverlay .custom-modal-body {
+        background: #020617 !important;
+    }
+
+    /* ===== Labels ===== */
+    html.dark-mode #addPetOverlay label,
+    html.dark-mode #editPetOverlay label {
+        color: #cbd5f5 !important;
+        font-size: 13px;
+    }
+
+    /* ===== Inputs / Select / Textarea ===== */
+    html.dark-mode #addPetOverlay .form-control,
+    html.dark-mode #editPetOverlay .form-control {
+        background: #0f172a !important;
+        color: #e5e7eb !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        border-radius: 8px;
+    }
+
+        html.dark-mode #addPetOverlay .form-control::placeholder,
+        html.dark-mode #editPetOverlay .form-control::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        html.dark-mode #addPetOverlay .form-control:focus,
+        html.dark-mode #editPetOverlay .form-control:focus {
+            border-color: #ff9500 !important;
+            box-shadow: none !important;
+        }
+
+    /* ===== Select Options ===== */
+    html.dark-mode #addPetOverlay select option,
+    html.dark-mode #editPetOverlay select option {
+        background: #020617 !important;
+        color: #e5e7eb !important;
+    }
+
+    /* ===== File Input ===== */
+    html.dark-mode #addPetOverlay input[type="file"],
+    html.dark-mode #editPetOverlay input[type="file"] {
+        background: #020617 !important;
+        color: #cbd5f5 !important;
+        border: 1px dashed rgba(255,255,255,0.3) !important;
+    }
+
+        html.dark-mode #addPetOverlay input[type="file"]::file-selector-button,
+        html.dark-mode #editPetOverlay input[type="file"]::file-selector-button {
+            background: #ff9500 !important;
+            color: #0f172a !important;
+            border: none !important;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+    /* ===== Footer ===== */
+    html.dark-mode #addPetOverlay .custom-modal-footer,
+    html.dark-mode #editPetOverlay .custom-modal-footer {
+        background: #020617 !important;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* ===== Footer Buttons ===== */
+    html.dark-mode #addPetOverlay .btn-secondary,
+    html.dark-mode #editPetOverlay .btn-secondary {
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        color: #cbd5f5 !important;
+    }
+
+        html.dark-mode #addPetOverlay .btn-secondary:hover,
+        html.dark-mode #editPetOverlay .btn-secondary:hover {
+            background: rgba(255,255,255,0.08) !important;
+        }
+
+    html.dark-mode #addPetOverlay .btn-orange-primary,
+    html.dark-mode #editPetOverlay .btn-orange-primary {
+        background: #ff9500 !important;
+        color: #0f172a !important;
+        font-weight: 600;
+    }
+
+    /* ===== Alerts ===== */
+    html.dark-mode #addPetOverlay .alert,
+    html.dark-mode #editPetOverlay .alert {
+        background: rgba(15,23,42,0.9) !important;
+        color: #e5e7eb !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+    }
+
+
+/* =========================
+   DARK MODE - EDIT PROFILE MODAL
+   ========================= */
+
+/* 整个 modal 内容 */
+html.dark-mode .custom-modal-dialog,
+html.dark-mode .custom-modal-content {
+    background-color: #111827 !important; /* 深色主体 */
+    color: #f3f4f6 !important;
+    border-radius: 16px; /* 保留你原本圆角 */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+/* Header（橙色那条可以保留） */
+html.dark-mode .custom-modal-header {
+    background: linear-gradient(135deg, #ff8a00, #ff6a00) !important;
+    color: #ffffff !important;
+}
+
+/* Body */
+html.dark-mode .custom-modal-body {
+    background-color: #111827 !important;
     color: #e5e7eb !important;
-    border-radius: 16px;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.65);
 }
 
-/* ===== Header ===== */
-#addPetOverlay .custom-modal-header,
-#editPetOverlay .custom-modal-header {
-    background: linear-gradient(135deg, #ff9500, #ff7a00) !important;
-    color: #0f172a !important;
-    border-bottom: none !important;
+    /* Tab 标题 */
+    html.dark-mode .custom-modal-body h4,
+    html.dark-mode .custom-modal-body h5,
+    html.dark-mode .custom-modal-body label {
+        color: #f9fafb !important;
+    }
+
+    /* Input / Select / Textarea */
+    html.dark-mode .custom-modal-body input,
+    html.dark-mode .custom-modal-body textarea,
+    html.dark-mode .custom-modal-body select {
+        background-color: #1f2937 !important;
+        color: #f9fafb !important;
+        border: 1px solid #374151 !important;
+    }
+
+        /* Placeholder */
+        html.dark-mode .custom-modal-body input::placeholder,
+        html.dark-mode .custom-modal-body textarea::placeholder {
+            color: #9ca3af !important;
+        }
+
+    /* Dropzone（拖图片那块） */
+    html.dark-mode .custom-modal-body .dropzone,
+    html.dark-mode .custom-modal-body .upload-area {
+        background-color: #0f172a !important;
+        border: 2px dashed #374151 !important;
+        color: #9ca3af !important;
+    }
+
+    /* 已选图片区域 */
+    html.dark-mode .custom-modal-body .photo-preview {
+        background-color: #020617 !important;
+        border: 1px solid #374151;
+    }
+
+/* Footer */
+html.dark-mode .custom-modal-footer {
+    background-color: #0f172a !important;
+    border-top: 1px solid #374151;
 }
 
-#addPetOverlay .custom-modal-title,
-#editPetOverlay .custom-modal-title {
-    font-weight: 700;
+    /* Cancel 按钮 */
+    html.dark-mode .custom-modal-footer .btn-cancel {
+        background-color: #1f2937 !important;
+        color: #e5e7eb !important;
+        border: 1px solid #374151 !important;
+    }
+
+    /* Save 按钮（保留橙色强调） */
+    html.dark-mode .custom-modal-footer .btn-primary {
+        background: linear-gradient(135deg, #ff8a00, #ff6a00) !important;
+        color: #ffffff !important;
+    }
+
+/* =========================
+   DARK MODE - PHOTO THUMBNAIL GRID
+   ========================= */
+
+html.dark-mode .photo-thumbnails-grid {
+    background-color: #0f172a !important; /* 深蓝黑 */
+    border: 1px solid #374151 !important;
+    border-radius: 12px; /* 保留你原本圆角 */
+    padding: 12px;
 }
 
-/* ===== Body ===== */
-#addPetOverlay .custom-modal-body,
-#editPetOverlay .custom-modal-body {
-    background: #020617 !important;
+    /* 有照片时 */
+    html.dark-mode .photo-thumbnails-grid.has-photos {
+        background-color: #020617 !important;
+    }
+
+    /* 移除原本紫色斜线背景 */
+    html.dark-mode .photo-thumbnails-grid::before,
+    html.dark-mode .photo-thumbnails-grid::after {
+        display: none !important;
+    }
+
+/* 单张照片卡片 */
+html.dark-mode .photo-thumbnail {
+    background-color: #111827 !important;
+    border: 1px solid #374151 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
-/* ===== Labels ===== */
-#addPetOverlay label,
-#editPetOverlay label {
-    color: #cbd5f5 !important;
-    font-size: 13px;
+    /* 照片本身 */
+    html.dark-mode .photo-thumbnail img {
+        filter: brightness(0.95) contrast(1.05);
+        border-radius: 50%; /* 你原本是圆的 */
+    }
+
+    /* 删除按钮（红色 X） */
+    html.dark-mode .photo-thumbnail .remove-photo {
+        background-color: rgba(239, 68, 68, 0.9) !important;
+        color: #ffffff !important;
+    }
+
+    /* 当前选中 / 主照片标记 */
+    html.dark-mode .photo-thumbnail .photo-index {
+        background-color: #ff7a18 !important;
+        color: #ffffff !important;
+    }
+
+
+/* =========================
+   DARK MODE - PHOTO THUMBNAIL GRID
+   ========================= */
+
+html.dark-mode .photo-thumbnails-grid {
+    background-color: #0f172a !important; /* 深蓝黑 */
+    border: 1px solid #374151 !important;
+    border-radius: 12px; /* 保留你原本圆角 */
+    padding: 12px;
 }
 
-/* ===== Inputs / Select / Textarea ===== */
-#addPetOverlay .form-control,
-#editPetOverlay .form-control {
-    background: #0f172a !important;
-    color: #e5e7eb !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 8px;
+    /* 有照片时 */
+    html.dark-mode .photo-thumbnails-grid.has-photos {
+        background-color: #020617 !important;
+    }
+
+    /* 移除原本紫色斜线背景 */
+    html.dark-mode .photo-thumbnails-grid::before,
+    html.dark-mode .photo-thumbnails-grid::after {
+        display: none !important;
+    }
+
+/* 单张照片卡片 */
+html.dark-mode .photo-thumbnail {
+    background-color: #111827 !important;
+    border: 1px solid #374151 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
-#addPetOverlay .form-control::placeholder,
-#editPetOverlay .form-control::placeholder {
-    color: #94a3b8 !important;
-}
+    /* 照片本身 */
+    html.dark-mode .photo-thumbnail img {
+        filter: brightness(0.95) contrast(1.05);
+        border-radius: 50%; /* 你原本是圆的 */
+    }
 
-#addPetOverlay .form-control:focus,
-#editPetOverlay .form-control:focus {
-    border-color: #ff9500 !important;
-    box-shadow: none !important;
-}
+    /* 删除按钮（红色 X） */
+    html.dark-mode .photo-thumbnail .remove-photo {
+        background-color: rgba(239, 68, 68, 0.9) !important;
+        color: #ffffff !important;
+    }
 
-/* ===== Select Options ===== */
-#addPetOverlay select option,
-#editPetOverlay select option {
-    background: #020617 !important;
-    color: #e5e7eb !important;
-}
+    /* 当前选中 / 主照片标记 */
+    html.dark-mode .photo-thumbnail .photo-index {
+        background-color: #ff7a18 !important;
+        color: #ffffff !important;
+    }
 
-/* ===== File Input ===== */
-#addPetOverlay input[type="file"],
-#editPetOverlay input[type="file"] {
-    background: #020617 !important;
-    color: #cbd5f5 !important;
-    border: 1px dashed rgba(255,255,255,0.3) !important;
-}
 
-#addPetOverlay input[type="file"]::file-selector-button,
-#editPetOverlay input[type="file"]::file-selector-button {
-    background: #ff9500 !important;
-    color: #0f172a !important;
-    border: none !important;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-weight: 600;
-}
+/* =========================================
+   DARK MODE – REDEEMED GIFTS (PROFILE PAGE)
+   ========================================= */
 
-/* ===== Footer ===== */
-#addPetOverlay .custom-modal-footer,
-#editPetOverlay .custom-modal-footer {
-    background: #020617 !important;
-    border-top: 1px solid rgba(255,255,255,0.08);
-}
-
-/* ===== Footer Buttons ===== */
-#addPetOverlay .btn-secondary,
-#editPetOverlay .btn-secondary {
+/* 外层列表（透明即可） */
+html.dark-mode .redeemed-gifts-list {
     background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.25) !important;
-    color: #cbd5f5 !important;
 }
 
-#addPetOverlay .btn-secondary:hover,
-#editPetOverlay .btn-secondary:hover {
-    background: rgba(255,255,255,0.08) !important;
+/* 单张 Redeemed Gift 卡片 */
+html.dark-mode .redeemed-gift-card {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px; /* 保留原本圆角 */
+    box-shadow: 0 10px 26px rgba(0,0,0,0.45);
 }
 
-#addPetOverlay .btn-orange-primary,
-#editPetOverlay .btn-orange-primary {
-    background: #ff9500 !important;
-    color: #0f172a !important;
-    font-weight: 600;
-}
+    /* 左侧礼物图片背景（防止浅色刺眼） */
+    html.dark-mode .redeemed-gift-card .gift-image {
+        background: #020617 !important;
+        border-radius: 10px;
+    }
 
-/* ===== Alerts ===== */
-#addPetOverlay .alert,
-#editPetOverlay .alert {
-    background: rgba(15,23,42,0.9) !important;
-    color: #e5e7eb !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-}
+    /* Gift 名称 */
+    html.dark-mode .redeemed-gift-card .gift-name {
+        color: #f8fafc !important;
+        font-weight: 600;
+    }
+
+    /* Meta 信息（Qty / pts） */
+    html.dark-mode .redeemed-gift-card .gift-meta {
+        color: #cbd5f5 !important;
+    }
+
+    /* 日期 */
+    html.dark-mode .redeemed-gift-card .gift-date {
+        color: #94a3b8 !important;
+        font-size: 12px;
+    }
+
+    /* 状态：REDEEMED */
+    html.dark-mode .redeemed-gift-card .gift-status {
+        background: rgba(34, 197, 94, 0.15) !important;
+        color: #22c55e !important;
+        border: 1px solid rgba(34, 197, 94, 0.4);
+        font-weight: 600;
+        border-radius: 999px;
+    }
+
+
 
 /*==============================
     END PROFILE PAGE DARK MODE
@@ -1553,6 +1834,49 @@ html.dark-mode select.form-control {
 html.dark-mode select.has-unavailable-groomers {
     border-color: #f59e0b;
 }
+
+/* =========================
+   DARK MODE - SUCCESS TOAST
+   ========================= */
+
+html.dark-mode .appt-toast.toast-success {
+    background: linear-gradient( 135deg, rgba(16, 185, 129, 0.22), rgba(6, 95, 70, 0.35) ) !important;
+    border-left: 5px solid #10b981 !important;
+    color: #ecfdf5 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(16, 185, 129, 0.35);
+}
+
+/* =========================
+   DARK MODE - ERROR TOAST (STRONG)
+   ========================= */
+
+html.dark-mode .appt-toast.toast-error {
+    background: linear-gradient( 135deg, rgba(239, 68, 68, 0.25), rgba(127, 29, 29, 0.35) ) !important;
+    border-left: 5px solid #ef4444 !important;
+    color: #fee2e2 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+
+    /* 文本 */
+    html.dark-mode .appt-toast.toast-error * {
+        color: #fee2e2 !important;
+    }
+
+    /* Icon */
+    html.dark-mode .appt-toast.toast-error svg,
+    html.dark-mode .appt-toast.toast-error i {
+        color: #ef4444 !important;
+        stroke: #ef4444 !important;
+    }
+
+    /* 标题 Error */
+    html.dark-mode .appt-toast.toast-error strong,
+    html.dark-mode .appt-toast.toast-error .toast-title {
+        color: #fecaca !important;
+        font-weight: 600;
+    }
+
+
 /*=========================================================
     END APPOINTMENT PAGE DARK MODE
     =========================================================
@@ -1574,3 +1898,4 @@ html.dark-mode .chatbot-container .message.bot-message p {
     html.dark-mode .chatbot-container .message.bot-message li {
         color: #1f2937 !important;
     }
+
