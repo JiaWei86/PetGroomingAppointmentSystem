@@ -80,7 +80,7 @@ if (typeof window !== 'undefined' && typeof window.openConfirmModal !== 'functio
                     {
                         for (int i = 0; i < photoList.Length; i++)
                         {
-                            <img src="@photoList[i]" alt="avatar @(i+1)" class="profile-avatar avatar-photo @(i==0?"active":"")" data-index="@i" onerror="this.onerror=null;this.src='/Customer/img/default-avatar.png'" />
+                            <img src="@photoList[i]" alt="avatar @(i+1)" class="profile-avatar avatar-photo @(i==0?"active":"")" data-index="@i" onerror="this.onerror=null;this.src='/images/ownerAvatar.png'" />
                         }
                     }
                     @if (photoList.Length > 1)
@@ -188,10 +188,10 @@ if (typeof window !== 'undefined' && typeof window.openConfirmModal !== 'functio
                         {
                             var stored = pet?.Photo?.Trim();
                             string petImg;
-                            if (string.IsNullOrEmpty(stored) || stored == "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" || stored == "/Customer/img/default-pet.png" || stored == "/uploads/pet-placeholder.png")
+                            if (string.IsNullOrEmpty(stored) || stored == "/uploads/d3999c82-0883-447a-9a53-52dec5cc92d5.jpeg" || stored == "/images/dogAvatar.png" || stored == "/uploads/pet-placeholder.png")
                             {
                                 var t = (pet?.Type ?? "").Trim().ToLower();
-                                petImg = t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
+                                petImg = t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/images/dogAvatar.png");
                             }
                             else
                             {
@@ -200,7 +200,7 @@ if (typeof window !== 'undefined' && typeof window.openConfirmModal !== 'functio
 
                             <div class="pet-item">
                                     <img src="@petImg"
-                                        onerror="this.onerror=null;this.src='/Customer/img/default-pet.png'"
+                                        onerror="this.onerror=null;this.src='/images/dogAvatar.png'"
                                      alt="@pet?.Name"
                                      class="pet-avatar" />
                                 <div class="pet-info">
@@ -400,7 +400,7 @@ if (typeof window !== 'undefined' && typeof window.openConfirmModal !== 'functio
                         {
                             var p = photoList[i];
                             <div class="existing-photo-item" data-photo="@p" style="position:relative;width:72px;height:72px;border:2px solid #ff9500;">
-                                <img src="@p" alt="photo @(i+1)" onerror="this.onerror=null;this.src='/Customer/img/default-avatar.png'" />
+                                <img src="@p" alt="photo @(i+1)" onerror="this.onerror=null;this.src='/images/ownerAvatar.png'" />
                                 <button type="button" class="delete-photo-btn" data-photo="@p" title="Delete photo">×</button>
                             </div>
                         }
@@ -2030,11 +2030,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const addPetTypeSelect = document.getElementById('petType');
     const addPetPhotoPreviewImg = document.getElementById('addPetPhotoPreview');
     function getTypeDefaultImg(type) {
-        if (!type) return '/Customer/img/default-pet.png';
+        if (!type) return '/images/dogAvatar.png';
         const t = type.trim().toLowerCase();
         if (t === 'dog') return '/images/dogAvatar.png';
         if (t === 'cat') return '/images/catAvatar.png';
-        return '/Customer/img/default-pet.png';
+        return '/images/dogAvatar.png';
     }
     addPetTypeSelect?.addEventListener('change', function () {
         try {

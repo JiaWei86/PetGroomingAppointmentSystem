@@ -8,6 +8,7 @@ using PetGroomingAppointmentSystem.Services;
 using System.IO;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers;
 
@@ -17,12 +18,14 @@ public class HomeController : Controller
     private readonly DB _db;
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IS3StorageService _s3Service;
+    private readonly IPasswordService _passwordService;
 
-    public HomeController(DB db, IWebHostEnvironment webHostEnvironment, IS3StorageService s3Service)
+    public HomeController(DB db, IWebHostEnvironment webHostEnvironment, IS3StorageService s3Service, IPasswordService passwordService)
     {
         _db = db;
         _webHostEnvironment = webHostEnvironment;
         _s3Service = s3Service;
+        _passwordService = passwordService;
     }
 
 
@@ -154,19 +157,39 @@ public class HomeController : Controller
                 var photoFile = Request.Form.Files[0];
                 if (photoFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
-                    if (!Directory.Exists(uploadsFolder))
-                        Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    try
                     {
-                        await photoFile.CopyToAsync(fileStream);
-                    }
+                        using var memoryStream = new MemoryStream();
+                        await photoFile.CopyToAsync(memoryStream);
+                        var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                        var contentType = photoFile.ContentType ?? "image/jpeg";
+                        var base64Image = $"data:{contentType};base64,{base64String}";
 
-                    customer.Photo = "/uploads/customers/" + uniqueFileName;
+                        // Upload to S3 and get CloudFront URL
+                        var cloudFrontUrl = await _s3Service.UploadBase64ImageAsync(
+                            base64Image,
+                            $"customers/{customer.UserId}"
+                        );
+                        customer.Photo = cloudFrontUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Fallback to local storage if S3 fails
+                        Console.WriteLine($"Error uploading profile photo to S3: {ex.Message}");
+                        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "customers");
+                        if (!Directory.Exists(uploadsFolder))
+                            Directory.CreateDirectory(uploadsFolder);
+
+                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + photoFile.FileName;
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photoFile.CopyToAsync(fileStream);
+                        }
+
+                        customer.Photo = "/uploads/customers/" + uniqueFileName;
+                    }
                 }
             }
 
@@ -195,10 +218,12 @@ public class HomeController : Controller
             if (IsCustomerBlocked(customer))
                 return BlockedResponse("change password");
 
-            if (customer.Password != currentPassword)
+            // Verify current password using password service (supports hashed passwords)
+            if (!_passwordService.VerifyPassword(currentPassword, customer.Password))
                 return BadRequest(new { success = false, message = "Current password is incorrect" });
 
-            customer.Password = newPassword;
+            // Hash the new password before storing
+            customer.Password = _passwordService.HashPassword(newPassword);
 
             // ✅ If customer was pending, activate their account now
             if (customer.Status == "pending_password")
@@ -215,6 +240,111 @@ public class HomeController : Controller
         {
             return Json(new { success = false, message = ex.Message });
         }
+    }
+
+    // Request model for customer field validation (Customer area)
+    public class CustomerFieldValidationRequest
+    {
+        public string CustomerId { get; set; } = string.Empty;
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldValue { get; set; } = string.Empty;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ValidateCustomerField([FromBody] CustomerFieldValidationRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.FieldName))
+            return Json(new { isValid = false, errorMessage = "Invalid validation request." });
+
+        try
+        {
+            var field = request.FieldName.Trim().ToLowerInvariant();
+            var value = (request.FieldValue ?? string.Empty).Trim();
+
+            switch (field)
+            {
+                case "name":
+                    if (value.Length < 3 || value.Length > 200)
+                        return Json(new { isValid = false, errorMessage = "Name must be 3-200 characters." });
+                    break;
+                case "ic":
+                    var icPattern = "^\\d{6}-\\d{2}-\\d{4}$";
+                    if (!Regex.IsMatch(value, icPattern))
+                        return Json(new { isValid = false, errorMessage = "Invalid IC format. Expected xxxxxx-xx-xxxx." });
+
+                    // parse date portion YYMMDD
+                    string datePart = value.Substring(0, 6);
+                    if (!int.TryParse(datePart.Substring(0, 2), out int yy) || !int.TryParse(datePart.Substring(2, 2), out int mm) || !int.TryParse(datePart.Substring(4, 2), out int dd))
+                        return Json(new { isValid = false, errorMessage = "Invalid IC date segment." });
+
+                    int fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+                    DateTime today = DateTime.Now.Date;
+                    DateTime birthDate;
+                    try { birthDate = new DateTime(fullYear, mm, dd); } catch { return Json(new { isValid = false, errorMessage = "Invalid birth date in IC." }); }
+                    if (birthDate > today) return Json(new { isValid = false, errorMessage = "Birth date cannot be in the future." });
+                    int age = today.Year - birthDate.Year; if (today.Month < birthDate.Month || (today.Month == birthDate.Month && today.Day < birthDate.Day)) age--;
+                    if (age < 18) return Json(new { isValid = false, errorMessage = "Customer must be at least 18 years old." });
+
+                    var icDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.IC == value)
+                        : await _db.Customers.AnyAsync(c => c.IC == value && c.UserId != request.CustomerId);
+                    if (icDuplicate) return Json(new { isValid = false, errorMessage = "This IC number is already registered." });
+                    break;
+                case "email":
+                    if (string.IsNullOrEmpty(value) || !Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                        return Json(new { isValid = false, errorMessage = "Please enter a valid email address." });
+                    var emailDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.Email.ToLower() == value.ToLower())
+                        : await _db.Customers.AnyAsync(c => c.Email.ToLower() == value.ToLower() && c.UserId != request.CustomerId);
+                    if (emailDuplicate) return Json(new { isValid = false, errorMessage = "This email address is already in use." });
+                    break;
+                case "phone":
+                    // Expect format 01X-XXXXXXX or 01X-XXXXXXXX
+                    if (!Regex.IsMatch(value, "^01\\d-\\d{7,8}$"))
+                        return Json(new { isValid = false, errorMessage = "Phone format must be 01X-XXXXXXX or 01X-XXXXXXXX." });
+                    var phoneDuplicate = string.IsNullOrEmpty(request.CustomerId)
+                        ? await _db.Customers.AnyAsync(c => c.Phone == value)
+                        : await _db.Customers.AnyAsync(c => c.Phone == value && c.UserId != request.CustomerId);
+                    if (phoneDuplicate) return Json(new { isValid = false, errorMessage = "This phone number is already registered." });
+                    break;
+                default:
+                    return Json(new { isValid = false, errorMessage = "Invalid field for validation." });
+            }
+
+            return Json(new { isValid = true });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ValidateCustomerField error: {ex.Message}");
+            return Json(new { isValid = false, errorMessage = "An unexpected error occurred during validation." });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult ValidatePassword([FromBody] ValidatePasswordRequest req)
+    {
+        try
+        {
+            var password = req?.Password ?? string.Empty;
+            var result = new
+            {
+                length = password.Length >= 8,
+                uppercase = Regex.IsMatch(password, "[A-Z]"),
+                lowercase = Regex.IsMatch(password, "[a-z]"),
+                symbol = Regex.IsMatch(password, "[@!#$%^&*]")
+            };
+
+            return Json(new { success = true, data = result });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    public class ValidatePasswordRequest
+    {
+        public string Password { get; set; }
     }
 
     [HttpGet]
@@ -249,19 +379,25 @@ public class HomeController : Controller
             if (IsCustomerBlocked(customer))
                 return BlockedResponse("add pet");
 
-            // Generate sequential PetId (P001, P002, etc.)
-            int nextNumber = 1;
-
+            // Generate sequential PetId (P001, P002, etc.) — fill any gaps (pick smallest missing)
             var existingPetIds = _db.Pets
                 .Where(p => p.PetId.StartsWith("P"))
                 .Select(p => p.PetId)
                 .ToList();
 
+            int nextNumber = 1;
             if (existingPetIds.Any())
             {
-                nextNumber = existingPetIds
+                var nums = existingPetIds
                     .Select(id => int.TryParse(id.Substring(1), out int num) ? num : 0)
-                    .Max() + 1;
+                    .Where(n => n > 0)
+                    .ToHashSet();
+
+                // Find the smallest missing positive integer starting from 1
+                while (nums.Contains(nextNumber))
+                {
+                    nextNumber++;
+                }
             }
 
             var petId = $"P{nextNumber:D3}";
@@ -305,6 +441,14 @@ public class HomeController : Controller
                         // Fallback: leave photo as null if S3 upload fails
                     }
                 }
+            }
+
+            // If no photo was uploaded, assign default avatar based on type
+            if (string.IsNullOrEmpty(pet.Photo))
+            {
+                var t = (pet.Type ?? string.Empty).ToLower();
+                if (t == "dog") pet.Photo = "/images/dogAvatar.png";
+                else if (t == "cat") pet.Photo = "/images/catAvatar.png";
             }
 
             _db.Pets.Add(pet);
@@ -381,6 +525,14 @@ public class HomeController : Controller
                     }
                 }
             }
+
+                // If pet still has no photo after update and type is known, set default avatar
+                if (string.IsNullOrEmpty(pet.Photo))
+                {
+                    var t = (pet.Type ?? string.Empty).ToLower();
+                    if (t == "dog") pet.Photo = "/images/dogAvatar.png";
+                    else if (t == "cat") pet.Photo = "/images/catAvatar.png";
+                }
 
             _db.Pets.Update(pet);
             await _db.SaveChangesAsync();

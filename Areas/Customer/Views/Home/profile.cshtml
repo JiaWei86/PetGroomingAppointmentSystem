@@ -11,9 +11,9 @@
     }
     if (!photoList.Any())
     {
-        photoList.Add("/Customer/img/default-avatar.png");
+        photoList.Add("/images/ownerAvatar.png");
     }
-    var hasMultiplePhotos = photoList.Count > 1 || (photoList.Count == 1 && photoList[0] != "/Customer/img/default-avatar.png");
+    var hasMultiplePhotos = photoList.Count > 1 || (photoList.Count == 1 && photoList[0] != "/images/ownerAvatar.png");
     
     // Status control variables
     var customerStatus = customer?.Status?.ToLower() ?? "active";
@@ -26,6 +26,15 @@
 <link rel="stylesheet" href="~/Customer/css/multi-avatar.css" />
 <link rel="stylesheet" href="~/Customer/css/status-control.css" />
 <link rel="stylesheet" href="~/Customer/css/redeemed-gifts.css" />
+
+<style>
+    /* Field-level validation messages: green for valid, red for invalid */
+    .error-message { color: #dc3545; display:block; margin-top:6px; font-size:12px; }
+    .error-message.valid { color: #10b981; }
+    .error-message.invalid { color: #dc3545; }
+    input.is-invalid { border-color: #dc3545 !important; }
+    .text-success { color: #10b981 !important; }
+</style>
 
 @* ========== BLOCKED ACCOUNT OVERLAY ========== *@
 @if (isBlocked)
@@ -247,20 +256,33 @@
                                                 <div class="card h-100 pet-card">
                                                     <div class="row no-gutters align-items-center">
                                                         <div class="col-4 text-center p-3">
-                                                            <img src="@(string.IsNullOrEmpty(pet.Photo) ? "/Customer/img/default-pet.png" : pet.Photo)" 
-                                                                 alt="@pet.Name" class="rounded-circle" 
-                                                                 style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" />
-                                                        </div>
+                                                                        @{ 
+                                                                            var stored = pet?.Photo?.Trim();
+                                                                            var t = (pet?.Type ?? "").ToString().ToLower();
+                                                                            var petImg = "/images/dogAvatar.png";
+                                                                            if (!string.IsNullOrEmpty(stored)) {
+                                                                                petImg = stored;
+                                                                            } else if (t == "dog") {
+                                                                                petImg = "/images/dogAvatar.png";
+                                                                            } else if (t == "cat") {
+                                                                                petImg = "/images/catAvatar.png";
+                                                                            }
+                                                                        }
+                                                                          <img src="@petImg" 
+                                                                              alt="@(pet?.Name ?? "")" class="rounded-circle" 
+                                                                             style="width:72px;height:72px;object-fit:cover;border:2px solid #ff9500;" 
+                                                                             onerror="this.onerror=null;this.src='/images/dogAvatar.png'" />
+                                                                    </div>
                                                         <div class="col-8">
                                                             <div class="card-body py-2">
-                                                                <h6 class="card-title mb-1">@pet.Name</h6>
-                                                                <p class="small text-muted mb-1">@pet.Type - @pet.Breed</p>
-                                                                <p class="small text-muted mb-1">Age: @pet.Age years</p>
+                                                                <h6 class="card-title mb-1">@(pet?.Name ?? "")</h6>
+                                                                <p class="small text-muted mb-1">@(pet?.Type ?? "") - @(pet?.Breed ?? "")</p>
+                                                                <p class="small text-muted mb-1">Age: @(pet?.Age?.ToString() ?? "") years</p>
                                                                 @if (!isBlocked)
                                                                 {
                                                                     <div class="d-flex gap-2">
-                                                                        <button class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@pet.PetId')">Edit</button>
-                                                                        <button class="btn btn-sm btn-danger" onclick="deletePet('@pet.PetId', '@pet.Name')">Delete</button>
+                                                                        <button class="btn btn-sm btn-orange-outline" onclick="openEditPetModal('@(pet?.PetId ?? "")')">Edit</button>
+                                                                        <button class="btn btn-sm btn-danger" onclick="deletePet('@(pet?.PetId ?? "")', '@(pet?.Name ?? "")')">Delete</button>
                                                                     </div>
                                                                 }
                                                             </div>
@@ -543,7 +565,7 @@
                             <div class="mb-3">
                                 <label class="form-label"><strong>New Password</strong> <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control" id="newPassword" name="newPassword" required placeholder="Enter new password" minlength="8" oninput="checkPasswordStrength()" />
+                                    <input type="password" class="form-control" id="newPassword" name="newPassword" required placeholder="Enter new password" minlength="8" oninput="checkPasswordStrength()" onblur="validatePasswordAjax()" />
                                     <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)">
                                         <i class="fa fa-eye"></i>
                                     </button>
@@ -555,7 +577,15 @@
                                     </div>
                                     <small id="passwordStrengthText" class="text-muted"></small>
                                 </div>
-                                <small class="text-muted">Password must be at least 8 characters</small>
+
+                                <!-- Password criteria checklist (AJAX-validated) -->
+                                <ul class="list-unstyled mt-2 mb-0" id="passwordCriteriaList" style="font-size:13px;">
+                                    <li id="pwCriteriaLength" class="text-muted">✗ At least 8 characters</li>
+                                    <li id="pwCriteriaUpper" class="text-muted">✗ At least 1 uppercase letter (A-Z)</li>
+                                    <li id="pwCriteriaLower" class="text-muted">✗ At least 1 lowercase letter (a-z)</li> 
+                                    <li id="pwCriteriaSymbol" class="text-muted">✗ At least 1 symbol (@@!#$%^&*)</li>
+                                </ul>
+                                <small class="text-muted">Password must satisfy all criteria above.</small>
                             </div>
 
                             <div class="mb-3">
@@ -640,7 +670,7 @@
                 <form id="editPetForm" enctype="multipart/form-data" onsubmit="submitPetForm(event)">
                     <input type="hidden" id="petIdInput" name="petId" />
                     <div class="text-center mb-3">
-                        <img id="petPhotoPreview" src="/Customer/img/default-pet.png" class="rounded-circle" style="width:100px;height:100px;object-fit:cover;border:3px solid #ff9500;" />
+                        <img id="petPhotoPreview" src="/images/dogAvatar.png" class="rounded-circle" style="width:100px;height:100px;object-fit:cover;border:3px solid #ff9500;" />
                         <input type="file" id="petPhotoInput" name="petPhotoFile" accept="image/*" class="form-control mt-2" onchange="previewPetPhoto(event)" />
                     </div>
                     <div class="row">
@@ -677,7 +707,7 @@
             </div>
             <div class="custom-modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeAddPetModal()">Cancel</button>
-                <button type="submit" class="btn btn-orange-primary" form="editPetForm"><i class="fa fa-save"></i> Save</button>
+                <button type="submit" id="addPetSaveBtn" class="btn btn-orange-primary" form="editPetForm"><i class="fa fa-save"></i> Save</button>
             </div>
         </div>
     </div>
@@ -715,13 +745,13 @@
  {
  <text>
  uploadedPhotos = [
- @for (int i =0; i < photoList.Count; i++)
- {
- if (photoList[i] != "/Customer/img/default-avatar.png")
- {
- @:{ id: '@i', src: '@photoList[i]', isExisting: true },
- }
- }
+@for (int i = 0; i < photoList.Count; i++)
+{
+    if (photoList[i] != "/images/ownerAvatar.png")
+    {
+        @: { id: '@i', src: '@photoList[i]', isExisting: true },
+    }
+}
  ];
  </text>
  }
@@ -1050,31 +1080,44 @@ closeWebcamModal = function() {
 
  // ========== FORM SUBMISSION ==========
  function submitEditProfile(event) {
- event.preventDefault();
- 
- if (!checkStatusBeforeAction('update profile')) return;
- 
- const formData = new FormData(document.getElementById('editProfileForm'));
- 
- fetch('/Customer/Home/UpdateProfileMultiPhoto', {
- method: 'POST',
- body: formData
- })
- .then(response => response.json())
- .then(data => {
- if (data.success) {
- document.getElementById('successMessage').textContent = 'Profile updated!';
- document.getElementById('successMessage').style.display = 'block';
- setTimeout(() => { closeEditModal(); location.reload(); },1500);
- } else {
- document.getElementById('errorMessage').textContent = data.message;
- document.getElementById('errorMessage').style.display = 'block';
- }
- })
- .catch(error => {
- document.getElementById('errorMessage').textContent = 'Error updating profile';
- document.getElementById('errorMessage').style.display = 'block';
- });
+     event.preventDefault();
+
+     if (!checkStatusBeforeAction('update profile')) return;
+
+     const doSubmit = () => {
+        const form = document.getElementById('editProfileForm');
+        const formData = new FormData(form);
+        const tokenValue = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        fetch('/Customer/Home/UpdateProfileMultiPhoto', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: tokenValue ? { 'X-Requested-With': 'XMLHttpRequest', 'RequestVerificationToken': tokenValue } : { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+         .then(response => response.json())
+         .then(data => {
+             if (data.success) {
+                 try { showDynamicAlert('Profile updated', 'success'); } catch(e) {}
+                 document.getElementById('successMessage').textContent = 'Profile updated!';
+                 document.getElementById('successMessage').style.display = 'block';
+                 setTimeout(() => { closeEditModal(); location.reload(); },1500);
+             } else {
+                 try { showDynamicAlert(data.message || 'Failed to update profile. See console.', 'danger'); } catch(e) {}
+                 document.getElementById('errorMessage').textContent = data.message;
+                 document.getElementById('errorMessage').style.display = 'block';
+             }
+         })
+         .catch(error => {
+             try { showDynamicAlert('Network error. See console.', 'danger'); } catch(e) {}
+             document.getElementById('errorMessage').textContent = 'Error updating profile';
+             document.getElementById('errorMessage').style.display = 'block';
+         });
+     };
+
+    // submission is triggered by the form submit handler which shows confirmation.
+    // submitEditProfile performs the actual POST; do not show another confirm here.
+    doSubmit();
  }
 
  // ========== CHANGE PASSWORD FUNCTIONS ==========
@@ -1101,7 +1144,9 @@ closeWebcamModal = function() {
  
  if (password.length ===0) {
  container.style.display = 'none';
- return;
+        // Reset criteria UI
+        setPasswordCriteria({ length: false, uppercase: false, lowercase: false, symbol: false });
+        return;
  }
  
  container.style.display = 'block';
@@ -1134,7 +1179,70 @@ closeWebcamModal = function() {
  }
  
  text.textContent = feedback;
+
+    // Update local criteria UI immediately (fast client-side check)
+    const criteria = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        symbol: /[@@!#$%^&*]/.test(password)
+    };
+    setPasswordCriteria(criteria);
  }
+
+// Update criteria list items visual state
+function setPasswordCriteria(criteria) {
+    try {
+        const map = {
+            length: 'pwCriteriaLength',
+            uppercase: 'pwCriteriaUpper',
+            lowercase: 'pwCriteriaLower',
+            symbol: 'pwCriteriaSymbol'
+        };
+        Object.keys(map).forEach(key => {
+            const el = document.getElementById(map[key]);
+            if (!el) return;
+            if (criteria[key]) {
+                el.classList.remove('text-muted','text-danger');
+                el.classList.add('text-success');
+                el.textContent = '✓ ' + el.textContent.replace(/^.\s*/,'');
+            } else {
+                el.classList.remove('text-success','text-danger');
+                el.classList.add('text-muted');
+                // Ensure it shows ✗ prefix
+                el.textContent = '✗ ' + el.textContent.replace(/^[✓✗]\s*/,'');
+            }
+        });
+    } catch (e) { console.error(e); }
+}
+
+// AJAX validation to server-side endpoint; triggered on blur
+function validatePasswordAjax() {
+    const password = document.getElementById('newPassword').value || '';
+    if (!password) return;
+
+    // send JSON to server to validate password rules
+    fetch('/Customer/Home/ValidatePassword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data && data.success && data.data) {
+            setPasswordCriteria({
+                length: !!data.data.length,
+                uppercase: !!data.data.uppercase,
+                lowercase: !!data.data.lowercase,
+                symbol: !!data.data.symbol
+            });
+        } else {
+            // On server failure, fall back to client-side check (already applied by checkPasswordStrength)
+            console.warn('ValidatePassword failed', data);
+        }
+    })
+    .catch(err => { console.error('ValidatePassword request error', err); });
+}
 
  function checkPasswordMatch() {
  const newPassword = document.getElementById('newPassword').value;
@@ -1246,7 +1354,7 @@ closeWebcamModal = function() {
  document.getElementById('petIdInput').value = '';
  document.getElementById('petModalTitle').textContent = 'Add Pet';
  document.getElementById('editPetForm').reset();
- document.getElementById('petPhotoPreview').src = '/Customer/img/default-pet.png';
+    document.getElementById('petPhotoPreview').src = '/images/dogAvatar.png';
  document.getElementById('petSuccessMessage').style.display = 'none';
  document.getElementById('petErrorMessage').style.display = 'none';
  document.getElementById('addPetOverlay').classList.add('show');
@@ -1267,7 +1375,7 @@ closeWebcamModal = function() {
  document.getElementById('petType').value = pet.type || '';
  document.getElementById('petBreed').value = pet.breed || '';
  document.getElementById('petRemark').value = pet.remark || '';
- document.getElementById('petPhotoPreview').src = pet.photo || '/Customer/img/default-pet.png';
+    document.getElementById('petPhotoPreview').src = pet.photo || '/images/dogAvatar.png';
  document.getElementById('petModalTitle').textContent = 'Edit Pet';
  document.getElementById('petSuccessMessage').style.display = 'none';
  document.getElementById('petErrorMessage').style.display = 'none';
@@ -1283,59 +1391,99 @@ closeWebcamModal = function() {
  }
 
  function submitPetForm(event) {
- event.preventDefault();
- 
- if (!checkStatusBeforeAction('save pet')) return;
- 
- const petId = document.getElementById('petIdInput').value;
- const formData = new FormData(document.getElementById('editPetForm'));
- const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
+     event.preventDefault();
 
- fetch(url, { method: 'POST', body: formData })
- .then(r => r.json())
- .then(data => {
- if (data.success) {
- document.getElementById('petSuccessMessage').textContent = petId ? 'Pet updated!' : 'Pet added!';
- document.getElementById('petSuccessMessage').style.display = 'block';
- setTimeout(() => { closeAddPetModal(); location.reload(); },1000);
- } else {
- document.getElementById('petErrorMessage').textContent = data.message;
- document.getElementById('petErrorMessage').style.display = 'block';
- }
- })
- .catch(error => {
- document.getElementById('petErrorMessage').textContent = 'Error saving pet';
- document.getElementById('petErrorMessage').style.display = 'block';
- });
+     if (!checkStatusBeforeAction('save pet')) return;
+
+     const petId = document.getElementById('petIdInput').value;
+     const petName = document.getElementById('petName')?.value || 'pet';
+     const formData = new FormData(document.getElementById('editPetForm'));
+     const url = petId ? '/Customer/Home/UpdatePet' : '/Customer/Home/AddPet';
+
+     const doSubmit = () => {
+         fetch(url, { method: 'POST', body: formData })
+         .then(r => r.json())
+         .then(data => {
+             if (data.success) {
+                 try { showDynamicAlert(petId ? 'Pet updated!' : 'Pet added!', 'success'); } catch(e) {}
+                 document.getElementById('petSuccessMessage').textContent = petId ? 'Pet updated!' : 'Pet added!';
+                 document.getElementById('petSuccessMessage').style.display = 'block';
+                 setTimeout(() => { closeAddPetModal(); location.reload(); },1000);
+             } else {
+                 try { showDynamicAlert(data.message || 'Failed to save pet', 'danger'); } catch(e) {}
+                 document.getElementById('petErrorMessage').textContent = data.message;
+                 document.getElementById('petErrorMessage').style.display = 'block';
+             }
+         })
+         .catch(error => {
+             try { showDynamicAlert('Network error while saving pet.', 'danger'); } catch(e) {}
+             document.getElementById('petErrorMessage').textContent = 'Error saving pet';
+             document.getElementById('petErrorMessage').style.display = 'block';
+         });
+     };
+
+     const title = petId ? 'Save Changes?' : 'Confirm Add';
+     const message = petId ? `Are you sure you want to save changes to "${petName}"?` : `Are you sure you want to add "${petName}"?`;
+     const icon = petId ? 'edit' : 'add';
+     const iconColor = petId ? '#f59e0b' : '#10b981';
+
+     if (typeof window.showConfirmModal === 'function') {
+         window.showConfirmModal(title, message, icon, iconColor, doSubmit);
+     } else {
+         if (confirm(message)) doSubmit();
+     }
  }
 
  function deletePet(petId, petName) {
- if (!checkStatusBeforeAction('delete pet')) return;
- if (!confirm(`Delete ${petName}?`)) return;
- const formData = new FormData();
- formData.append('petId', petId);
- formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
- fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
- .then(async response => {
- const text = await response.text();
- try {
- const data = JSON.parse(text);
- if (data.success) {
- location.reload();
- } else {
- console.error('DeletePet error response:', data);
- alert(data.message || 'Delete failed');
- }
- } catch (err) {
- console.error('Failed to parse DeletePet response as JSON:', text, err);
- alert('Server error while deleting pet. See console for details.');
- }
+     if (!checkStatusBeforeAction('delete pet')) return;
+    // prevent duplicate confirm dialogs
+    if (window._confirmingDelete) return;
 
- })
- .catch(err => {
- console.error('DeletePet request failed:', err);
- alert('Request failed. See console for details.');
- });
+    const doDelete = () => {
+         const formData = new FormData();
+         formData.append('petId', petId);
+         formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value);
+         fetch('/Customer/Home/DeletePet', { method: 'POST', body: formData })
+         .then(async response => {
+             const text = await response.text();
+             try {
+                 const data = JSON.parse(text);
+                if (data.success) {
+                    try { showDynamicAlert(`${petName} deleted.`, 'success'); } catch(e) {}
+                    try { showSuccessToast(`${petName} deleted.`); } catch(e) {}
+                    // give the messages a moment to appear before reload
+                    setTimeout(() => location.reload(), 1400);
+                } else {
+                     console.error('DeletePet error response:', data);
+                     try { showDynamicAlert(data.message || 'Delete failed', 'danger'); } catch(e) {}
+                     alert(data.message || 'Delete failed');
+                 }
+             } catch (err) {
+                 console.error('Failed to parse DeletePet response as JSON:', text, err);
+                 try { showDynamicAlert('Server error while deleting pet.', 'danger'); } catch(e) {}
+                 alert('Server error while deleting pet. See console for details.');
+             }
+         })
+         .catch(err => {
+             console.error('DeletePet request failed:', err);
+             try { showDynamicAlert('Request failed. See console for details.', 'danger'); } catch(e) {}
+             alert('Request failed. See console for details.');
+         });
+     };
+
+     const message = `Are you sure you want to delete "${petName}"?`;
+    if (typeof window.showConfirmModal === 'function') {
+        window._confirmingDelete = true;
+        window.showConfirmModal('Confirm Delete', message, 'delete', '#ef4444', () => { try { doDelete(); } finally { window._confirmingDelete = false; } });
+    } else {
+        // fallback to native confirm but guard against duplicates
+        window._confirmingDelete = true;
+        try {
+            if (confirm(message)) doDelete();
+        } finally {
+            window._confirmingDelete = false;
+        }
+    }
  }
 
  function previewPetPhoto(event) {
@@ -1346,6 +1494,178 @@ closeWebcamModal = function() {
  reader.readAsDataURL(file);
  }
  }
+
+// ========== PET AGE VALIDATION (mirror admin behavior) ==========
+function validatePetAgeField(inputId, errorId, submitBtnId) {
+    const petAgeInput = document.getElementById(inputId);
+    let errorEl = document.getElementById(errorId);
+    const saveBtn = submitBtnId ? document.getElementById(submitBtnId) : null;
+    if (!petAgeInput) return true;
+
+    // create error element if missing
+    if (!errorEl) {
+        errorEl = document.createElement('small');
+        errorEl.id = errorId;
+        errorEl.className = 'error-message';
+        if (petAgeInput.parentNode) petAgeInput.parentNode.appendChild(errorEl);
+    }
+
+    const raw = petAgeInput.value;
+    if (raw === null || raw === undefined || raw === '') {
+        errorEl.textContent = '';
+        errorEl.classList.remove('valid','invalid');
+        petAgeInput.classList.remove('is-invalid');
+        petAgeInput.setCustomValidity('');
+        if (saveBtn) saveBtn.disabled = false;
+        return true;
+    }
+
+    const age = Number(raw);
+    if (Number.isNaN(age) || !isFinite(age)) {
+        errorEl.textContent = 'Age must be a number.';
+        errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+        petAgeInput.classList.add('is-invalid');
+        petAgeInput.setCustomValidity('Invalid age');
+        if (saveBtn) saveBtn.disabled = true;
+        return false;
+    }
+
+    if (age < 0) {
+        errorEl.textContent = 'Age cannot be negative.';
+        errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+        petAgeInput.classList.add('is-invalid');
+        petAgeInput.setCustomValidity('Age cannot be negative');
+        if (saveBtn) saveBtn.disabled = true;
+        return false;
+    }
+
+    if (age > 30) {
+        errorEl.textContent = 'Age cannot be greater than 30.';
+        errorEl.classList.remove('valid'); errorEl.classList.add('invalid');
+        petAgeInput.classList.add('is-invalid');
+        petAgeInput.setCustomValidity('Age too large');
+        if (saveBtn) saveBtn.disabled = true;
+        return false;
+    }
+
+    // valid
+    errorEl.textContent = '✓ Valid';
+    errorEl.classList.remove('invalid'); errorEl.classList.add('valid');
+    petAgeInput.classList.remove('is-invalid');
+    petAgeInput.setCustomValidity('');
+    if (saveBtn) saveBtn.disabled = false;
+    return true;
+}
+
+// Attach handler for add/edit pet age (customer profile uses single pet form)
+(function attachCustomerPetAgeHandlers() {
+    const petAgeInput = document.getElementById('petAge');
+    const saveBtn = document.getElementById('addPetSaveBtn');
+    if (petAgeInput) {
+        petAgeInput.addEventListener('input', () => validatePetAgeField('petAge','error-PetAge','addPetSaveBtn'));
+        petAgeInput.addEventListener('blur', () => validatePetAgeField('petAge','error-PetAge','addPetSaveBtn'));
+    }
+})();
+
+// ========== AJAX FIELD VALIDATION (mirror Admin validateCustomerField_Edit) ==========
+async function validateCustomerField_Edit(inputElement) {
+    const rawFieldName = inputElement.name; // e.g., "name", "email", "phone", "ic"
+    const fieldName = rawFieldName.toLowerCase();
+    const fieldValue = (inputElement.value || '');
+    let errorElement = document.getElementById(`error-${rawFieldName}`);
+
+    if (!errorElement) {
+        // create small error element next to the field
+        errorElement = document.createElement('small');
+        errorElement.id = `error-${rawFieldName}`;
+        errorElement.className = 'error-message';
+        if (inputElement.parentNode) inputElement.parentNode.appendChild(errorElement);
+    }
+
+    errorElement.textContent = '';
+    errorElement.classList.remove('valid');
+    inputElement.classList.remove('is-invalid');
+
+    if (inputElement.required && !fieldValue.trim()) {
+        errorElement.textContent = `${rawFieldName} is required.`;
+        inputElement.classList.add('is-invalid');
+        return;
+    }
+
+    if (!inputElement.required && !fieldValue.trim()) return;
+
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        const response = await fetch('@Url.Action("ValidateCustomerField","Home", new { area = "Admin" })', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({ CustomerId: '@(customer?.UserId ?? "")', FieldName: fieldName, FieldValue: fieldValue })
+        });
+
+        if (!response.ok) throw new Error('Server validation failed');
+        const result = await response.json();
+        if (!result.isValid) {
+            errorElement.textContent = result.errorMessage || 'Invalid field';
+            inputElement.classList.add('is-invalid');
+            errorElement.classList.remove('valid');
+            errorElement.classList.add('invalid');
+        } else {
+            errorElement.textContent = '✓ Valid';
+            inputElement.classList.remove('is-invalid');
+            errorElement.classList.remove('invalid');
+            errorElement.classList.add('valid');
+        }
+    } catch (err) {
+        console.error('Edit field validation error:', err);
+    }
+}
+
+// Auto-format helpers (IC and phone) — copied/simplified from admin.js
+function formatICNumber(input) {
+    const cursorPos = input.selectionStart;
+    const oldValue = input.value;
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 12) value = value.substring(0, 12);
+    let formattedValue = value;
+    if (value.length > 6) {
+        if (value.length > 8) {
+            formattedValue = value.substring(0,6) + '-' + value.substring(6,8) + '-' + value.substring(8,12);
+        } else {
+            formattedValue = value.substring(0,6) + '-' + value.substring(6);
+        }
+    }
+
+    if (formattedValue !== oldValue) {
+        input.value = formattedValue;
+        const digitsBeforeCursor = oldValue.substring(0, cursorPos).replace(/\D/g, '').length;
+        let dashesBeforeNew = 0;
+        if (digitsBeforeCursor > 6) dashesBeforeNew++;
+        if (digitsBeforeCursor > 8) dashesBeforeNew++;
+        const newCursorPos = digitsBeforeCursor + dashesBeforeNew;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+    }
+}
+
+function formatPhoneNumber(input) {
+    const cursorPos = input.selectionStart;
+    const oldValue = input.value;
+    let value = input.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.substring(0, 11);
+    let formattedValue = value;
+    if (value.length > 3) formattedValue = value.substring(0,3) + '-' + value.substring(3,11);
+    if (formattedValue !== oldValue) {
+        input.value = formattedValue;
+        const digitsBeforeCursor = oldValue.substring(0, cursorPos).replace(/\D/g, '').length;
+        let dashesBeforeNew = 0; if (digitsBeforeCursor > 3) dashesBeforeNew++;
+        const newCursorPos = digitsBeforeCursor + dashesBeforeNew;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+    }
+}
 
  // ========== SUCCESS TOASTS ==========
  function showSuccessToast(message) {
@@ -1409,6 +1729,51 @@ closeWebcamModal = function() {
  } catch (e) {
  console.error('Error handling pending password display:', e);
  }
+
+    // Attach edit-profile field validation and auto-format handlers
+    try {
+        const editName = '@(customer?.Name?.Replace("'", "\\'") ?? "")';
+        const editForm = document.getElementById('editProfileForm');
+
+        // Field elements
+        const nameEl = document.getElementById('fullName');
+        const emailEl = document.getElementById('email');
+        const phoneEl = document.getElementById('phone');
+        const icEl = document.getElementById('icNumber');
+
+        const attachValidation = (el) => {
+            if (!el) return;
+            el.addEventListener('blur', function() { validateCustomerField_Edit(this); });
+                el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); validateCustomerField_Edit(this); } });
+                el.addEventListener('input', function() {
+                const err = document.getElementById('error-' + this.name);
+                if (err) { err.textContent = ''; err.classList.remove('valid'); }
+                this.classList.remove('is-invalid');
+            });
+        };
+
+        attachValidation(nameEl);
+        attachValidation(emailEl);
+        attachValidation(phoneEl);
+        attachValidation(icEl);
+
+        if (icEl) icEl.addEventListener('input', function() { formatICNumber(this); });
+        if (phoneEl) phoneEl.addEventListener('input', function() { formatPhoneNumber(this); });
+
+        // Bind form submit to confirmation flow (ensure single binding)
+        if (editForm) {
+            try { editForm.removeEventListener('submit', submitEditProfile); } catch (e) {}
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (typeof window.showConfirmModal === 'function') {
+                    window.showConfirmModal('Confirm Edit', `Are you sure you want to save changes to "${editName}"?`, 'save', '#10b981', function() { submitEditProfile(e); });
+                } else {
+                    if (confirm(`Are you sure you want to save changes to "${editName}"?`)) submitEditProfile(e);
+                }
+                return false;
+            });
+        }
+    } catch (e) { console.error('Attach validation handlers error', e); }
  });
 
 </script>

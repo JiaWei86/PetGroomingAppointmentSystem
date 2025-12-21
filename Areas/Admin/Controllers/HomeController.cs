@@ -878,12 +878,12 @@ public class HomeController : Controller
                 string newPetId = "P" + nextPetNumber.ToString("D3");
 
                 // Determine default pet photo based on type when no photo provided
-                string GetDefaultPetPhoto(string? type)
-                {
-                    if (string.IsNullOrEmpty(type)) return "/Customer/img/default-pet.png";
-                    var t = type.Trim().ToLower();
-                    return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
-                }
+                    string GetDefaultPetPhoto(string? type)
+                    {
+                        if (string.IsNullOrEmpty(type)) return "/images/dogAvatar.png";
+                        var t = type.Trim().ToLower();
+                        return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/images/dogAvatar.png");
+                    }
 
                 var newPet = new Pet
                 {
@@ -1099,7 +1099,7 @@ public class HomeController : Controller
                     .Select(p => p.Trim()).Where(p => !string.IsNullOrEmpty(p)).ToList();
 
                 // If we're adding new uploaded photos, remove any default/local placeholder from existing
-                var defaultPlaceholders = new[] { "/images/ownerAvatar.png", "/uploads/placeholder.png", "/Customer/img/default-avatar.png" };
+                var defaultPlaceholders = new[] { "/images/ownerAvatar.png", "/uploads/placeholder.png", "/images/ownerAvatar.png" };
                 if (uploadedUrls.Any())
                 {
                     existing = existing.Where(p => !defaultPlaceholders.Any(d => string.Equals(d, p, StringComparison.OrdinalIgnoreCase))).ToList();
@@ -1261,9 +1261,9 @@ public class HomeController : Controller
 
             string GetDefaultPetPhoto(string? type)
             {
-                if (string.IsNullOrEmpty(type)) return "/Customer/img/default-pet.png";
+                if (string.IsNullOrEmpty(type)) return "/images/dogAvatar.png";
                 var t = type.Trim().ToLower();
-                return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/Customer/img/default-pet.png");
+                return t == "dog" ? "/images/dogAvatar.png" : (t == "cat" ? "/images/catAvatar.png" : "/images/dogAvatar.png");
             }
 
             var pet = new Pet
