@@ -8,20 +8,24 @@ using Org.BouncyCastle.Crypto.Generators;
 using PetGroomingAppointmentSystem.Areas.Admin.Controllers;
 using PetGroomingAppointmentSystem.Areas.Staff.ViewModels;
 using PetGroomingAppointmentSystem.Models;
+using PetGroomingAppointmentSystem.Services;
 
 namespace PetGroomingAppointmentSystem.Areas.Staff.Controllers
 {
     [Area("Staff")]
     [StaffOnly]
+
     public class HomeController : Controller
     {
         private readonly DB _db;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IPasswordService _passwordService;
 
-        public HomeController(DB context, IWebHostEnvironment webHostEnvironment)
+        public HomeController(DB context, IWebHostEnvironment webHostEnvironment, IPasswordService passwordService)
         {
             _db = context;
             _webHostEnvironment = webHostEnvironment;
+            _passwordService = passwordService;
         }
 
         public async Task<IActionResult> Index()
@@ -240,7 +244,16 @@ namespace PetGroomingAppointmentSystem.Areas.Staff.Controllers
 
             if (!string.IsNullOrEmpty(model.Password))
             {
-                staff.Password = model.Password;
+                try
+                {
+                    staff.Password = _passwordService.HashPassword(model.Password);
+                }
+                catch
+                {
+                    // Fallback: if hashing fails for any reason, do not store plaintext
+                    TempData["ErrorMessage"] = "Unable to update password at this time.";
+                    return RedirectToAction("Profile");
+                }
             }
 
             _db.SaveChanges();

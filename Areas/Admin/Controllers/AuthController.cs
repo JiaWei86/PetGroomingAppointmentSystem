@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PetGroomingAppointmentSystem.Models;
+using PetGroomingAppointmentSystem.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
@@ -65,15 +66,17 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
     public class AuthController : Controller
     {
         private readonly DB _dbContext;
+        private readonly IPasswordService _passwordService;
         
         // Login attempt tracking (in-memory)
         private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
         private const int LOCKOUT_THRESHOLD = 3;
         private const int LOCKOUT_SECONDS = 15;
 
-        public AuthController(DB dbContext)
+        public AuthController(DB dbContext, IPasswordService passwordService)
         {
             _dbContext = dbContext;
+            _passwordService = passwordService;
         }
 
         // ========================================
@@ -131,9 +134,9 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             // Try Admin Login First
             // ========================================
             var adminUser = _dbContext.Admins
-                                    .FirstOrDefault(a => (a.UserId == username || a.Name == username) && a.Password == password);
+                                    .FirstOrDefault(a => a.UserId == username || a.Name == username);
 
-            if (adminUser != null)
+            if (adminUser != null && _passwordService.VerifyPassword(password, adminUser.Password))
             {
                 // Clear failed login attempts
                 loginAttempts.Remove(username);
@@ -155,9 +158,9 @@ namespace PetGroomingAppointmentSystem.Areas.Admin.Controllers
             // Try Staff Login - UPDATED VERSION
             // ========================================
             var staffUser = _dbContext.Staffs
-               .FirstOrDefault(s => (s.UserId == username || s.Name == username) && s.Password == password);
+               .FirstOrDefault(s => s.UserId == username || s.Name == username);
             
-            if (staffUser != null)
+            if (staffUser != null && _passwordService.VerifyPassword(password, staffUser.Password))
             {
                 // Clear failed login attempts
                 loginAttempts.Remove(username);
