@@ -11,6 +11,7 @@ builder.Services.AddSqlServer<DB>($@"
 
 ");
 
+
 // AWS S3 Storage Service
 builder.Services.Configure<AWSSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.AddSingleton<IS3StorageService, S3StorageService>();
@@ -52,6 +53,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddHttpClient<IRecaptchaService, RecaptchaService>();
 
 var app = builder.Build();
+
+
 
 // HTTP pipeline configuration
 if (!app.Environment.IsDevelopment())

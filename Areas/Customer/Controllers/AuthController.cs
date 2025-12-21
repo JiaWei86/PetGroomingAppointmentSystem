@@ -16,9 +16,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         private readonly IRecaptchaService _recaptchaService;
         private readonly IPasswordService _passwordService;  // ✅ 新增
 
-        private static Dictionary<string, (int attempts, DateTime lockoutUntil)> loginAttempts = new();
+        private static Dictionary<string, (int attempts, int secondsRemaining)> loginAttempts = new();
+        private static bool timerStarted = false;
 
         private const int LOCKOUT_THRESHOLD = 3;
+        private const int LOCKOUT_DURATION_SECONDS = 15;
 
         public AuthController(
             IEmailService emailService,
@@ -34,6 +36,50 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             _validationService = validationService;
             _recaptchaService = recaptchaService;
             _passwordService = passwordService;  // ✅ 新增
+        }
+
+        // ✅ 添加这个方法
+        private static void StartLockoutTimerThread()
+        {
+            Thread timerThread = new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(1000);  // 每秒执行一次
+
+                    lock (loginAttempts)
+                    {
+                        var expiredKeys = new List<string>();
+
+                        foreach (var key in loginAttempts.Keys.ToList())
+                        {
+                            var (attempts, secondsRemaining) = loginAttempts[key];
+                            secondsRemaining--;
+
+                            if (secondsRemaining <= 0)
+                            {
+                                expiredKeys.Add(key);
+                            }
+                            else
+                            {
+                                loginAttempts[key] = (attempts, secondsRemaining);
+                            }
+                        }
+
+                        // 清除过期的
+                        foreach (var key in expiredKeys)
+                        {
+                            loginAttempts.Remove(key);
+                            Console.WriteLine($"[TIMEOUT] {key}: Lockout expired");
+                        }
+                    }
+                }
+            })
+            {
+                IsBackground = true
+            };
+
+            timerThread.Start();
         }
 
         public IActionResult Login()
@@ -81,7 +127,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             // ✅ 只在非移动设备上检查 reCAPTCHA
             if (!IsMobileDevice())
             {
-                // 检查 reCAPTCHA（使用 g-recaptcha-response）
                 if (string.IsNullOrWhiteSpace(recaptchaToken) || recaptchaToken == null)
                 {
                     recaptchaToken = Request.Form["g-recaptcha-response"].ToString();
@@ -97,7 +142,6 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     return View(model);
                 }
 
-                // 验证 reCAPTCHA token
                 bool recaptchaValid = await _recaptchaService.VerifyTokenAsync(recaptchaToken);
                 if (!recaptchaValid)
                 {
@@ -110,59 +154,56 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 }
             }
 
-            // ✅ 关键：先清除过期的 lockout
-            ClearExpiredLockouts(formattedPhoneNumber);
+            // ✅ 检查锁定状态
             var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
-            // ✅ 检查 lockout 状态
             if (lockoutInfo.isLocked)
             {
-                var remainingSeconds = (int)(lockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
                 ViewData["IsLocked"] = true;
-                ViewData["LockoutSeconds"] = Math.Max(0, remainingSeconds);
+                ViewData["LockoutSeconds"] = lockoutInfo.secondsRemaining;  // ✅ 改这里：secondsRemaining 而不是 lockoutUntil
                 ViewData["Error"] = "Too many login attempts. Please try again later.";
+                Console.WriteLine($"[LOCKED] {formattedPhoneNumber}: {lockoutInfo.secondsRemaining}s remaining");
                 return View(model);
             }
 
-            // Query database with formatted phone number
+            // Query database
             var user = _dbContext.Customers
                 .FirstOrDefault(u => u.Phone == formattedPhoneNumber && u.Role == "customer");
 
-            // ✅ 改动：先查询用户，再验证密码哈希
             if (user == null || !_passwordService.VerifyPassword(model.Password, user.Password))
             {
-                // Invalid credentials - increment failed attempts
+                // ✅ 失败 - 增加计数
                 IncrementFailedAttempts(formattedPhoneNumber);
+                
                 var updatedLockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
                 if (updatedLockoutInfo.isLocked)
                 {
                     ViewData["IsLocked"] = true;
-                    ViewData["LockoutSeconds"] = (int)(updatedLockoutInfo.lockoutUntil - DateTime.UtcNow).TotalSeconds;
-                    ViewData["Error"] = "Too many login attempts. Please wait a moment and try again later.";
+                    ViewData["LockoutSeconds"] = updatedLockoutInfo.secondsRemaining;  // ✅ 改这里
+                    ViewData["Error"] = "Too many login attempts. Please try again later.";
+                    Console.WriteLine($"[LOCKED NOW] {formattedPhoneNumber}");
                 }
                 else
                 {
-                    ViewData["Error"] = $"Invalid phone number or password. Attempt {updatedLockoutInfo.attempts}/{LOCKOUT_THRESHOLD}.";
+                    ViewData["Error"] = $"Invalid phone number or password. Attempt {updatedLockoutInfo.attempts}/3.";
+                    
+                    // ✅ 只有未锁定时才显示 reCAPTCHA
+                    if (!IsMobileDevice())
+                    {
+                        ViewData["RequireRecaptcha"] = true;
+                        var siteKey = HttpContext.RequestServices
+                            .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
+                        ViewData["RecaptchaSiteKey"] = siteKey;
+                    }
                 }
 
                 return View(model);
             }
 
-            // Successful login - reset failed attempts
+            // ✅ 成功登录 - 重置计数
             ResetFailedAttempts(formattedPhoneNumber);
-
-            // ✅ Check if customer needs to set a new password
-            if (user.Status == "pending_password")
-            {
-                // For first-time login, set the main session variables
-                HttpContext.Session.SetString("CustomerId", user.UserId);
-                HttpContext.Session.SetString("CustomerName", user.Name);
-                HttpContext.Session.SetString("CustomerPhone", user.Phone);
-                // ✅ Redirect to profile and signal to open change password section
-                TempData["ShowChangePassword"] = true;
-                return RedirectToAction("Profile", "Home");
-            }
+            Console.WriteLine($"[LOGIN SUCCESS] {formattedPhoneNumber}: Reset attempts");
 
             // Set session for authenticated user
             HttpContext.Session.SetString("CustomerId", user.UserId);
@@ -179,6 +220,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     Secure = HttpContext.Request.IsHttps,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
                 });
+            }
+
+            // ✅ Check if customer needs to set a new password
+            if (user.Status == "pending_password")
+            {
+                HttpContext.Session.SetString("CustomerId", user.UserId);
+                HttpContext.Session.SetString("CustomerName", user.Name);
+                HttpContext.Session.SetString("CustomerPhone", user.Phone);
+                TempData["ShowChangePassword"] = true;
+                return RedirectToAction("Profile", "Home");
             }
 
             return RedirectToAction("Index", "Home");
@@ -549,137 +600,63 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         {
             try
             {
-                Console.WriteLine($"\n\n{'=' * 60}");
-                Console.WriteLine($"CheckPhoneNumber CALLED");
-                Console.WriteLine($"{'=' * 60}");
-                Console.WriteLine($"Input phoneNumber: '{phoneNumber}'");
-                Console.WriteLine($"Input type: {phoneNumber?.GetType().Name ?? "NULL"}");
-                Console.WriteLine($"Input length: {phoneNumber?.Length ?? 0}");
-
                 if (string.IsNullOrEmpty(phoneNumber))
                 {
-                    Console.WriteLine($"ERROR: phoneNumber is null or empty - returning available: true");
                     return Json(new { available = true });
                 }
 
                 string cleanedInput = System.Text.RegularExpressions.Regex.Replace(phoneNumber, @"\D", "");
-                Console.WriteLine($"Cleaned input: '{cleanedInput}'");
 
                 if (cleanedInput.Length < 10)
                 {
-                    Console.WriteLine($"ERROR: Cleaned input length {cleanedInput.Length} < 10 - returning available: false");
                     return Json(new { available = false });
                 }
 
                 string formattedInput = FormatPhoneNumber(phoneNumber);
-                Console.WriteLine($"Formatted input: '{formattedInput}'");
 
-                // Get ALL users from database
-                var allUsers = _dbContext.Users.ToList();
-                Console.WriteLine($"\n[DATABASE CHECK] Found {allUsers.Count} total users in database");
+                // ⚠️ 只查询需要的字段，使用 Any() 而不是 ToList()
+                bool exists = _dbContext.Users
+                    .AsNoTracking()  // 不需要追踪，只是检查
+                    .Any(u => u.Phone == formattedInput);
 
-                if (allUsers.Count == 0)
-                {
-                    Console.WriteLine($"WARNING: No users in database!");
-                    return Json(new { available = true });
-                }
-
-                // Log each user
-                Console.WriteLine($"\nAll users in database:");
-                for (int i = 0; i < allUsers.Count; i++)
-                {
-                    var user = allUsers[i];
-                    Console.WriteLine($"  [{i}] UserId: {user.UserId}, Phone: '{user.Phone}' (Length: {user.Phone?.Length ?? 0})");
-                    if (!string.IsNullOrEmpty(user.Phone))
-                    {
-                        string cleanedDbPhone = System.Text.RegularExpressions.Regex.Replace(user.Phone, @"\D", "");
-                        Console.WriteLine($"       Cleaned DB phone: '{cleanedDbPhone}'");
-                    }
-                }
-
-                // Check direct match
-                Console.WriteLine($"\n[DIRECT MATCH] Checking if any user.Phone == '{formattedInput}'");
-                bool directMatch = allUsers.Any(u => u.Phone == formattedInput);
-                Console.WriteLine($"Direct match result: {directMatch}");
-
-                if (directMatch)
-                {
-                    Console.WriteLine($"✓ MATCH FOUND! Returning available: false");
-                    Console.WriteLine($"{'=' * 60}\n");
-                    return Json(new { available = false });
-                }
-
-                // Check cleaned match
-                Console.WriteLine($"\n[CLEANED MATCH] Checking cleaned versions...");
-                bool cleanedMatch = false;
-                foreach (var user in allUsers)
-                {
-                    if (!string.IsNullOrEmpty(user.Phone))
-                    {
-                        string cleanedDbPhone = System.Text.RegularExpressions.Regex.Replace(user.Phone, @"\D", "");
-                        bool matches = (cleanedDbPhone == cleanedInput);
-                        Console.WriteLine($"  Compare: '{cleanedInput}' == '{cleanedDbPhone}' ? {matches}");
-                        if (matches)
-                        {
-                            cleanedMatch = true;
-                            Console.WriteLine($"  ✓ MATCH!");
-                            break;
-                        }
-                    }
-                }
-
-                Console.WriteLine($"\nCleaned match result: {cleanedMatch}");
-                Console.WriteLine($"Final available result: {!cleanedMatch}");
-                Console.WriteLine($"{'=' * 60}\n");
-
-                return Json(new { available = !cleanedMatch });
+                return Json(new { available = !exists });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[EXCEPTION] {ex.Message}");
-                Console.WriteLine($"[EXCEPTION] {ex.StackTrace}");
-                Console.WriteLine($"{'=' * 60}\n");
                 return Json(new { available = false, error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Clears expired lockout entries from the login attempts dictionary
-        /// </summary>
-        private void ClearExpiredLockouts(string phoneNumber)
-        {
-            if (loginAttempts.ContainsKey(phoneNumber))
-            {
-                var lockoutInfo = loginAttempts[phoneNumber];
-                // ✅ 改进：完全清除过期的lockout，重置尝试次数
-                if (DateTime.UtcNow > lockoutInfo.lockoutUntil)
-                {
-                    loginAttempts.Remove(phoneNumber);
-                }
             }
         }
 
         /// <summary>
         /// Gets the current lockout information for a phone number
         /// </summary>
-        private (bool isLocked, int attempts, DateTime lockoutUntil) GetLockoutInfo(string phoneNumber)
+        private (bool isLocked, int attempts, int secondsRemaining) GetLockoutInfo(string phoneNumber)
         {
-            if (!loginAttempts.ContainsKey(phoneNumber))
+            try
             {
-                return (false, 0, DateTime.UtcNow);
+                lock (loginAttempts)
+                {
+                    if (!loginAttempts.ContainsKey(phoneNumber))
+                        return (false, 0, 0);
+
+                    var (attempts, secondsRemaining) = loginAttempts[phoneNumber];
+
+                    // ✅ 检查是否已过期
+                    if (secondsRemaining <= 0)
+                    {
+                        loginAttempts.Remove(phoneNumber);
+                        return (false, 0, 0);
+                    }
+
+                    bool isLocked = attempts >= LOCKOUT_THRESHOLD;
+                    return (isLocked, attempts, secondsRemaining);
+                }
             }
-
-            var (attempts, lockoutUntil) = loginAttempts[phoneNumber];
-            bool isLocked = attempts >= LOCKOUT_THRESHOLD && DateTime.UtcNow < lockoutUntil;
-
-            // ✅ 新增：如果lockout已过期，重置数据
-            if (DateTime.UtcNow > lockoutUntil && attempts >= LOCKOUT_THRESHOLD)
+            catch (Exception ex)
             {
-                loginAttempts.Remove(phoneNumber);
-                return (false, 0, DateTime.UtcNow);
+                Console.WriteLine($"[ERROR GetLockoutInfo] {ex.Message}");
+                return (false, 0, 0);
             }
-
-            return (isLocked, attempts, lockoutUntil);
         }
 
         /// <summary>
@@ -687,37 +664,38 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         /// </summary>
         private void IncrementFailedAttempts(string phoneNumber)
         {
-            if (!loginAttempts.ContainsKey(phoneNumber))
+            try
             {
-                // First failed attempt - set lockout to 15 seconds from now
-                loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
-            }
-            else
-            {
-                var (attempts, currentLockoutUntil) = loginAttempts[phoneNumber];
-                
-                // ✅ 改进：如果lockout已过期，重置计数器
-                if (DateTime.UtcNow > currentLockoutUntil)
+                lock (loginAttempts)
                 {
-                    // Lockout expired - reset to first attempt
-                    loginAttempts[phoneNumber] = (1, DateTime.UtcNow.AddSeconds(15));
-                }
-                else
-                {
-                    // Still within lockout period - increment
-                    attempts++;
+                    int attempts = 1;
+                    int secondsRemaining = LOCKOUT_DURATION_SECONDS;
 
-                    if (attempts >= LOCKOUT_THRESHOLD)
+                    if (loginAttempts.ContainsKey(phoneNumber))
                     {
-                        // Lock account for 15 seconds
-                        loginAttempts[phoneNumber] = (attempts, DateTime.UtcNow.AddSeconds(15));
+                        var (prevAttempts, prevSeconds) = loginAttempts[phoneNumber];
+
+                        // ✅ 如果还有剩余时间，继续累积
+                        if (prevSeconds > 0)
+                        {
+                            attempts = prevAttempts + 1;
+                            secondsRemaining = LOCKOUT_DURATION_SECONDS;  // 重置为 15 秒
+                        }
+                        else
+                        {
+                            // 时间已过期，重新开始
+                            attempts = 1;
+                            secondsRemaining = LOCKOUT_DURATION_SECONDS;
+                        }
                     }
-                    else
-                    {
-                        // Update attempts but keep the existing lockout timer
-                        loginAttempts[phoneNumber] = (attempts, currentLockoutUntil);
-                    }
+
+                    loginAttempts[phoneNumber] = (attempts, secondsRemaining);  // ✅ 必须赋值回去
+                    Console.WriteLine($"[ATTEMPT] {phoneNumber}: {attempts}/{LOCKOUT_THRESHOLD} - {secondsRemaining}s remaining");
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR IncrementFailedAttempts] {ex.Message}");
             }
         }
 
@@ -726,9 +704,20 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         /// </summary>
         private void ResetFailedAttempts(string phoneNumber)
         {
-            if (loginAttempts.ContainsKey(phoneNumber))
+            try
             {
-                loginAttempts.Remove(phoneNumber);
+                lock (loginAttempts)
+                {
+                    if (loginAttempts.ContainsKey(phoneNumber))
+                    {
+                        loginAttempts.Remove(phoneNumber);
+                        Console.WriteLine($"[RESET] {phoneNumber}: Attempts cleared");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR ResetFailedAttempts] {ex.Message}");
             }
         }
 
