@@ -603,6 +603,14 @@ public class HomeController : Controller
             var dbStaff = await _db.Staffs.FindAsync(deleteStaffId);
             if (dbStaff == null) return NotFound();
 
+            // Prevent deleting a staff who is referenced by any appointment to avoid FK constraint errors
+            bool hasAppointments = await _db.Appointments.AnyAsync(a => a.StaffId == deleteStaffId);
+            if (hasAppointments)
+            {
+                TempData["ErrorMessage"] = "Cannot delete this groomer because they are assigned to existing appointments. Please reassign or remove those appointments first.";
+                return RedirectToAction(nameof(Groomer));
+            }
+
             _db.Staffs.Remove(dbStaff);
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = " Staff deleted successfully!";
@@ -1820,6 +1828,7 @@ public class HomeController : Controller
                 return RedirectToAction(nameof(Appointment));
             }
 
+            
             if (appointmentToUpdate.Status != "Confirmed" || model.Status != "Completed")
             {
                 TempData["ErrorMessage"] = "Invalid status change. Only 'Confirmed' appointments can be changed to 'Completed'.";

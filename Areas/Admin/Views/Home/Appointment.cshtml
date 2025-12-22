@@ -455,7 +455,6 @@
                                 {
                                     <button onclick="enableInlineEdit(this)" class="btn btn-sm btn-action edit-btn">Edit</button>
                                 }
-                                <button class="btn btn-sm btn-action delete-btn" onclick="deleteAppointment(this, '@appointment.AppointmentId')">Delete</button>
                             </td>
                         </tr>
                     }
@@ -623,47 +622,7 @@
 
         }
 
-        // Function to handle deleting an appointment
-        function deleteAppointment(button, appointmentId) {
-            if (!appointmentId) return;
-
-            // Find the table row to get customer and pet names
-            const row = $(button).closest('tr');
-            const customerName = row.find('td:nth-child(3)').text().trim();
-            const petName = row.find('td:nth-child(4)').text().trim();
-
-            const message = `Are you sure you want to delete the appointment for ${customerName}'s pet (${petName})?`;
-            
-            // Use the global confirmation modal
-            window.showConfirmModal('Confirm Deletion', message, 'delete', '#ef4444', function () {
-                // User confirmed, proceed with AJAX deletion
-                const token = $('input[name="__RequestVerificationToken"]').val();
-
-                $.ajax({
-                    url: '@Url.Action("DeleteAppointmentAjax", "Home")',
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: token,
-                        appointmentId: appointmentId
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            // On success, remove the table row and show a success alert
-                            $('tr[data-appointment-id="' + appointmentId + '"]').fadeOut(500, function () {
-                                $(this).remove();
-                            });
-                            window.showDynamicAlert(response.message, 'success');
-                        } else {
-                            // On failure, show an error alert
-                            window.showDynamicAlert(response.message, 'danger');
-                        }
-                    },
-                    error: function () {
-                        window.showDynamicAlert('An unexpected error occurred while trying to delete the appointment.', 'danger');
-                    }
-                });
-            });
-        }
+        // Deletion via admin UI has been removed — function intentionally omitted.
 
         // Function to confirm updating an appointment status
         function confirmAppointmentUpdate(button, appointmentId) {
@@ -702,12 +661,17 @@
                 .append('<option value="Confirmed" selected>Confirmed</option>')
                 .append('<option value="Completed">Completed</option>');
 
+            // (Groomer editing removed) capture groomer cell to preserve original for cancel
+            var groomerCell = $(cells[5]);
+            var originalGroomerHTML = groomerCell.html();
+
             // Create Save and Cancel buttons
             var saveButton = $('<button type="button" class="btn btn-sm btn-success">Save</button>');
             var cancelButton = $('<button type="button" class="btn btn-sm btn-secondary">Cancel</button>');
 
             // Replace cell content with editable controls
             statusCell.html(statusDropdown);
+            // groomer cell remains read-only in inline edit
             actionsCell.empty().append(saveButton).append(' ').append(cancelButton);
 
             // Add event listeners for the new buttons
@@ -719,6 +683,7 @@
                 form.append('<input type="hidden" name="actionType" value="edit" />');
                 form.append(`<input type="hidden" name="EditAppointmentId" value="${appointmentId}" />`);
                 form.append(`<input type="hidden" name="Status" value="${statusDropdown.val()}" />`);
+                // No groomer editing — do not include StaffId
                 // Append filter values to maintain state after reload
                 form.append(`<input type="hidden" name="FilterStatus" value="@Model.FilterStatus" />`);
                 form.append(`<input type="hidden" name="FilterGroomerId" value="@Model.FilterGroomerId" />`);
@@ -738,6 +703,8 @@
                 // Restore original content
                 statusCell.html(originalStatusHTML);
                 actionsCell.html(originalActionsHTML);
+                // restore groomer cell
+                groomerCell.html(originalGroomerHTML);
             });
         }
 

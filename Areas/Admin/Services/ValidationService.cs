@@ -163,7 +163,8 @@ return true; // Optional field
 
     /// <summary>
     /// Validate that experience years are realistic for the person's age derived from IC.
-    /// The experience cannot be more than (Age - 18).
+    /// The experience cannot be more than (Age - 16).
+    /// This matches the client-side check which allows starting experience from age 16.
     /// </summary>
     public ValidationResult ValidateExperienceAgainstAge(int experience, string ic)
     {
@@ -191,12 +192,14 @@ return true; // Optional field
                 age--;
             }
 
-            // Experience cannot be greater than the number of years they could have been working (age - 18)
-            if (experience > (age - 18))
+            // Experience cannot be greater than the number of years they could have been working (age - 16)
+            // Use 16 as the assumed earliest working/experience-starting age to match client behavior.
+            int earliestWorkingAge = 16;
+            if (experience > (age - earliestWorkingAge))
             {
                 return new ValidationResult
                 {
-                    IsValid = false, // Assuming ValidationResult has an IsValid property
+                    IsValid = false,
                     ErrorMessage = $"Experience of {experience} years is unrealistic for someone aged {age}."
                 };
             }
