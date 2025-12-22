@@ -403,6 +403,7 @@
         let phoneValidationTimeout;
         let isPhoneRegistered = false;
         let isPasswordFilled = false;
+        let isRecaptchaCompleted = false; // ✅ 新增：追踪 reCAPTCHA 完成状态
 
         // Disable all form inputs when locked
         if (isLocked === "true") {
@@ -525,7 +526,7 @@
             }
         });
 
-        // ✅ Clear password error on input & track password state
+        // ✅ 清除密码错误信息并跟踪密码输入状态
         document.getElementById('password').addEventListener('input', function () {
             isPasswordFilled = this.value.length > 0;
             
@@ -538,7 +539,7 @@
             updateSubmitButtonState();
         });
 
-        // ✅ 根据验证状态更新按钮
+        // ✅ 根据验证状态更新按钮（修复：正确检查所有条件）
         function updateSubmitButtonState() {
             const submitBtn = document.getElementById('submitBtn');
             const phoneInput = document.getElementById('phoneNumber');
@@ -547,18 +548,18 @@
 
             const isPhoneFormatValid = phoneRegex.test(phoneInput.value);
             
-            // ✅ 新增：检查 reCAPTCHA 状态
-            let isRecaptchaValid = true;
+            // ✅ 修复：使用状态标志而不是查询隐藏字段
+            let isRecaptchaValid = !requireRecaptcha || isRecaptchaCompleted;
+            // 说明：如果 requireRecaptcha 为 false，则 isRecaptchaValid 默认为 true
+            //      如果 requireRecaptcha 为 true，则必须 isRecaptchaCompleted 为 true
+            
             let isRecaptchaRequired = requireRecaptcha === "true";
             
             if (isRecaptchaRequired) {
-                const recaptchaResponse = document.querySelector('[name="g-recaptcha-response"]');
-                isRecaptchaValid = recaptchaResponse && recaptchaResponse.value.length > 0;
-                
                 // ✅ 显示或隐藏 reCAPTCHA 警告
                 const recaptchaWarning = document.getElementById('recaptchaWarning');
                 if (recaptchaWarning) {
-                    if (!isRecaptchaValid && isPhoneFormatValid && isPasswordFilled && isPhoneRegistered) {
+                    if (!isRecaptchaCompleted && isPhoneFormatValid && isPasswordFilled && isPhoneRegistered) {
                         // 只有当其他字段都填好了但 reCAPTCHA 还没完成时才显示
                         recaptchaWarning.classList.add('show');
                     } else {
@@ -568,7 +569,19 @@
             }
 
             // ✅ 现在包含 reCAPTCHA 检查
+            // 所有条件都必须满足：注册电话 + 密码已填 + 电话格式有效 + reCAPTCHA完成（如果需要）+ 未被锁定
             const canSubmit = isPhoneRegistered && isPasswordFilled && isPhoneFormatValid && isRecaptchaValid && !isLocked;
+
+            console.log('Button state:', {
+                isPhoneRegistered,
+                isPasswordFilled,
+                isPhoneFormatValid,
+                isRecaptchaValid,
+                isRecaptchaCompleted,
+                requireRecaptcha: isRecaptchaRequired,
+                isLocked,
+                canSubmit
+            });
 
             if (canSubmit) {
                 submitBtn.disabled = false;
@@ -629,8 +642,11 @@
                 isValid = false;
             }
 
-            // ✅ reCAPTCHA 检查已由按钮的 disabled 状态处理
-            // 因为按钮在 reCAPTCHA 未完成时会被禁用，所以这里不再需要显示 alert
+            // ✅ 检查 reCAPTCHA（作为双重保险）
+            if (requireRecaptcha === "true" && !isRecaptchaCompleted) {
+                e.preventDefault();
+                return;
+            }
 
             // Prevent submit if validation fails
             if (!isValid) {
@@ -659,15 +675,17 @@
             </text>
         }
 
-        // ✅ 监听 reCAPTCHA 完成事件
+        // ✅ 修复：正确监听 reCAPTCHA 完成事件
         function onRecaptchaChange() {
-            console.log('reCAPTCHA completed');
+            console.log('✅ reCAPTCHA completed');
+            isRecaptchaCompleted = true; // ✅ 设置标志为 true
             updateSubmitButtonState();
         }
 
-        // ✅ 监听 reCAPTCHA 过期事件
+        // ✅ 修复：正确监听 reCAPTCHA 过期事件
         function onRecaptchaExpired() {
-            console.log('reCAPTCHA expired');
+            console.log('❌ reCAPTCHA expired');
+            isRecaptchaCompleted = false; // ✅ 设置标志为 false
             updateSubmitButtonState();
         }
 
