@@ -113,8 +113,10 @@ public class HomeController : Controller
         if (customer == null)
             return NotFound("Customer not found");
 
-        if (IsCustomerBlocked(customer))
-            return BlockedResponse("view profile");
+        // ✅ REMOVED: Don't return JSON for blocked users
+        // Let the view handle blocked status display with the overlay
+        // if (IsCustomerBlocked(customer))
+        //     return BlockedResponse("view profile");
 
         var pets = _db.Pets.Where(p => p.CustomerId == customer.UserId).ToList();
 
