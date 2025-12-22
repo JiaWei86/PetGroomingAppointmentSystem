@@ -14,11 +14,11 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         private readonly IPhoneService _phoneService;
         private readonly IValidationService _validationService;
         private readonly IRecaptchaService _recaptchaService;
-        private readonly IPasswordService _passwordService;  // ✅ 新增
+        private readonly IPasswordService _passwordService;  
 
         private static Dictionary<string, (int attempts, int secondsRemaining)> loginAttempts = new();
         private static bool timerStarted = false;
-        private static readonly object timerLock = new object();  // ✅ 新增：线程安全锁
+        private static readonly object timerLock = new object();  
 
         private const int LOCKOUT_THRESHOLD = 3;
         private const int LOCKOUT_DURATION_SECONDS = 15;
@@ -29,16 +29,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             IPhoneService phoneService,
             IValidationService validationService,
             IRecaptchaService recaptchaService,
-            IPasswordService passwordService)  // ✅ 新增
+            IPasswordService passwordService)  
         {
             _emailService = emailService;
             _dbContext = dbContext;
             _phoneService = phoneService;
             _validationService = validationService;
             _recaptchaService = recaptchaService;
-            _passwordService = passwordService;  // ✅ 新增
+            _passwordService = passwordService;  
             
-            // ✅ 改进：使用 lock 确保线程安全，只启动一次
+            
             if (!timerStarted)
             {
                 lock (timerLock)
@@ -53,14 +53,14 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             }
         }
 
-        // ✅ 添加这个方法
+        
         private static void StartLockoutTimerThread()
         {
             Thread timerThread = new Thread(() =>
             {
                 while (true)
                 {
-                    Thread.Sleep(1000);  // 每秒执行一次
+                    Thread.Sleep(1000);  
 
                     lock (loginAttempts)
                     {
@@ -81,7 +81,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                             }
                         }
 
-                        // 清除过期的
+                        
                         foreach (var key in expiredKeys)
                         {
                             loginAttempts.Remove(key);
@@ -99,16 +99,16 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
         public IActionResult Login()
         {
-            // ✅ 改进：完全清除所有错误状态
+            
             ViewData.Remove("Error");
             ViewData.Remove("IsLocked");
             ViewData.Remove("LockoutSeconds");
             
-            // ✅ 总是显示 reCAPTCHA（改这里）
+           
             var recaptchaSiteKey = HttpContext.RequestServices
                 .GetRequiredService<IConfiguration>()["RecaptchaSettings:SiteKey"];
             ViewData["RecaptchaSiteKey"] = recaptchaSiteKey;
-            ViewData["RequireRecaptcha"] = !IsMobileDevice();  // 移动端不需要 reCAPTCHA
+            ViewData["RequireRecaptcha"] = !IsMobileDevice();  
             
             var model = new LoginViewModel();
             
@@ -169,13 +169,13 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 }
             }
 
-            // ✅ 检查锁定状态
+            
             var lockoutInfo = GetLockoutInfo(formattedPhoneNumber);
 
             if (lockoutInfo.isLocked)
             {
                 ViewData["IsLocked"] = true;
-                ViewData["LockoutSeconds"] = lockoutInfo.secondsRemaining;  // ✅ 改这里：secondsRemaining 而不是 lockoutUntil
+                ViewData["LockoutSeconds"] = lockoutInfo.secondsRemaining; 
                 ViewData["Error"] = "Too many login attempts. Please try again later.";
                 Console.WriteLine($"[LOCKED] {formattedPhoneNumber}: {lockoutInfo.secondsRemaining}s remaining");
                 return View(model);
@@ -187,7 +187,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
             if (user == null || !_passwordService.VerifyPassword(model.Password, user.Password))
             {
-                // ✅ 失败 - 增加计数
+               
                 IncrementFailedAttempts(formattedPhoneNumber);
                 
                 var updatedLockoutInfo = GetLockoutInfo(formattedPhoneNumber);
@@ -195,7 +195,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 if (updatedLockoutInfo.isLocked)
                 {
                     ViewData["IsLocked"] = true;
-                    ViewData["LockoutSeconds"] = updatedLockoutInfo.secondsRemaining;  // ✅ 改这里
+                    ViewData["LockoutSeconds"] = updatedLockoutInfo.secondsRemaining;  
                     ViewData["Error"] = "Too many login attempts. Please try again later.";
                     Console.WriteLine($"[LOCKED NOW] {formattedPhoneNumber}");
                 }
@@ -203,7 +203,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 {
                     ViewData["Error"] = $"Invalid phone number or password. Attempt {updatedLockoutInfo.attempts}/3.";
                     
-                    // ✅ 只有未锁定时才显示 reCAPTCHA
+                    
                     if (!IsMobileDevice())
                     {
                         ViewData["RequireRecaptcha"] = true;
@@ -216,7 +216,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View(model);
             }
 
-            // ✅ 成功登录 - 重置计数
+            
             ResetFailedAttempts(formattedPhoneNumber);
             Console.WriteLine($"[LOGIN SUCCESS] {formattedPhoneNumber}: Reset attempts");
 
@@ -361,7 +361,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 }
                 else
                 {
-                    // ✅ 修改：显示错误，而不是成功消息
+                    
                     ViewData["Error"] = "No account found with that phone number and email combination. Please verify and try again.";
                     ViewData["Email"] = email;
                     ViewData["Phone"] = formattedPhoneNumber;
@@ -477,7 +477,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return View();
             }
 
-            // ✅ 改动：使用密码服务哈希密码
+            
             customer.Password = _passwordService.HashPassword(newPassword);
             _dbContext.SaveChanges();
 
@@ -557,7 +557,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 int newIdNumber = int.Parse(lastId.Substring(1)) + 1;
                 string newUserId = $"C{newIdNumber:D3}";
 
-                // ✅ 改动：使用密码服务哈希密码
+                
                 string hashedPassword = _passwordService.HashPassword(model.Password);
 
                 // Create new Customer record (inherits from User)
@@ -568,7 +568,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     IC = model.IC,
                     Email = model.Email,
                     Phone = formattedPhone,
-                    Password = hashedPassword,  // ✅ 保存哈希后的密码
+                    Password = hashedPassword,  
                     Role = "customer",
                     CreatedAt = DateTime.UtcNow,
                     LoyaltyPoint = 0,
@@ -582,7 +582,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 if (isAjaxRequest)
                 {
-                    // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                    
                     HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
                     
                     return Json(new { 
@@ -592,7 +592,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     });
                 }
 
-                // ✅ 设置 session flag：标记这个电话号码刚刚注册，需要 reCAPTCHA
+                
                 HttpContext.Session.SetString("JustRegisteredPhone", formattedPhone);
     
                 TempData["RegistrationSuccess"] = "Registration successful! Please login with your credentials.";
@@ -629,9 +629,9 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                 string formattedInput = FormatPhoneNumber(phoneNumber);
 
-                // ⚠️ 只查询需要的字段，使用 Any() 而不是 ToList()
+                
                 bool exists = _dbContext.Users
-                    .AsNoTracking()  // 不需要追踪，只是检查
+                    .AsNoTracking()  
                     .Any(u => u.Phone == formattedInput);
 
                 return Json(new { available = !exists });
@@ -656,7 +656,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
 
                     var (attempts, secondsRemaining) = loginAttempts[phoneNumber];
 
-                    // ✅ 检查是否已过期
+                    
                     if (secondsRemaining <= 0)
                     {
                         loginAttempts.Remove(phoneNumber);
@@ -690,21 +690,21 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                     {
                         var (prevAttempts, prevSeconds) = loginAttempts[phoneNumber];
 
-                        // ✅ 如果还有剩余时间，继续累积
+                        
                         if (prevSeconds > 0)
                         {
                             attempts = prevAttempts + 1;
-                            secondsRemaining = LOCKOUT_DURATION_SECONDS;  // 重置为 15 秒
+                            secondsRemaining = LOCKOUT_DURATION_SECONDS;  
                         }
                         else
                         {
-                            // 时间已过期，重新开始
+                            
                             attempts = 1;
                             secondsRemaining = LOCKOUT_DURATION_SECONDS;
                         }
                     }
 
-                    loginAttempts[phoneNumber] = (attempts, secondsRemaining);  // ✅ 必须赋值回去
+                    loginAttempts[phoneNumber] = (attempts, secondsRemaining);  
                     Console.WriteLine($"[ATTEMPT] {phoneNumber}: {attempts}/{LOCKOUT_THRESHOLD} - {secondsRemaining}s remaining");
                 }
             }
@@ -758,10 +758,10 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             HttpContext.Session.Remove("ResetEmail");
             HttpContext.Session.Remove("ResetPhone");
 
-            // 清除 session
+            
             HttpContext.Session.Clear();
 
-            // ✅ 改动：不删除 RememberPhone cookie，这样下次登录时仍能显示"Welcome back!"
+            
             // Response.Cookies.Delete("RememberPhone", new Microsoft.AspNetCore.Http.CookieOptions
             // {
             //     HttpOnly = true,
@@ -896,7 +896,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "IC date cannot be in the future." });
             }
 
-            // Validate state code - ✅ 改为 Substring(7, 2)
+            
             string stateCode = ic.Substring(7, 2);
             var validStates = new[] { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16" };
             if (!validStates.Contains(stateCode))
@@ -944,7 +944,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             return Json(new { isValid = true, message = "Valid password." });
         }
 
-        // 在 AuthController 类内部添加这个内部类
+        
         public class ValidateFieldRequest
         {
             public string FieldName { get; set; }
@@ -955,7 +955,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
         /// AJAX endpoint for real-time field validation during registration
         /// </summary>
         [HttpPost]
-        public IActionResult ValidateRegisterField([FromBody] ValidateFieldRequest request)  // ✅ 改这里
+        public IActionResult ValidateRegisterField([FromBody] ValidateFieldRequest request)  
         {
             try
             {
@@ -1001,7 +1001,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "This phone number is already registered." });
             }
 
-            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+            return Json(new { isValid = true, errorMessage = "" });  
         }
 
         private IActionResult ValidateNameField(string name)
@@ -1017,7 +1017,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "Name must contain only letters and spaces." });
             }
 
-            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+            return Json(new { isValid = true, errorMessage = "" });  
         }
 
         private IActionResult ValidateICField(string ic)
@@ -1091,7 +1091,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "Age must be at least 18 years old." });
             }
 
-            // Validate state code - ✅ 改为 Substring(7, 2)
+            
             string stateCode = ic.Substring(7, 2);
             var validStates = new[] { "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16" };
             if (!validStates.Contains(stateCode))
@@ -1126,7 +1126,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "This email is already registered." });
             }
 
-            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+            return Json(new { isValid = true, errorMessage = "" });  
         }
 
         private IActionResult ValidatePasswordField(string password)
@@ -1151,7 +1151,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
                 return Json(new { isValid = false, errorMessage = "Password must contain at least 1 symbol." });
             }
 
-            return Json(new { isValid = true, errorMessage = "" });  // ✅ 改这里
+            return Json(new { isValid = true, errorMessage = "" });  
         }
 
         /// <summary>
@@ -1195,9 +1195,7 @@ namespace PetGroomingAppointmentSystem.Areas.Customer.Controllers
             }
         }
 
-        /// <summary>
-        /// 检测是否为移动设备
-        /// </summary>
+     
         private bool IsMobileDevice()
         {
             var userAgent = Request.Headers["User-Agent"].ToString().ToLower();
