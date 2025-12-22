@@ -644,12 +644,13 @@
 
 
 <script>
- let cropper;
+    let cropper;
 
     const photoInput = document.getElementById("photoInput");
     const photoPreview = document.getElementById("photoPreview");
     const photoError = document.getElementById("photoError");
     const cropperControls = document.getElementById("cropperControls");
+    const photoUploadSection = document.getElementById("photoUploadSection");
 
     const emailInput = document.getElementById("emailInput");
     const phoneInput = document.getElementById("phoneInput");
@@ -736,43 +737,71 @@
     function resetPhotoInput() {
         photoInput.value = "";
         photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+        photoError.classList.remove("show");
+        photoError.innerText = "";
         if (cropper) {
             cropper.destroy();
             cropper = null;
+            cropperControls.style.display = "none";
         }
-        cropperControls.style.display = "none";
+        showPhotoInputWrapper(true);
     }
 
-    photoInput.addEventListener("change", function (e) {
+    // Helper to show/hide file input + error + hint
+    function showPhotoInputWrapper(show) {
+        const fileWrapper = photoUploadSection.querySelector(".file-input-wrapper");
+        const hint = photoUploadSection.querySelector("small.hint");
+        const errorDiv = photoUploadSection.querySelector(".photo-error");
+
+        if (show) {
+            fileWrapper.style.display = "block";
+            hint.style.display = "block";
+            errorDiv.style.display = photoError.classList.contains("show") ? "block" : "none";
+        }
+    }
+
+    // File input change (handles validation and Cropper initialization)
+    photoInput.addEventListener("change", function(e) {
         const file = e.target.files[0];
-        clearAllErrors();
+
+        photoError.classList.remove("show");
+        photoError.innerText = "";
+
         if (!file) {
             resetPhotoInput();
             return;
         }
 
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 5 * 1024 * 1024; // 5MB
         const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-        if (file.size > maxSize) {
-            photoError.innerText = "Photo must not exceed 5MB.";
+        if (file.size > maxSize || !allowedTypes.includes(file.type)) {
+            let errorMsg = "";
+            if (file.size > maxSize) {
+                errorMsg = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 5MB.`;
+            } else {
+                errorMsg = "Invalid file type. Only JPG, PNG, GIF, WebP allowed.";
+            }
+
+            photoError.innerText = errorMsg;
             photoError.classList.add("show");
-            resetPhotoInput();
+
+            // Reset preview and hide the file input section
+            photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
+            showPhotoInputWrapper(false);
+            photoInput.value = "";
             return;
         }
 
-        if (!allowedTypes.includes(file.type)) {
-            photoError.innerText = "Invalid file type. JPG, PNG, GIF, WebP only.";
-            photoError.classList.add("show");
-            resetPhotoInput();
-            return;
-        }
+        showPhotoInputWrapper(true);
 
         const reader = new FileReader();
-        reader.onload = function (event) {
-            photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" />`;
+        reader.onload = function(event) {
+            photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" style="max-width:100%;" />`;
+
             if (cropper) cropper.destroy();
-            cropper = new Cropper(document.getElementById("cropperImage"), {
+            const image = document.getElementById("cropperImage");
+            cropper = new Cropper(image, {
                 aspectRatio: 1,
                 viewMode: 1,
                 autoCropArea: 1
@@ -782,155 +811,78 @@
         reader.readAsDataURL(file);
     });
 
-          function resetPhotoInput() {
-           photoInput.value = "";
-           photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
-           photoError.classList.remove("show");
-           photoError.innerText = "";
-           if (cropper) {
-               cropper.destroy();
-               cropper = null;
-               cropperControls.style.display = "none";
-           }
-           showPhotoInputWrapper(true);
-       }
+       // Drag & Drop
+    photoUploadSection.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d97706";
+        photoPreview.style.background = "#fffbf0";
+    });
 
-       // Helper to show/hide file input + error + hint
-       function showPhotoInputWrapper(show) {
-           const fileWrapper = photoUploadSection.querySelector(".file-input-wrapper");
-           const hint = photoUploadSection.querySelector("small.hint");
-           const errorDiv = photoUploadSection.querySelector(".photo-error");
+    photoUploadSection.addEventListener("dragleave", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d1d5db";
+        photoPreview.style.background = "#f9fafb";
+    });
 
-           if (show) {
-               fileWrapper.style.display = "block";
-               hint.style.display = "block";
-               errorDiv.style.display = photoError.classList.contains("show") ? "block" : "none";
-           }
-       }
+    photoUploadSection.addEventListener("drop", function(e) {
+        e.preventDefault();
+        photoPreview.style.borderColor = "#d1d5db";
+        photoPreview.style.background = "#f9fafb";
 
-       // File input change (handles validation and Cropper initialization)
-       photoInput.addEventListener("change", function(e) {
-           const file = e.target.files[0];
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
 
-           photoError.classList.remove("show");
-           photoError.innerText = "";
+        // Assign the dropped file to the input
+        photoInput.files = e.dataTransfer.files;
 
-           if (!file) {
-               resetPhotoInput();
-               return;
-           }
+        // Always show the input and hint for valid files
+        showPhotoInputWrapper(true);
 
-           const maxSize = 5 * 1024 * 1024; // 5MB
-           const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        // Trigger the existing change event for validation & preview
+        photoInput.dispatchEvent(new Event("change"));
+    });
 
-           if (file.size > maxSize || !allowedTypes.includes(file.type)) {
-               let errorMsg = "";
-               if (file.size > maxSize) {
-                   errorMsg = `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum allowed is 5MB.`;
-               } else {
-                   errorMsg = "Invalid file type. Only JPG, PNG, GIF, WebP allowed.";
-               }
+    // Cropper controls
+    document.getElementById("rotateLeft").onclick = () => cropper.rotate(-90);
+    document.getElementById("rotateRight").onclick = () => cropper.rotate(90);
 
-               photoError.innerText = errorMsg;
-               photoError.classList.add("show");
+    document.getElementById("flipHorizontal").onclick = () => {
+        cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1);
+    };
 
-               // Reset preview and hide the file input section
-               photoPreview.innerHTML = '<div class="photo-placeholder">📷</div>';
-               showPhotoInputWrapper(false);
-               photoInput.value = "";
-               return;
-           }
+    document.getElementById("flipVertical").onclick = () => {
+        cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1);
+    };
 
-           showPhotoInputWrapper(true);
+    document.getElementById("resetCrop").onclick = () => {
+        cropper.reset();
+    };
 
-           const reader = new FileReader();
-           reader.onload = function(event) {
-               photoPreview.innerHTML = `<img id="cropperImage" src="${event.target.result}" style="max-width:100%;" />`;
+    document.getElementById("cropImage").onclick = () => {
+        const canvas = cropper.getCroppedCanvas({
+            width: 600,
+            height: 600,
+            fillColor: "#fff"
+        });
 
-               if (cropper) cropper.destroy();
-               const image = document.getElementById("cropperImage");
-               cropper = new Cropper(image, {
-                   aspectRatio: 1,
-                   viewMode: 1,
-                   autoCropArea: 1
-               });
-               cropperControls.style.display = "flex";
-           };
-           reader.readAsDataURL(file);
-       });
+        canvas.toBlob(blob => {
+            const newFile = new File([blob], "cropped.png", { type: "image/png" });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(newFile);
+            photoInput.files = dataTransfer.files;
 
-          // Drag & Drop
-       photoUploadSection.addEventListener("dragover", function(e) {
-           e.preventDefault();
-           photoPreview.style.borderColor = "#d97706";
-           photoPreview.style.background = "#fffbf0";
-       });
+            const url = URL.createObjectURL(blob);
+            photoPreview.innerHTML = `<img src="${url}" style="max-width:100%;" />`;
+        });
 
-       photoUploadSection.addEventListener("dragleave", function(e) {
-           e.preventDefault();
-           photoPreview.style.borderColor = "#d1d5db";
-           photoPreview.style.background = "#f9fafb";
-       });
+        cropper.destroy();
+        cropperControls.style.display = "none";
+    };
 
-       photoUploadSection.addEventListener("drop", function(e) {
-           e.preventDefault();
-           photoPreview.style.borderColor = "#d1d5db";
-           photoPreview.style.background = "#f9fafb";
-
-           const file = e.dataTransfer.files[0];
-           if (!file) return;
-
-           // Assign the dropped file to the input
-           photoInput.files = e.dataTransfer.files;
-
-           // Always show the input and hint for valid files
-           showPhotoInputWrapper(true);
-
-           // Trigger the existing change event for validation & preview
-           photoInput.dispatchEvent(new Event("change"));
-       });
-
-       // Cropper controls
-       document.getElementById("rotateLeft").onclick = () => cropper.rotate(-90);
-       document.getElementById("rotateRight").onclick = () => cropper.rotate(90);
-
-       document.getElementById("flipHorizontal").onclick = () => {
-           cropper.scaleX(cropper.getData().scaleX === 1 ? -1 : 1);
-       };
-
-       document.getElementById("flipVertical").onclick = () => {
-           cropper.scaleY(cropper.getData().scaleY === 1 ? -1 : 1);
-       };
-
-       document.getElementById("resetCrop").onclick = () => {
-           cropper.reset();
-       };
-
-       document.getElementById("cropImage").onclick = () => {
-           const canvas = cropper.getCroppedCanvas({
-               width: 600,
-               height: 600,
-               fillColor: "#fff"
-           });
-
-           canvas.toBlob(blob => {
-               const newFile = new File([blob], "cropped.png", { type: "image/png" });
-               const dataTransfer = new DataTransfer();
-               dataTransfer.items.add(newFile);
-               photoInput.files = dataTransfer.files;
-
-               const url = URL.createObjectURL(blob);
-               photoPreview.innerHTML = `<img src="${url}" style="max-width:100%;" />`;
-           });
-
-           cropper.destroy();
-           cropperControls.style.display = "none";
-       };
-
-       // Close modal by clicking outside
-       document.getElementById("editProfileModal").addEventListener("click", function(e) {
-           if (e.target === this) closeEditModal();
-       });
+    // Close modal by clicking outside
+    document.getElementById("editProfileModal").addEventListener("click", function(e) {
+        if (e.target === this) closeEditModal();
+    });
 </script>
 
 
