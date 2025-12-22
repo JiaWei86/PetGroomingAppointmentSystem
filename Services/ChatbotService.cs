@@ -104,6 +104,11 @@ public class ChatbotService : IChatbotService
                 {
                     Answer = "You can reach us by: Whatsapp (during business hours) and Email (response within 24 hours). Our friendly team is here to help with any questions or concerns!",
                     Keywords = new[] { "contact", "support", "help", "phone", "email" }
+                },
+                new FaqItem
+                {
+                    Answer = "Our store is located at Setapak Central Mall, Jalan Taman Ibu Kota, 53300 Setapak, Kuala Lumpur.",
+                    Keywords = new[] { "location", "address", "where", "store", "branch", "map", "directions", "nearby", "find", "place", "how to get", "location details" }
                 }
             };
 
