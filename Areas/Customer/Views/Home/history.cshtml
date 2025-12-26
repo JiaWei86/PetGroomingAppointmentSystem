@@ -760,16 +760,55 @@ function ViewAppointment(appointmentId) {
                 const modal = document.getElementById('detailModal');
                 const modalBody = document.getElementById('modalBody');
                 
+                // ✅ Check appointment time and status constraints
+                const appointmentDate = new Date(a.date + ' ' + a.time);
+                const now = new Date();
+                const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
+                const isConfirmed = a.status.toLowerCase() === 'confirmed';
+                const isComplete = a.status.toLowerCase() === 'complete';
+                
+                // ✅ Reschedule constraints
+                const canReschedule = isConfirmed && hoursUntilAppointment >= 24 && !isComplete;
+                const rescheduleTooltip = isComplete 
+                    ? 'Cannot reschedule completed appointments' 
+                    : !isConfirmed 
+                    ? 'Only confirmed appointments can be rescheduled' 
+                    : hoursUntilAppointment < 24 
+                    ? 'Cannot reschedule within 24 hours of appointment'
+                    : 'Reschedule this appointment';
+                
+                // ✅ Cancel constraints
+                const canCancel = isConfirmed && hoursUntilAppointment >= 24;
+                const cancelTooltip = isComplete
+                    ? 'Cannot cancel completed appointments'
+                    : !isConfirmed
+                    ? 'Only confirmed appointments can be cancelled'
+                    : hoursUntilAppointment < 24
+                    ? 'Cannot cancel within 24 hours of appointment'
+                    : 'Cancel this appointment';
+                
                 // Determine available actions based on status
                 let actionButtons = '';
                 if (a.status.toLowerCase() === 'confirmed') {
-                    actionButtons = `
-                        <button class="btn btn-primary" onclick="OpenRescheduleModal('${a.appointmentId}')">
+                    const rescheduleBtn = canReschedule 
+                        ? `<button class="btn btn-primary" onclick="OpenRescheduleModal('${a.appointmentId}')">
                             <span>📅</span> Reschedule
-                        </button>
-                        <button class="btn btn-danger" onclick="CancelAppointment('${a.appointmentId}')">
+                        </button>`
+                        : `<button class="btn btn-primary" disabled title="${rescheduleTooltip}">
+                            <span>📅</span> Reschedule
+                        </button>`;
+                    
+                    const cancelBtn = canCancel
+                        ? `<button class="btn btn-danger" onclick="CancelAppointment('${a.appointmentId}')">
                             <span>✕</span> Cancel
-                        </button>
+                        </button>`
+                        : `<button class="btn btn-danger" disabled title="${cancelTooltip}">
+                            <span>✕</span> Cancel
+                        </button>`;
+                    
+                    actionButtons = `
+                        ${rescheduleBtn}
+                        ${cancelBtn}
                     `;
                 }
                 
@@ -933,44 +972,67 @@ function ConfirmCancelAppointment() {
 
 // Reschedule Modal Functions
 function OpenRescheduleModal(appointmentId) {
-    currentRescheduleId = appointmentId;
-    
-    // Get the current appointment details
     const appointment = appointmentState.allData.find(a => a.appointmentId === appointmentId);
     if (!appointment) return;
     
-    const durationMinutes = appointment.durationTime || 30; // Default to 30 if not provided
+    // ✅ Add validation before opening reschedule modal
+    const appointmentDate = new Date(appointment.date + ' ' + appointment.time);
+    const now = new Date();
+    const hoursUntilAppointment = (appointmentDate - now) / (1000 * 60 * 60);
+    const isConfirmed = appointment.status.toLowerCase() === 'confirmed';
+    const isComplete = appointment.status.toLowerCase() === 'complete';
+    
+    // Check if appointment can be rescheduled
+    if (isComplete) {
+        showErrorToast('Cannot reschedule completed appointments');
+        return;
+    }
+    
+    if (!isConfirmed) {
+        showErrorToast('Only confirmed appointments can be rescheduled');
+        return;
+    }
+    
+    if (hoursUntilAppointment < 24) {
+        showErrorToast('Cannot reschedule within 24 hours of appointment');
+        return;
+    }
+    
+    currentRescheduleId = appointmentId;
     
     document.getElementById('newDate').value = '';
     
-    // ✅ Generate valid time slots based on service duration
+    // ✅ Generate half-hour time slots: 9:00, 9:30, 10:00, 10:30, ..., 4:30 PM
     const timeSelect = document.getElementById('newTime');
     timeSelect.innerHTML = '<option value="">-- Select time --</option>';
     
-    const startHour = 9;    // 9 AM
-    const endHour = 16;     // 4 PM
-    const endMinutes = 30;  // 4:30 PM
+    const timeSlots = [
+        { hour: 9, minute: 0, display: '09:00 AM' },
+        { hour: 9, minute: 30, display: '09:30 AM' },
+        { hour: 10, minute: 0, display: '10:00 AM' },
+        { hour: 10, minute: 30, display: '10:30 AM' },
+        { hour: 11, minute: 0, display: '11:00 AM' },
+        { hour: 11, minute: 30, display: '11:30 AM' },
+        { hour: 12, minute: 0, display: '12:00 PM' },
+        { hour: 12, minute: 30, display: '12:30 PM' },
+        { hour: 13, minute: 0, display: '01:00 PM' },
+        { hour: 13, minute: 30, display: '01:30 PM' },
+        { hour: 14, minute: 0, display: '02:00 PM' },
+        { hour: 14, minute: 30, display: '02:30 PM' },
+        { hour: 15, minute: 0, display: '03:00 PM' },
+        { hour: 15, minute: 30, display: '03:30 PM' },
+        { hour: 16, minute: 0, display: '04:00 PM' },
+        { hour: 16, minute: 30, display: '04:30 PM' }
+    ];
     
-    // Generate time slots
-    for (let hour = startHour; hour <= endHour; hour++) {
-        for (let minutes = 0; minutes < 60; minutes += durationMinutes) {
-            // Don't exceed 4:30 PM
-            if (hour === endHour && (minutes > endMinutes || (minutes === endMinutes && durationMinutes > 0))) {
-                break;
-            }
-            if (hour === endHour && minutes + durationMinutes > endMinutes) {
-                break;
-            }
-            
-            const timeString = `${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            const displayTime = `${String(hour % 12 || 12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
-            
-            const option = document.createElement('option');
-            option.value = timeString;
-            option.textContent = displayTime;
-            timeSelect.appendChild(option);
-        }
-    }
+    // Add all time slots to the select
+    timeSlots.forEach(slot => {
+        const timeString = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
+        const option = document.createElement('option');
+        option.value = timeString;
+        option.textContent = slot.display;
+        timeSelect.appendChild(option);
+    });
     
     document.getElementById('rescheduleModal').style.display = 'flex';
 }
